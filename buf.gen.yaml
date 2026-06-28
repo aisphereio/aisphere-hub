@@ -1,0 +1,27 @@
+version: v2
+
+inputs:
+  - directory: api
+
+plugins:
+  - local: protoc-gen-go
+    out: api
+    opt:
+      - paths=source_relative
+
+  - local: protoc-gen-go-grpc
+    out: api
+    opt:
+      - paths=source_relative
+
+  - local: protoc-gen-go-http
+    out: api
+    opt:
+      - paths=source_relative
+
+  - local: protoc-gen-openapi
+    out: .
+    strategy: all
+    opt:
+      - fq_schema_naming=true
+      - default_response=false

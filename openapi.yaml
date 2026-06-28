@@ -1,0 +1,1856 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: ""
+    version: 0.0.1
+paths:
+    /v1/audit/records:
+        get:
+            tags:
+                - AuditService
+            description: |-
+                QueryAuditRecords returns audit records matching the filter.
+                 Results are sorted by time descending (newest first).
+            operationId: AuditService_QueryAuditRecords
+            parameters:
+                - name: actorId
+                  in: query
+                  description: Filter fields. Empty fields are wildcards.
+                  schema:
+                    type: string
+                - name: actorType
+                  in: query
+                  schema:
+                    type: string
+                - name: resourceType
+                  in: query
+                  schema:
+                    type: string
+                - name: resourceId
+                  in: query
+                  schema:
+                    type: string
+                - name: action
+                  in: query
+                  schema:
+                    type: string
+                - name: result
+                  in: query
+                  schema:
+                    type: string
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: string
+                - name: orgId
+                  in: query
+                  schema:
+                    type: string
+                - name: projectId
+                  in: query
+                  schema:
+                    type: string
+                - name: from
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: to
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.audit.v1.QueryAuditRecordsResponse'
+    /v1/authn/exchange:
+        post:
+            tags:
+                - AuthnService
+            description: "Exchange exchanges an OAuth authorization code for IdP tokens.\r\n\r\n Supports PKCE via the optional `code_verifier` field for public clients\r\n (SPAs, mobile apps) that cannot safely store a client secret. When the\r\n authorization request was made with a `code_challenge`, the same\r\n `code_verifier` MUST be supplied here.\r\n\r\n NOTE: kernel authn exposes CodeVerifier on AuthCodeExchangeRequest, but\r\n the current Casdoor SDK adapter (kernel/authn/casdoor/token.go) does not\r\n yet forward it to GetOAuthToken. The field is accepted on the wire for\r\n forward compatibility; verify the kernel version before relying on PKCE\r\n enforcement server-side."
+            operationId: AuthnService_Exchange
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authn.v1.ExchangeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authn.v1.TokenResponse'
+    /v1/authn/introspect:
+        post:
+            tags:
+                - AuthnService
+            description: "Introspect validates a token and returns the principal it represents.\r\n\r\n Useful for debug tools, third-party integrations, and service-to-service\r\n calls that need to verify a token's validity and identity without going\r\n through the full request middleware chain. Mirrors RFC 7662 token\r\n introspection semantics (active=false when the token is invalid,\r\n expired, or revoked)."
+            operationId: AuthnService_Introspect
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authn.v1.IntrospectRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authn.v1.IntrospectResponse'
+    /v1/authn/login-url:
+        get:
+            tags:
+                - AuthnService
+            description: "LoginURL returns the IdP authorization URL as JSON for SPA/debug usage.\r\n\r\n Browser users should prefer GET /v1/authn/login, which is registered as a\r\n direct HTTP 302 route by the service implementation. See the service\r\n comment above."
+            operationId: AuthnService_LoginURL
+            parameters:
+                - name: redirectUri
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: scope
+                  in: query
+                  schema:
+                    type: string
+                - name: prompt
+                  in: query
+                  schema:
+                    type: string
+                - name: orgId
+                  in: query
+                  description: "org_id optionally overrides the globally configured Casdoor organization\r\n for this login URL. When unset, the global config organization is used.\r\n Maps to kernel authn.LoginURLRequest.OrgID."
+                  schema:
+                    type: string
+                - name: appId
+                  in: query
+                  description: "app_id optionally overrides the globally configured Casdoor application.\r\n Maps to kernel authn.LoginURLRequest.AppID."
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authn.v1.LoginURLResponse'
+    /v1/authn/logout-url:
+        get:
+            tags:
+                - AuthnService
+            description: "LogoutURL returns the IdP logout URL as JSON for SPA/debug usage.\r\n\r\n Browser users can also call GET /v1/authn/logout for a direct HTTP 302.\r\n\r\n Side effect: token revocation. When the request carries an\r\n `Authorization: Bearer <access_token>` header, OR an explicit\r\n `access_token` field is supplied in the request body, the implementation\r\n calls Revoke on that access token before returning the IdP logout URL.\r\n This adds the token to the local session blacklist so subsequent API\r\n calls with the same token are rejected even before the IdP session\r\n expires. The `access_token` field makes this previously-implicit side\r\n effect visible in the API contract.\r\n\r\n NOTE: kernel authn does not currently expose a LogoutURLBuilder\r\n interface. The hub data layer must construct the Casdoor logout URL\r\n itself using the configured Casdoor endpoint, client_id and\r\n post_logout_redirect_uri. See legacy backend internal/data/auth.go for\r\n the pattern (it built the URL via the old aisphere-kit authn adapter;\r\n the new hub will need to call casdoor SDK directly or compose the URL\r\n from config)."
+            operationId: AuthnService_LogoutURL
+            parameters:
+                - name: postLogoutRedirectUri
+                  in: query
+                  schema:
+                    type: string
+                - name: idTokenHint
+                  in: query
+                  schema:
+                    type: string
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: accessToken
+                  in: query
+                  description: "access_token explicitly identifies the token to revoke locally before\r\n returning the IdP logout URL. When unset, the implementation falls back\r\n to the `Authorization: Bearer <access_token>` request header.\r\n\r\n This field makes the implicit revocation side effect of LogoutURL\r\n visible in the API contract instead of being hidden in service code\r\n (legacy backend internal/biz/auth.go:LogoutURL).\r\n\r\n Revoke is best-effort. If the local session manager is unavailable the\r\n implementation MUST still return the logout URL and log a warning."
+                  schema:
+                    type: string
+                - name: orgId
+                  in: query
+                  schema:
+                    type: string
+                - name: appId
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authn.v1.LogoutURLResponse'
+    /v1/authn/me:
+        get:
+            tags:
+                - AuthnService
+            description: "Me returns the current authenticated principal.\r\n\r\n Requires `Authorization: Bearer <access_token>`. The returned Principal\r\n includes `expires_at` so frontends can schedule proactive token refreshes\r\n before the token expires, rather than waiting for a 401 to trigger a\r\n reactive refresh."
+            operationId: AuthnService_Me
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authn.v1.MeResponse'
+    /v1/authn/refresh:
+        post:
+            tags:
+                - AuthnService
+            description: Refresh refreshes an IdP access token using a refresh token.
+            operationId: AuthnService_Refresh
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authn.v1.RefreshRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authn.v1.TokenResponse'
+    /v1/authn/revoke:
+        post:
+            tags:
+                - AuthnService
+            description: "Revoke explicitly revokes an access or refresh token.\r\n\r\n Use this for multi-device session management (e.g. \"sign out everywhere\"\r\n flows) where the caller wants to invalidate a token without navigating\r\n the IdP logout page.\r\n\r\n IdP-side revocation is best-effort; the local session blacklist is\r\n always updated so the token is rejected at the next API call regardless\r\n of whether the IdP actually revokes it.\r\n\r\n NOTE: the current Casdoor SDK adapter (kernel/authn/casdoor/token.go)\r\n returns ErrIdentityBackendFailed(\"casdoor sdk does not expose token\r\n revocation\"). Until the kernel adapter is updated, this RPC will only\r\n update the local blacklist and return a warning. Callers that need\r\n full IdP-side revocation should use LogoutURL with id_token_hint."
+            operationId: AuthnService_Revoke
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authn.v1.RevokeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authn.v1.RevokeResponse'
+    /v1/authz/check:
+        post:
+            tags:
+                - AuthzService
+            description: CheckPermission evaluates whether subject has permission on resource.
+            operationId: AuthzService_CheckPermission
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authz.v1.CheckPermissionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.CheckPermissionResponse'
+    /v1/authz/check:batch:
+        post:
+            tags:
+                - AuthzService
+            description: |-
+                BatchCheckPermissions evaluates multiple checks in one round-trip.
+                 Useful for list views where each row needs its own permission check.
+            operationId: AuthzService_BatchCheckPermissions
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authz.v1.BatchCheckPermissionsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.BatchCheckPermissionsResponse'
+    /v1/authz/lookup-resources:
+        get:
+            tags:
+                - AuthzService
+            description: |-
+                LookupResources returns resource IDs that the subject can access
+                 with the given permission. Used by "list my skills" views.
+            operationId: AuthzService_LookupResources
+            parameters:
+                - name: subject.type
+                  in: query
+                  schema:
+                    type: string
+                - name: subject.id
+                  in: query
+                  schema:
+                    type: string
+                - name: subject.relation
+                  in: query
+                  description: |-
+                    relation is optional. Use it to express "member of group X" as
+                     subject = {type:"group", id:"g_1", relation:"member"}.
+                  schema:
+                    type: string
+                - name: resourceType
+                  in: query
+                  schema:
+                    type: string
+                - name: permission
+                  in: query
+                  schema:
+                    type: string
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: string
+                - name: orgId
+                  in: query
+                  schema:
+                    type: string
+                - name: projectId
+                  in: query
+                  schema:
+                    type: string
+                - name: fullyConsistent
+                  in: query
+                  schema:
+                    type: boolean
+                - name: consistencyToken
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.LookupResourcesResponse'
+    /v1/authz/lookup-subjects:
+        get:
+            tags:
+                - AuthzService
+            description: |-
+                LookupSubjects returns subjects that can access the given resource
+                 with the given permission. Used by "who can access this skill?" views.
+            operationId: AuthzService_LookupSubjects
+            parameters:
+                - name: resource.type
+                  in: query
+                  schema:
+                    type: string
+                - name: resource.id
+                  in: query
+                  schema:
+                    type: string
+                - name: permission
+                  in: query
+                  schema:
+                    type: string
+                - name: subjectType
+                  in: query
+                  schema:
+                    type: string
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: string
+                - name: orgId
+                  in: query
+                  schema:
+                    type: string
+                - name: projectId
+                  in: query
+                  schema:
+                    type: string
+                - name: fullyConsistent
+                  in: query
+                  schema:
+                    type: boolean
+                - name: consistencyToken
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.LookupSubjectsResponse'
+    /v1/authz/relationships:
+        get:
+            tags:
+                - AuthzService
+            description: |-
+                ReadRelationships lists relationship tuples matching the filter.
+                 Used by share-management UIs (e.g. "who has access to skill X?").
+            operationId: AuthzService_ReadRelationships
+            parameters:
+                - name: filter.resourceType
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.resourceId
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.relation
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.subjectType
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.subjectId
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.subjectRelation
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: cursor
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.ReadRelationshipsResponse'
+        post:
+            tags:
+                - AuthzService
+            description: |-
+                WriteRelationships creates or updates relationship tuples. Idempotent
+                 (TOUCH semantics): writing an existing tuple is a no-op.
+            operationId: AuthzService_WriteRelationships
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authz.v1.WriteRelationshipsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.WriteRelationshipsResponse'
+        delete:
+            tags:
+                - AuthzService
+            description: |-
+                DeleteRelationships removes relationship tuples matching the filter.
+                 At least one of resource / subject filter field must be set.
+            operationId: AuthzService_DeleteRelationships
+            parameters:
+                - name: filter.resourceType
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.resourceId
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.relation
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.subjectType
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.subjectId
+                  in: query
+                  schema:
+                    type: string
+                - name: filter.subjectRelation
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.DeleteRelationshipsResponse'
+    /v1/authz/schema:
+        get:
+            tags:
+                - AuthzService
+            description: ReadSchema returns the current SpiceDB schema text.
+            operationId: AuthzService_ReadSchema
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.authz.v1.ReadSchemaResponse'
+        put:
+            tags:
+                - AuthzService
+            description: |-
+                WriteSchema replaces the SpiceDB schema. Use with care — schema
+                 changes are global and may break existing tuples.
+            operationId: AuthzService_WriteSchema
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.authz.v1.WriteSchemaRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /v1/skills:
+        get:
+            tags:
+                - SkillService
+            description: |-
+                ListSkills lists canonical skills visible to the caller. Visibility
+                 rules: caller sees (a) skills they own, (b) skills shared with them
+                 via accessx grants, (c) skills with visibility=public.
+            operationId: SkillService_ListSkills
+            parameters:
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageToken
+                  in: query
+                  schema:
+                    type: string
+                - name: q
+                  in: query
+                  schema:
+                    type: string
+                - name: status
+                  in: query
+                  schema:
+                    type: string
+                - name: visibility
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.ListSkillsResponse'
+        post:
+            tags:
+                - SkillService
+            description: CreateSkill creates one canonical skill. The caller becomes the owner.
+            operationId: SkillService_CreateSkill
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.CreateSkillRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.Skill'
+    /v1/skills/{name}:
+        get:
+            tags:
+                - SkillService
+            description: GetSkill returns one canonical skill by name.
+            operationId: SkillService_GetSkill
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.Skill'
+        put:
+            tags:
+                - SkillService
+            description: |-
+                UpdateSkill updates mutable fields of one canonical skill. owner_id /
+                 visibility / status are NOT updated by this RPC — they require
+                 separate lifecycle endpoints (TODO: ownership transfer, visibility
+                 change).
+            operationId: SkillService_UpdateSkill
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.UpdateSkillRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.Skill'
+        delete:
+            tags:
+                - SkillService
+            description: |-
+                DeleteSkill soft-deletes one canonical skill by name. Cascades to
+                 versions and files. S3 objects are purged best-effort after the DB
+                 transaction commits.
+            operationId: SkillService_DeleteSkill
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /v1/skills/{name}/shares:
+        get:
+            tags:
+                - SkillService
+            description: |-
+                ListSkillShares lists subjects that have any relation on the named
+                 skill. Requires skill.read (with ownership + public fallback).
+            operationId: SkillService_ListSkillShares
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.ListSkillSharesResponse'
+        post:
+            tags:
+                - SkillService
+            description: |-
+                CreateSkillShare grants a viewer or editor relation on the named
+                 skill to a subject. Requires skill.edit. The relation field accepts
+                 "viewer" or "editor"; passing "owner" returns INVALID_ARGUMENT.
+            operationId: SkillService_CreateSkillShare
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.CreateSkillShareRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillShare'
+    /v1/skills/{name}/shares/{subjectType}/{subjectId}:
+        delete:
+            tags:
+                - SkillService
+            description: |-
+                DeleteSkillShare revokes ALL relations between the named skill and
+                 the named subject. Requires skill.edit.
+            operationId: SkillService_DeleteSkillShare
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: subjectType
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: subjectId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /v1/skills/{name}/versions:
+        get:
+            tags:
+                - SkillService
+            description: ListSkillVersions lists versions of one canonical skill, oldest first.
+            operationId: SkillService_ListSkillVersions
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.ListSkillVersionsResponse'
+    /v1/skills/{name}/versions/{version}:
+        get:
+            tags:
+                - SkillService
+            description: GetSkillVersion returns one version metadata record.
+            operationId: SkillService_GetSkillVersion
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersion'
+    /v1/skills/{name}/versions/{version}/download:
+        get:
+            tags:
+                - SkillService
+            description: |-
+                DownloadSkillVersion returns the version package bytes. Use
+                 if_none_match to leverage ETag-based 304 Not Modified.
+            operationId: SkillService_DownloadSkillVersion
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: ifNoneMatch
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillPackageDownload'
+    /v1/skills/{name}/versions/{version}/file:
+        get:
+            tags:
+                - SkillService
+            description: GetSkillVersionFile returns one text or base64-encoded file content.
+            operationId: SkillService_GetSkillVersionFile
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: path
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillFile'
+    /v1/skills/{name}/versions/{version}/files:
+        get:
+            tags:
+                - SkillService
+            description: ListSkillVersionFiles lists files stored for one skill version.
+            operationId: SkillService_ListSkillVersionFiles
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.ListSkillVersionFilesResponse'
+    /v1/skills/{name}/versions/{version}:offline:
+        post:
+            tags:
+                - SkillService
+            description: OfflineSkillVersion removes one online version from catalog/runtime use.
+            operationId: SkillService_OfflineSkillVersion
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersionActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersion'
+    /v1/skills/{name}/versions/{version}:online:
+        post:
+            tags:
+                - SkillService
+            description: |-
+                OnlineSkillVersion makes one published version consumable by
+                 catalog/runtime. Any previously-online version of the same skill is
+                 automatically demoted to published.
+            operationId: SkillService_OnlineSkillVersion
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersionActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersion'
+    /v1/skills/{name}/versions/{version}:publish:
+        post:
+            tags:
+                - SkillService
+            description: PublishSkillVersion marks a submitted version as published.
+            operationId: SkillService_PublishSkillVersion
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersionActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersion'
+    /v1/skills/{name}/versions/{version}:submit:
+        post:
+            tags:
+                - SkillService
+            description: SubmitSkillVersion marks a draft version ready for publish.
+            operationId: SkillService_SubmitSkillVersion
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersionActionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersion'
+    /v1/skills:upload:
+        post:
+            tags:
+                - SkillService
+            description: |-
+                UploadSkillPackage imports a zipped Skill package into a new or
+                 existing version. The zip must contain SKILL.md with YAML front-matter
+                 declaring name, description, version. Other files become version
+                 files; binary files are base64-encoded in the DB content column.
+            operationId: SkillService_UploadSkillPackage
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/aisphere.hub.skill.v1.UploadSkillPackageRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersion'
+components:
+    schemas:
+        aisphere.hub.audit.v1.AuditActor:
+            type: object
+            properties:
+                subjectId:
+                    type: string
+                subjectType:
+                    type: string
+                tenantId:
+                    type: string
+                orgId:
+                    type: string
+                projectId:
+                    type: string
+                name:
+                    type: string
+                email:
+                    type: string
+        aisphere.hub.audit.v1.AuditRecord:
+            type: object
+            properties:
+                id:
+                    type: string
+                time:
+                    type: string
+                    format: date-time
+                action:
+                    type: string
+                result:
+                    type: string
+                severity:
+                    type: string
+                reason:
+                    type: string
+                actor:
+                    $ref: '#/components/schemas/aisphere.hub.audit.v1.AuditActor'
+                resource:
+                    $ref: '#/components/schemas/aisphere.hub.audit.v1.AuditResource'
+                requestId:
+                    type: string
+                traceId:
+                    type: string
+                clientIp:
+                    type: string
+                userAgent:
+                    type: string
+                metadata:
+                    type: object
+            description: AuditRecord is one security audit event. Mirrors kernel auditx.Record.
+        aisphere.hub.audit.v1.AuditResource:
+            type: object
+            properties:
+                type:
+                    type: string
+                id:
+                    type: string
+                tenantId:
+                    type: string
+                orgId:
+                    type: string
+                projectId:
+                    type: string
+        aisphere.hub.audit.v1.QueryAuditRecordsResponse:
+            type: object
+            properties:
+                records:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.audit.v1.AuditRecord'
+                total:
+                    type: integer
+                    format: int32
+        aisphere.hub.authn.v1.ExchangeRequest:
+            required:
+                - code
+                - redirectUri
+            type: object
+            properties:
+                code:
+                    type: string
+                redirectUri:
+                    type: string
+                state:
+                    type: string
+                codeVerifier:
+                    type: string
+                    description: "code_verifier is the PKCE code verifier. Required when the authorization\r\n request was made with a code_challenge; recommended for all public\r\n clients (SPAs, mobile apps) that cannot store a client secret.\r\n Maps to kernel authn.AuthCodeExchangeRequest.CodeVerifier.\r\n\r\n NOTE: see Exchange RPC comment — the current Casdoor adapter does not\r\n yet forward this to the SDK. The field is accepted on the wire for\r\n forward compatibility."
+                orgId:
+                    type: string
+                appId:
+                    type: string
+        aisphere.hub.authn.v1.IntrospectRequest:
+            required:
+                - token
+            type: object
+            properties:
+                token:
+                    type: string
+                    description: token is the token to validate and inspect.
+                tokenType:
+                    type: string
+                    description: "token_type hints which kind of token is being introspected. Accepted\r\n values: \"access_token\" (default), \"refresh_token\", \"id_token\".\r\n Maps to kernel authn.VerifyTokenRequest.TokenType."
+                issuer:
+                    type: string
+                    description: "issuer optionally restricts the accepted token issuer. When unset, the\r\n globally configured IdP issuer is used."
+                audience:
+                    type: array
+                    items:
+                        type: string
+                    description: "audience optionally restricts the accepted token audience. When unset,\r\n the audience check is skipped."
+                orgId:
+                    type: string
+                appId:
+                    type: string
+        aisphere.hub.authn.v1.IntrospectResponse:
+            type: object
+            properties:
+                active:
+                    type: boolean
+                    description: "active indicates whether the token is currently valid (not expired, not\r\n revoked, signature OK, issuer/audience match if specified)."
+                principal:
+                    $ref: '#/components/schemas/aisphere.hub.authn.v1.Principal'
+                scope:
+                    type: string
+                    description: scope is the space-delimited scope list attached to the token.
+                expiresAt:
+                    type: string
+                    description: expires_at is the token's expiration time. Zero value means unknown.
+                    format: date-time
+                issuedAt:
+                    type: string
+                    description: issued_at is the token's issue time. Zero value means unknown.
+                    format: date-time
+            description: IntrospectResponse mirrors RFC 7662 token introspection.
+        aisphere.hub.authn.v1.LoginURLResponse:
+            type: object
+            properties:
+                loginUrl:
+                    type: string
+        aisphere.hub.authn.v1.LogoutURLResponse:
+            type: object
+            properties:
+                logoutUrl:
+                    type: string
+        aisphere.hub.authn.v1.MeResponse:
+            type: object
+            properties:
+                principal:
+                    $ref: '#/components/schemas/aisphere.hub.authn.v1.Principal'
+        aisphere.hub.authn.v1.Principal:
+            type: object
+            properties:
+                subjectType:
+                    type: string
+                subjectId:
+                    type: string
+                username:
+                    type: string
+                name:
+                    type: string
+                displayName:
+                    type: string
+                email:
+                    type: string
+                avatar:
+                    type: string
+                orgId:
+                    type: string
+                projectId:
+                    type: string
+                roles:
+                    type: array
+                    items:
+                        type: string
+                groups:
+                    type: array
+                    items:
+                        type: string
+                isAuthenticated:
+                    type: boolean
+                phone:
+                    type: string
+                    description: "phone is the user's phone number when available from the IdP.\r\n Maps to kernel authn.Principal.Phone."
+                scopes:
+                    type: array
+                    items:
+                        type: string
+                    description: "scopes are the OAuth/OIDC scopes attached to the current access token.\r\n Frontends can use this to gate UI affordances (e.g. hide \"write\"\r\n buttons when the token lacks the write scope).\r\n Maps to kernel authn.Principal.Scopes."
+                authMethod:
+                    type: string
+                    description: "auth_method records how the subject authenticated. Common values match\r\n the kernel authn.AuthMethod* constants: \"oauth\", \"oidc\", \"jwt\",\r\n \"api_key\", \"mtls\", \"session\", \"dev_token\", \"none\".\r\n Maps to kernel authn.Principal.AuthMethod."
+                expiresAt:
+                    type: string
+                    description: "expires_at is when the current access token expires. Frontends should\r\n use this to schedule proactive token refreshes before the token\r\n expires, rather than waiting for a 401 to trigger a reactive refresh.\r\n Zero value means the expiry is unknown (e.g. the IdP did not return\r\n an exp claim).\r\n Maps to kernel authn.Principal.ExpiresAt."
+                    format: date-time
+                attributes:
+                    type: object
+                    description: "attributes carries provider-specific claims (e.g. Casdoor owner/name,\r\n external ID, signin method, custom fields) that are not part of the\r\n canonical Principal schema. Values must be JSON-serializable.\r\n Maps to kernel authn.Principal.Attributes.\r\n\r\n NOTE: some attributes (such as `access_token`) are sensitive and\r\n SHOULD be filtered out by the service layer before returning to\r\n frontend clients. See kernel/authn/casdoor/token.go:principalFromClaims\r\n for the list of attributes currently set by the Casdoor adapter."
+            description: "Principal is the normalized identity of the current caller.\r\n\r\n Field set is aligned with kernel authn.Principal (github.com/aisphereio/\r\n kernel/authn.Principal). The kernel type has additional internal fields\r\n (Provider, ExternalID, Issuer, Audience, TenantID, AppID, IssuedAt) that\r\n are not exposed here because they are not useful to typical frontend\r\n consumers; if a future use case needs them, add fields rather than\r\n exposing the kernel struct verbatim."
+        aisphere.hub.authn.v1.RefreshRequest:
+            required:
+                - refreshToken
+            type: object
+            properties:
+                refreshToken:
+                    type: string
+                scope:
+                    type: string
+                orgId:
+                    type: string
+                appId:
+                    type: string
+        aisphere.hub.authn.v1.RevokeRequest:
+            required:
+                - token
+            type: object
+            properties:
+                token:
+                    type: string
+                    description: token is the access, refresh, or id token to revoke.
+                tokenType:
+                    type: string
+                    description: "token_type hints which kind of token is being revoked. Accepted values:\r\n   \"access_token\"  (default)\r\n   \"refresh_token\"\r\n   \"id_token\"\r\n Maps to kernel authn.RevokeTokenRequest.TokenType."
+                orgId:
+                    type: string
+                appId:
+                    type: string
+            description: RevokeRequest asks the implementation to revoke a single token.
+        aisphere.hub.authn.v1.RevokeResponse:
+            type: object
+            properties:
+                revoked:
+                    type: boolean
+                    description: "revoked is true when the token was successfully revoked (either IdP-side\r\n or local blacklist)."
+                idpRevoked:
+                    type: boolean
+                    description: "idp_revoked is true when the IdP itself confirmed revocation. False\r\n means only the local session blacklist was updated; the token may still\r\n be valid against other Resource Servers until it expires."
+                message:
+                    type: string
+                    description: "message carries a human-readable note, e.g. \"casdoor sdk does not expose\r\n token revocation; only local blacklist updated\"."
+            description: "RevokeResponse returns the outcome of a Revoke call.\r\n\r\n We do not use google.protobuf.Empty so callers can distinguish\r\n \"IdP-side revoked\" from \"only local blacklist updated\" — important for\r\n security-sensitive flows where the caller needs to know whether the token\r\n may still be valid against other Resource Servers."
+        aisphere.hub.authn.v1.TokenResponse:
+            type: object
+            properties:
+                accessToken:
+                    type: string
+                refreshToken:
+                    type: string
+                idToken:
+                    type: string
+                tokenType:
+                    type: string
+                expiresIn:
+                    type: string
+                scope:
+                    type: string
+            description: "TokenResponse is the OAuth2/OIDC token set returned by Exchange and Refresh.\r\n\r\n `expires_in` is seconds from issue time to expiry (OAuth2 standard). For a\r\n wall-clock expiry, callers can compute issued_at + expires_in, or use the\r\n `expires_at` field on Principal returned by Me/Introspect."
+        aisphere.hub.authz.v1.BatchCheckPermissionsRequest:
+            required:
+                - checks
+            type: object
+            properties:
+                checks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.authz.v1.CheckPermissionRequest'
+                fullyConsistent:
+                    type: boolean
+                consistencyToken:
+                    type: string
+        aisphere.hub.authz.v1.BatchCheckPermissionsResponse:
+            type: object
+            properties:
+                decisions:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.authz.v1.CheckPermissionResponse'
+                consistencyToken:
+                    type: string
+        aisphere.hub.authz.v1.CheckPermissionRequest:
+            required:
+                - subject
+                - resource
+                - permission
+            type: object
+            properties:
+                subject:
+                    $ref: '#/components/schemas/aisphere.hub.authz.v1.SubjectRef'
+                resource:
+                    $ref: '#/components/schemas/aisphere.hub.authz.v1.ObjectRef'
+                permission:
+                    type: string
+                tenantId:
+                    type: string
+                orgId:
+                    type: string
+                projectId:
+                    type: string
+                subjectAttrs:
+                    type: object
+                    description: |-
+                        Subject / resource / environment attrs are passed to SpiceDB as
+                         caveat context (ABAC). Optional; omit for pure ReBAC checks.
+                resourceAttrs:
+                    type: object
+                environmentAttrs:
+                    type: object
+                fullyConsistent:
+                    type: boolean
+                    description: |-
+                        fully_consistent=true forces SpiceDB to use the latest writes
+                         (slowest). When false, uses at-least-as-fresh with the optional
+                         consistency_token. Default false.
+                consistencyToken:
+                    type: string
+        aisphere.hub.authz.v1.CheckPermissionResponse:
+            type: object
+            properties:
+                effect:
+                    type: string
+                    description: |-
+                        effect is the canonical decision: "allow", "deny", "no_match".
+                         "no_match" means SpiceDB had no matching relationship / permission
+                         definition; callers usually treat it the same as "deny" but may
+                         surface a different message.
+                allowed:
+                    type: boolean
+                reason:
+                    type: string
+                consistencyToken:
+                    type: string
+                missingContext:
+                    type: array
+                    items:
+                        type: string
+        aisphere.hub.authz.v1.DeleteRelationshipsResponse:
+            type: object
+            properties:
+                consistencyToken:
+                    type: string
+                deleted:
+                    type: integer
+                    format: int32
+        aisphere.hub.authz.v1.LookupResourcesResponse:
+            type: object
+            properties:
+                resources:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.authz.v1.ObjectRef'
+                nextCursor:
+                    type: string
+                consistencyToken:
+                    type: string
+        aisphere.hub.authz.v1.LookupSubjectsResponse:
+            type: object
+            properties:
+                subjects:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.authz.v1.SubjectRef'
+                nextCursor:
+                    type: string
+                consistencyToken:
+                    type: string
+        aisphere.hub.authz.v1.ObjectRef:
+            required:
+                - type
+                - id
+            type: object
+            properties:
+                type:
+                    type: string
+                id:
+                    type: string
+        aisphere.hub.authz.v1.ReadRelationshipsResponse:
+            type: object
+            properties:
+                relationships:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.authz.v1.Relationship'
+                nextCursor:
+                    type: string
+                consistencyToken:
+                    type: string
+        aisphere.hub.authz.v1.ReadSchemaResponse:
+            type: object
+            properties:
+                schemaText:
+                    type: string
+        aisphere.hub.authz.v1.Relationship:
+            required:
+                - resource
+                - relation
+                - subject
+            type: object
+            properties:
+                resource:
+                    $ref: '#/components/schemas/aisphere.hub.authz.v1.ObjectRef'
+                relation:
+                    type: string
+                subject:
+                    $ref: '#/components/schemas/aisphere.hub.authz.v1.SubjectRef'
+                caveatName:
+                    type: string
+                caveatContext:
+                    type: object
+                expiresAt:
+                    type: string
+                    format: date-time
+            description: |-
+                Relationship is one ReBAC tuple. resource#relation@subject.
+
+                 For ABAC, optionally set caveat_name + caveat_context. The caveat must
+                 be defined in the SpiceDB schema; caveat_context is a JSON object
+                 whose keys match the caveat's required parameters.
+        aisphere.hub.authz.v1.SubjectRef:
+            required:
+                - type
+                - id
+            type: object
+            properties:
+                type:
+                    type: string
+                id:
+                    type: string
+                relation:
+                    type: string
+                    description: |-
+                        relation is optional. Use it to express "member of group X" as
+                         subject = {type:"group", id:"g_1", relation:"member"}.
+        aisphere.hub.authz.v1.WriteRelationshipsRequest:
+            required:
+                - relationships
+            type: object
+            properties:
+                relationships:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.authz.v1.Relationship'
+        aisphere.hub.authz.v1.WriteRelationshipsResponse:
+            type: object
+            properties:
+                consistencyToken:
+                    type: string
+                written:
+                    type: integer
+                    format: int32
+        aisphere.hub.authz.v1.WriteSchemaRequest:
+            required:
+                - schemaText
+            type: object
+            properties:
+                schemaText:
+                    type: string
+        aisphere.hub.skill.v1.CreateSkillRequest:
+            required:
+                - name
+            type: object
+            properties:
+                name:
+                    type: string
+                displayName:
+                    type: string
+                description:
+                    type: string
+                version:
+                    type: string
+                status:
+                    type: string
+                visibility:
+                    type: string
+                ownerId:
+                    type: string
+                orgId:
+                    type: string
+                projectId:
+                    type: string
+                sourceType:
+                    type: string
+                sourceUri:
+                    type: string
+                manifestJson:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+        aisphere.hub.skill.v1.CreateSkillShareRequest:
+            required:
+                - name
+                - relation
+                - subjectType
+                - subjectId
+            type: object
+            properties:
+                name:
+                    type: string
+                relation:
+                    type: string
+                subjectType:
+                    type: string
+                subjectId:
+                    type: string
+                subjectRelation:
+                    type: string
+        aisphere.hub.skill.v1.ListSkillSharesResponse:
+            type: object
+            properties:
+                shares:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillShare'
+        aisphere.hub.skill.v1.ListSkillVersionFilesResponse:
+            type: object
+            properties:
+                files:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillFile'
+        aisphere.hub.skill.v1.ListSkillVersionsResponse:
+            type: object
+            properties:
+                versions:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.skill.v1.SkillVersion'
+        aisphere.hub.skill.v1.ListSkillsResponse:
+            type: object
+            properties:
+                skills:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/aisphere.hub.skill.v1.Skill'
+                nextPageToken:
+                    type: string
+        aisphere.hub.skill.v1.Skill:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                displayName:
+                    type: string
+                description:
+                    type: string
+                version:
+                    type: string
+                status:
+                    type: string
+                visibility:
+                    type: string
+                ownerId:
+                    type: string
+                orgId:
+                    type: string
+                projectId:
+                    type: string
+                sourceType:
+                    type: string
+                sourceUri:
+                    type: string
+                manifestJson:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+                createTime:
+                    type: string
+                    format: date-time
+                updateTime:
+                    type: string
+                    format: date-time
+        aisphere.hub.skill.v1.SkillFile:
+            type: object
+            properties:
+                id:
+                    type: string
+                skillName:
+                    type: string
+                version:
+                    type: string
+                path:
+                    type: string
+                name:
+                    type: string
+                type:
+                    type: string
+                size:
+                    type: string
+                binary:
+                    type: boolean
+                content:
+                    type: string
+                createTime:
+                    type: string
+                    format: date-time
+                updateTime:
+                    type: string
+                    format: date-time
+        aisphere.hub.skill.v1.SkillPackageDownload:
+            type: object
+            properties:
+                skillName:
+                    type: string
+                version:
+                    type: string
+                etag:
+                    type: string
+                md5:
+                    type: string
+                sha256:
+                    type: string
+                notModified:
+                    type: boolean
+                packageBytes:
+                    type: string
+                    format: bytes
+        aisphere.hub.skill.v1.SkillShare:
+            type: object
+            properties:
+                resourceType:
+                    type: string
+                    description: resource is always "skill:{name}" — echoed for client convenience.
+                resourceId:
+                    type: string
+                relation:
+                    type: string
+                subjectType:
+                    type: string
+                subjectId:
+                    type: string
+                subjectRelation:
+                    type: string
+        aisphere.hub.skill.v1.SkillVersion:
+            type: object
+            properties:
+                id:
+                    type: string
+                skillName:
+                    type: string
+                version:
+                    type: string
+                status:
+                    type: string
+                author:
+                    type: string
+                commitMsg:
+                    type: string
+                publishPipelineInfo:
+                    type: string
+                downloadCount:
+                    type: string
+                md5:
+                    type: string
+                sha256:
+                    type: string
+                revision:
+                    type: string
+                sizeBytes:
+                    type: string
+                manifestJson:
+                    type: string
+                createTime:
+                    type: string
+                    format: date-time
+                updateTime:
+                    type: string
+                    format: date-time
+        aisphere.hub.skill.v1.SkillVersionActionRequest:
+            required:
+                - name
+                - version
+            type: object
+            properties:
+                name:
+                    type: string
+                version:
+                    type: string
+        aisphere.hub.skill.v1.UpdateSkillRequest:
+            required:
+                - name
+            type: object
+            properties:
+                name:
+                    type: string
+                displayName:
+                    type: string
+                description:
+                    type: string
+                version:
+                    type: string
+                sourceType:
+                    type: string
+                sourceUri:
+                    type: string
+                manifestJson:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+        aisphere.hub.skill.v1.UploadSkillPackageRequest:
+            required:
+                - packageBytes
+            type: object
+            properties:
+                packageBytes:
+                    type: string
+                    format: bytes
+                overwrite:
+                    type: boolean
+                targetVersion:
+                    type: string
+                commitMsg:
+                    type: string
+tags:
+    - name: AuditService
+      description: |-
+        AuditService exposes a read-only audit log query API.
+
+         Audit records are written by business modules (skill.create /
+         skill.delete / skill.share.* etc.) via auditx.Recorder. This service
+         lets frontend "activity feed" UIs query those records by actor,
+         resource, action, time range, etc.
+
+         ## Authorization
+
+         Querying audit records requires no special permission today — any
+         authenticated user can query any record. This is acceptable for dev
+         and small-team deployments. For multi-tenant production, gate this
+         RPC behind an "audit.read" permission via authz, OR filter results
+         by the caller's org / project so users only see their own org's
+         audit trail.
+    - name: AuthnService
+      description: "AuthnService is the authentication facade for aisphere-hub.\r\n\r\n Hub does not issue or persist local access tokens. Browser login, OAuth code\r\n exchange, refresh, logout, token revocation and token introspection are\r\n delegated to the configured identity provider (Casdoor by default through\r\n aisphere-kit/kernel authn). API requests are authenticated by kit middleware\r\n using IdP access tokens.\r\n\r\n ## Browser-friendly 302 routes (MUST be registered by the implementation)\r\n\r\n In addition to the JSON RPCs declared below, implementations MUST register\r\n two browser-friendly HTTP routes that return a 302 redirect instead of a\r\n JSON body. These exist because copying a JSON-encoded URL out of a response\r\n body unescapes `&` into `\\u0026` in many browsers and terminals, which\r\n breaks the redirect URL.\r\n\r\n   GET /v1/authn/login     -> 302 to the IdP login URL\r\n   GET /v1/authn/logout    -> 302 to the IdP logout URL\r\n\r\n They mirror the JSON `LoginURL` and `LogoutURL` RPCs but accept query\r\n parameters (redirect_uri, state, scope, prompt, post_logout_redirect_uri,\r\n id_token_hint) and perform the redirect server-side. They MUST be registered\r\n manually in the service layer via srv.HandleFunc, since google.api.http\r\n cannot express a 302 response. See the legacy backend\r\n `internal/service/auth.go` for the registration pattern.\r\n\r\n ## Multi-tenancy\r\n\r\n All requests carry optional `org_id` and `app_id` fields. When unset, the\r\n implementation falls back to the globally configured Casdoor organization\r\n and application. Per-request values allow multi-tenant deployments to\r\n target a specific org/app without restarting the service. This matches the\r\n kernel authn contracts (LoginURLRequest, AuthCodeExchangeRequest,\r\n RefreshTokenRequest, VerifyTokenRequest, RevokeTokenRequest all carry\r\n OrgID/AppID).\r\n\r\n ## Migration from legacy /v3/auth/*\r\n\r\n This service replaces the legacy `api.auth.v1.AuthService` at /v3/auth/*.\r\n Path is intentionally version-bumped to v1/authn to signal the contract\r\n change (Principal no longer duplicated on MeResponse top-level, new RPCs\r\n added). Deployments that need to keep legacy clients working should mount a\r\n gateway-level path rewrite /v3/auth/* -> /v1/authn/* for a transition\r\n period; the request/response bodies are wire-compatible except for the\r\n removed flat fields on MeResponse."
+    - name: AuthzService
+      description: |-
+        AuthzService exposes a provider-neutral authorization API backed by
+         SpiceDB (Zanzibar-style ReBAC) with optional ABAC caveats.
+
+         ## Resource model
+
+           Permission check:   subject  -[permission]->  resource
+           Relationship tuple: resource -[relation]->   subject
+
+         A "permission" is a derived, transitive capability (e.g. "read",
+         "delete"). A "relation" is a direct edge (e.g. "owner", "viewer",
+         "editor"). Permissions are defined in the SpiceDB schema as a union
+         of relations; callers cannot write permissions, only relations.
+
+         ## Common usage
+
+         ### Skill ownership (auto-written on skill create)
+
+           WriteRelationships({
+             resource: {type: "skill", id: "my-skill"},
+             relation: "owner",
+             subject:  {type: "user", id: "u_123"}
+           })
+
+         ### Skill share (grant viewer access)
+
+           WriteRelationships({
+             resource: {type: "skill", id: "my-skill"},
+             relation: "viewer",
+             subject:  {type: "user", id: "u_456"}
+           })
+
+         ### Check before reading a skill
+
+           CheckPermission({
+             subject:    {type: "user", id: "u_456"},
+             resource:   {type: "skill", id: "my-skill"},
+             permission: "read"
+           }) → {allowed: true, effect: "allow"}
+
+         ### List all skills a user can read
+
+           LookupResources({
+             subject:      {type: "user", id: "u_456"},
+             resource_type: "skill",
+             permission:   "read"
+           }) → {resources: [{type:"skill", id:"my-skill"}, ...]}
+
+         ## ABAC caveats (advanced)
+
+         For dynamic attributes (e.g. "viewer only during business hours"), pass
+         a `caveat_name` and `caveat_context` on WriteRelationships, or pass
+         `subject_attrs` / `resource_attrs` / `environment_attrs` on
+         CheckPermission. SpiceDB evaluates the caveat against the context at
+         check time.
+
+         ## Consistency
+
+         SpiceDB supports three consistency modes. Pass `fully_consistent=true`
+         for admin / debug calls (slowest but always sees latest writes). For
+         hot paths, pass the `consistency_token` returned by the previous
+         write/check to get at-least-as-fresh semantics without paying full
+         consistency cost.
+    - name: SkillService
+      description: |-
+        SkillService exposes the canonical AIHub Skill API.
+
+         This is the first real business module migrated from the legacy backend
+         into the new kernel-based Hub. It manages canonical Skills and their
+         versioned packages.
+
+         ## Resource model
+
+           Skill           /v1/skills/{name}
+           SkillVersion    /v1/skills/{name}/versions/{version}
+           SkillFile       /v1/skills/{name}/versions/{version}/files/{path}
+
+         Skill names match `^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$` and are globally
+         unique. Version strings are arbitrary but should follow semver when
+         possible (`0.1.0`, `1.0.0-rc.1`).
+
+         ## Authz
+
+         All RPCs require a Bearer token (kernel authn middleware enforces this).
+         Per-skill authorization (owner / shared / public visibility) is enforced
+         in the biz layer via accessx.Guard. Public-skill read fallback lets any
+         authenticated user read skills with visibility=public.
+
+         ## Status machine (SkillVersion)
+
+           draft → submitted → published → online → offline
+                                               ↑________|
+
+         Each transition is an idempotent CAS (compare-and-set on the status
+         column) so concurrent transition calls on the same version cannot both
+         succeed.

@@ -1,0 +1,397 @@
+syntax = "proto3";
+
+package aisphere.hub.skill.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
+
+// SkillService exposes the canonical AIHub Skill API.
+//
+// This is the first real business module migrated from the legacy backend
+// into the new kernel-based Hub. It manages canonical Skills and their
+// versioned packages.
+//
+// ## Resource model
+//
+//   Skill           /v1/skills/{name}
+//   SkillVersion    /v1/skills/{name}/versions/{version}
+//   SkillFile       /v1/skills/{name}/versions/{version}/files/{path}
+//
+// Skill names match `^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$` and are globally
+// unique. Version strings are arbitrary but should follow semver when
+// possible (`0.1.0`, `1.0.0-rc.1`).
+//
+// ## Authz
+//
+// All RPCs require a Bearer token (kernel authn middleware enforces this).
+// Per-skill authorization (owner / shared / public visibility) is enforced
+// in the biz layer via accessx.Guard. Public-skill read fallback lets any
+// authenticated user read skills with visibility=public.
+//
+// ## Status machine (SkillVersion)
+//
+//   draft → submitted → published → online → offline
+//                                       ↑________|
+//
+// Each transition is an idempotent CAS (compare-and-set on the status
+// column) so concurrent transition calls on the same version cannot both
+// succeed.
+service SkillService {
+  // CreateSkill creates one canonical skill. The caller becomes the owner.
+  rpc CreateSkill(CreateSkillRequest) returns (Skill) {
+    option (google.api.http) = {
+      post: "/v1/skills"
+      body: "*"
+    };
+  }
+
+  // UpdateSkill updates mutable fields of one canonical skill. owner_id /
+  // visibility / status are NOT updated by this RPC — they require
+  // separate lifecycle endpoints (TODO: ownership transfer, visibility
+  // change).
+  rpc UpdateSkill(UpdateSkillRequest) returns (Skill) {
+    option (google.api.http) = {
+      put: "/v1/skills/{name}"
+      body: "*"
+    };
+  }
+
+  // ListSkills lists canonical skills visible to the caller. Visibility
+  // rules: caller sees (a) skills they own, (b) skills shared with them
+  // via accessx grants, (c) skills with visibility=public.
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills"
+    };
+  }
+
+  // GetSkill returns one canonical skill by name.
+  rpc GetSkill(GetSkillRequest) returns (Skill) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}"
+    };
+  }
+
+  // DeleteSkill soft-deletes one canonical skill by name. Cascades to
+  // versions and files. S3 objects are purged best-effort after the DB
+  // transaction commits.
+  rpc DeleteSkill(DeleteSkillRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/skills/{name}"
+    };
+  }
+
+  // UploadSkillPackage imports a zipped Skill package into a new or
+  // existing version. The zip must contain SKILL.md with YAML front-matter
+  // declaring name, description, version. Other files become version
+  // files; binary files are base64-encoded in the DB content column.
+  rpc UploadSkillPackage(UploadSkillPackageRequest) returns (SkillVersion) {
+    option (google.api.http) = {
+      post: "/v1/skills:upload"
+      body: "*"
+    };
+  }
+
+  // ListSkillVersions lists versions of one canonical skill, oldest first.
+  rpc ListSkillVersions(ListSkillVersionsRequest) returns (ListSkillVersionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/versions"
+    };
+  }
+
+  // GetSkillVersion returns one version metadata record.
+  rpc GetSkillVersion(GetSkillVersionRequest) returns (SkillVersion) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/versions/{version}"
+    };
+  }
+
+  // SubmitSkillVersion marks a draft version ready for publish.
+  rpc SubmitSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/versions/{version}:submit"
+      body: "*"
+    };
+  }
+
+  // PublishSkillVersion marks a submitted version as published.
+  rpc PublishSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/versions/{version}:publish"
+      body: "*"
+    };
+  }
+
+  // OnlineSkillVersion makes one published version consumable by
+  // catalog/runtime. Any previously-online version of the same skill is
+  // automatically demoted to published.
+  rpc OnlineSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/versions/{version}:online"
+      body: "*"
+    };
+  }
+
+  // OfflineSkillVersion removes one online version from catalog/runtime use.
+  rpc OfflineSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/versions/{version}:offline"
+      body: "*"
+    };
+  }
+
+  // DownloadSkillVersion returns the version package bytes. Use
+  // if_none_match to leverage ETag-based 304 Not Modified.
+  rpc DownloadSkillVersion(DownloadSkillVersionRequest) returns (SkillPackageDownload) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/versions/{version}/download"
+    };
+  }
+
+  // ListSkillVersionFiles lists files stored for one skill version.
+  rpc ListSkillVersionFiles(ListSkillVersionFilesRequest) returns (ListSkillVersionFilesResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/versions/{version}/files"
+    };
+  }
+
+  // GetSkillVersionFile returns one text or base64-encoded file content.
+  rpc GetSkillVersionFile(GetSkillVersionFileRequest) returns (SkillFile) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/versions/{version}/file"
+    };
+  }
+
+  // --- Skill share (authz relationship management) ---
+  //
+  // These RPCs wrap authz.WriteRelationships / ReadRelationships /
+  // DeleteRelationships for the skill resource type. They require
+  // skill.edit on the named skill (only the owner / editor can share),
+  // and they only manage viewer / editor relations (NOT owner — owner
+  // is set at create time and is not transferable via these RPCs).
+
+  // ListSkillShares lists subjects that have any relation on the named
+  // skill. Requires skill.read (with ownership + public fallback).
+  rpc ListSkillShares(ListSkillSharesRequest) returns (ListSkillSharesResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/shares"
+    };
+  }
+
+  // CreateSkillShare grants a viewer or editor relation on the named
+  // skill to a subject. Requires skill.edit. The relation field accepts
+  // "viewer" or "editor"; passing "owner" returns INVALID_ARGUMENT.
+  rpc CreateSkillShare(CreateSkillShareRequest) returns (SkillShare) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/shares"
+      body: "*"
+    };
+  }
+
+  // DeleteSkillShare revokes ALL relations between the named skill and
+  // the named subject. Requires skill.edit.
+  rpc DeleteSkillShare(DeleteSkillShareRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/skills/{name}/shares/{subject_type}/{subject_id}"
+    };
+  }
+}
+
+// --- Skill ---
+
+message Skill {
+  int64 id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  string version = 5;
+  string status = 6;
+  string visibility = 7;
+  string owner_id = 8;
+  string org_id = 9;
+  string project_id = 10;
+  string source_type = 11;
+  string source_uri = 12;
+  string manifest_json = 13;
+  repeated string tags = 14;
+  google.protobuf.Timestamp create_time = 15;
+  google.protobuf.Timestamp update_time = 16;
+}
+
+message CreateSkillRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2;
+  string description = 3;
+  string version = 4;
+  string status = 5;
+  string visibility = 6;
+  string owner_id = 7;
+  string org_id = 8;
+  string project_id = 9;
+  string source_type = 10;
+  string source_uri = 11;
+  string manifest_json = 12;
+  repeated string tags = 13;
+}
+
+message UpdateSkillRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2;
+  string description = 3;
+  string version = 4;
+  string source_type = 5;
+  string source_uri = 6;
+  string manifest_json = 7;
+  repeated string tags = 8;
+}
+
+message ListSkillsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string q = 3;
+  string status = 4;
+  string visibility = 5;
+}
+
+message ListSkillsResponse {
+  repeated Skill skills = 1;
+  string next_page_token = 2;
+}
+
+message GetSkillRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteSkillRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// --- SkillVersion ---
+
+message SkillVersion {
+  int64 id = 1;
+  string skill_name = 2;
+  string version = 3;
+  string status = 4;
+  string author = 5;
+  string commit_msg = 6;
+  string publish_pipeline_info = 7;
+  int64 download_count = 8;
+  string md5 = 9;
+  string sha256 = 10;
+  string revision = 11;
+  int64 size_bytes = 12;
+  string manifest_json = 13;
+  google.protobuf.Timestamp create_time = 14;
+  google.protobuf.Timestamp update_time = 15;
+}
+
+message UploadSkillPackageRequest {
+  bytes package_bytes = 1 [(google.api.field_behavior) = REQUIRED];
+  bool overwrite = 2;
+  string target_version = 3;
+  string commit_msg = 4;
+}
+
+message ListSkillVersionsRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListSkillVersionsResponse {
+  repeated SkillVersion versions = 1;
+}
+
+message GetSkillVersionRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SkillVersionActionRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DownloadSkillVersionRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+  string if_none_match = 3;
+}
+
+message SkillPackageDownload {
+  string skill_name = 1;
+  string version = 2;
+  string etag = 3;
+  string md5 = 4;
+  string sha256 = 5;
+  bool not_modified = 6;
+  bytes package_bytes = 7;
+}
+
+// --- SkillFile ---
+
+message SkillFile {
+  int64 id = 1;
+  string skill_name = 2;
+  string version = 3;
+  string path = 4;
+  string name = 5;
+  string type = 6;
+  int64 size = 7;
+  bool binary = 8;
+  string content = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp update_time = 11;
+}
+
+message ListSkillVersionFilesRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListSkillVersionFilesResponse {
+  repeated SkillFile files = 1;
+}
+
+message GetSkillVersionFileRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+  string path = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// --- Skill share ---
+
+message SkillShare {
+  // resource is always "skill:{name}" — echoed for client convenience.
+  string resource_type = 1;
+  string resource_id = 2;
+  string relation = 3;        // "viewer" | "editor" | "owner"
+  string subject_type = 4;    // "user" | "service" | "group"
+  string subject_id = 5;
+  string subject_relation = 6; // optional, e.g. "member" for group subjects
+}
+
+message ListSkillSharesRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListSkillSharesResponse {
+  repeated SkillShare shares = 1;
+}
+
+message CreateSkillShareRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string relation = 2 [(google.api.field_behavior) = REQUIRED];  // "viewer" | "editor"
+  string subject_type = 3 [(google.api.field_behavior) = REQUIRED];
+  string subject_id = 4 [(google.api.field_behavior) = REQUIRED];
+  string subject_relation = 5; // optional, for group#member subjects
+}
+
+message DeleteSkillShareRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string subject_type = 2 [(google.api.field_behavior) = REQUIRED];
+  string subject_id = 3 [(google.api.field_behavior) = REQUIRED];
+}

@@ -1,0 +1,332 @@
+syntax = "proto3";
+
+package aisphere.hub.authz.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/authz/v1;authzv1";
+
+// AuthzService exposes a provider-neutral authorization API backed by
+// SpiceDB (Zanzibar-style ReBAC) with optional ABAC caveats.
+//
+// ## Resource model
+//
+//   Permission check:   subject  -[permission]->  resource
+//   Relationship tuple: resource -[relation]->   subject
+//
+// A "permission" is a derived, transitive capability (e.g. "read",
+// "delete"). A "relation" is a direct edge (e.g. "owner", "viewer",
+// "editor"). Permissions are defined in the SpiceDB schema as a union
+// of relations; callers cannot write permissions, only relations.
+//
+// ## Common usage
+//
+// ### Skill ownership (auto-written on skill create)
+//
+//   WriteRelationships({
+//     resource: {type: "skill", id: "my-skill"},
+//     relation: "owner",
+//     subject:  {type: "user", id: "u_123"}
+//   })
+//
+// ### Skill share (grant viewer access)
+//
+//   WriteRelationships({
+//     resource: {type: "skill", id: "my-skill"},
+//     relation: "viewer",
+//     subject:  {type: "user", id: "u_456"}
+//   })
+//
+// ### Check before reading a skill
+//
+//   CheckPermission({
+//     subject:    {type: "user", id: "u_456"},
+//     resource:   {type: "skill", id: "my-skill"},
+//     permission: "read"
+//   }) → {allowed: true, effect: "allow"}
+//
+// ### List all skills a user can read
+//
+//   LookupResources({
+//     subject:      {type: "user", id: "u_456"},
+//     resource_type: "skill",
+//     permission:   "read"
+//   }) → {resources: [{type:"skill", id:"my-skill"}, ...]}
+//
+// ## ABAC caveats (advanced)
+//
+// For dynamic attributes (e.g. "viewer only during business hours"), pass
+// a `caveat_name` and `caveat_context` on WriteRelationships, or pass
+// `subject_attrs` / `resource_attrs` / `environment_attrs` on
+// CheckPermission. SpiceDB evaluates the caveat against the context at
+// check time.
+//
+// ## Consistency
+//
+// SpiceDB supports three consistency modes. Pass `fully_consistent=true`
+// for admin / debug calls (slowest but always sees latest writes). For
+// hot paths, pass the `consistency_token` returned by the previous
+// write/check to get at-least-as-fresh semantics without paying full
+// consistency cost.
+service AuthzService {
+  // CheckPermission evaluates whether subject has permission on resource.
+  rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse) {
+    option (google.api.http) = {
+      post: "/v1/authz/check"
+      body: "*"
+    };
+  }
+
+  // BatchCheckPermissions evaluates multiple checks in one round-trip.
+  // Useful for list views where each row needs its own permission check.
+  rpc BatchCheckPermissions(BatchCheckPermissionsRequest) returns (BatchCheckPermissionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/authz/check:batch"
+      body: "*"
+    };
+  }
+
+  // WriteRelationships creates or updates relationship tuples. Idempotent
+  // (TOUCH semantics): writing an existing tuple is a no-op.
+  rpc WriteRelationships(WriteRelationshipsRequest) returns (WriteRelationshipsResponse) {
+    option (google.api.http) = {
+      post: "/v1/authz/relationships"
+      body: "*"
+    };
+  }
+
+  // DeleteRelationships removes relationship tuples matching the filter.
+  // At least one of resource / subject filter field must be set.
+  rpc DeleteRelationships(DeleteRelationshipsRequest) returns (DeleteRelationshipsResponse) {
+    option (google.api.http) = {
+      delete: "/v1/authz/relationships"
+    };
+  }
+
+  // ReadRelationships lists relationship tuples matching the filter.
+  // Used by share-management UIs (e.g. "who has access to skill X?").
+  rpc ReadRelationships(ReadRelationshipsRequest) returns (ReadRelationshipsResponse) {
+    option (google.api.http) = {
+      get: "/v1/authz/relationships"
+    };
+  }
+
+  // LookupResources returns resource IDs that the subject can access
+  // with the given permission. Used by "list my skills" views.
+  rpc LookupResources(LookupResourcesRequest) returns (LookupResourcesResponse) {
+    option (google.api.http) = {
+      get: "/v1/authz/lookup-resources"
+    };
+  }
+
+  // LookupSubjects returns subjects that can access the given resource
+  // with the given permission. Used by "who can access this skill?" views.
+  rpc LookupSubjects(LookupSubjectsRequest) returns (LookupSubjectsResponse) {
+    option (google.api.http) = {
+      get: "/v1/authz/lookup-subjects"
+    };
+  }
+
+  // ReadSchema returns the current SpiceDB schema text.
+  rpc ReadSchema(ReadSchemaRequest) returns (ReadSchemaResponse) {
+    option (google.api.http) = {
+      get: "/v1/authz/schema"
+    };
+  }
+
+  // WriteSchema replaces the SpiceDB schema. Use with care — schema
+  // changes are global and may break existing tuples.
+  rpc WriteSchema(WriteSchemaRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/v1/authz/schema"
+      body: "*"
+    };
+  }
+}
+
+// --- Common types ---
+
+message ObjectRef {
+  string type = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SubjectRef {
+  string type = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  // relation is optional. Use it to express "member of group X" as
+  // subject = {type:"group", id:"g_1", relation:"member"}.
+  string relation = 3;
+}
+
+// Relationship is one ReBAC tuple. resource#relation@subject.
+//
+// For ABAC, optionally set caveat_name + caveat_context. The caveat must
+// be defined in the SpiceDB schema; caveat_context is a JSON object
+// whose keys match the caveat's required parameters.
+message Relationship {
+  ObjectRef resource = 1 [(google.api.field_behavior) = REQUIRED];
+  string relation = 2 [(google.api.field_behavior) = REQUIRED];
+  SubjectRef subject = 3 [(google.api.field_behavior) = REQUIRED];
+  string caveat_name = 4;
+  google.protobuf.Struct caveat_context = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message RelationshipFilter {
+  string resource_type = 1;
+  string resource_id = 2;
+  string relation = 3;
+  string subject_type = 4;
+  string subject_id = 5;
+  string subject_relation = 6;
+}
+
+// --- CheckPermission ---
+
+message CheckPermissionRequest {
+  SubjectRef subject = 1 [(google.api.field_behavior) = REQUIRED];
+  ObjectRef resource = 2 [(google.api.field_behavior) = REQUIRED];
+  string permission = 3 [(google.api.field_behavior) = REQUIRED];
+
+  string tenant_id = 4;
+  string org_id = 5;
+  string project_id = 6;
+
+  // Subject / resource / environment attrs are passed to SpiceDB as
+  // caveat context (ABAC). Optional; omit for pure ReBAC checks.
+  google.protobuf.Struct subject_attrs = 7;
+  google.protobuf.Struct resource_attrs = 8;
+  google.protobuf.Struct environment_attrs = 9;
+
+  // fully_consistent=true forces SpiceDB to use the latest writes
+  // (slowest). When false, uses at-least-as-fresh with the optional
+  // consistency_token. Default false.
+  bool fully_consistent = 10;
+  string consistency_token = 11;
+}
+
+message CheckPermissionResponse {
+  // effect is the canonical decision: "allow", "deny", "no_match".
+  // "no_match" means SpiceDB had no matching relationship / permission
+  // definition; callers usually treat it the same as "deny" but may
+  // surface a different message.
+  string effect = 1;
+  bool allowed = 2;
+  string reason = 3;
+  string consistency_token = 4;
+  repeated string missing_context = 5;
+}
+
+// --- BatchCheck ---
+
+message BatchCheckPermissionsRequest {
+  repeated CheckPermissionRequest checks = 1 [(google.api.field_behavior) = REQUIRED];
+  bool fully_consistent = 2;
+  string consistency_token = 3;
+}
+
+message BatchCheckPermissionsResponse {
+  repeated CheckPermissionResponse decisions = 1;
+  string consistency_token = 2;
+}
+
+// --- Write / Delete / Read relationships ---
+
+message WriteRelationshipsRequest {
+  repeated Relationship relationships = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message WriteRelationshipsResponse {
+  string consistency_token = 1;
+  int32 written = 2;
+}
+
+message DeleteRelationshipsRequest {
+  RelationshipFilter filter = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteRelationshipsResponse {
+  string consistency_token = 1;
+  int32 deleted = 2;
+}
+
+message ReadRelationshipsRequest {
+  RelationshipFilter filter = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+message ReadRelationshipsResponse {
+  repeated Relationship relationships = 1;
+  string next_cursor = 2;
+  string consistency_token = 3;
+}
+
+// --- Lookup ---
+
+message LookupResourcesRequest {
+  SubjectRef subject = 1 [(google.api.field_behavior) = REQUIRED];
+  string resource_type = 2 [(google.api.field_behavior) = REQUIRED];
+  string permission = 3 [(google.api.field_behavior) = REQUIRED];
+
+  string tenant_id = 4;
+  string org_id = 5;
+  string project_id = 6;
+
+  google.protobuf.Struct subject_attrs = 7;
+  google.protobuf.Struct environment_attrs = 8;
+
+  bool fully_consistent = 9;
+  string consistency_token = 10;
+
+  int32 limit = 11;
+  string cursor = 12;
+}
+
+message LookupResourcesResponse {
+  repeated ObjectRef resources = 1;
+  string next_cursor = 2;
+  string consistency_token = 3;
+}
+
+message LookupSubjectsRequest {
+  ObjectRef resource = 1 [(google.api.field_behavior) = REQUIRED];
+  string permission = 2 [(google.api.field_behavior) = REQUIRED];
+  string subject_type = 3 [(google.api.field_behavior) = REQUIRED];
+
+  string tenant_id = 4;
+  string org_id = 5;
+  string project_id = 6;
+
+  google.protobuf.Struct resource_attrs = 7;
+  google.protobuf.Struct environment_attrs = 8;
+
+  bool fully_consistent = 9;
+  string consistency_token = 10;
+
+  int32 limit = 11;
+  string cursor = 12;
+}
+
+message LookupSubjectsResponse {
+  repeated SubjectRef subjects = 1;
+  string next_cursor = 2;
+  string consistency_token = 3;
+}
+
+// --- Schema ---
+
+message ReadSchemaRequest {}
+
+message ReadSchemaResponse {
+  string schema_text = 1;
+}
+
+message WriteSchemaRequest {
+  string schema_text = 1 [(google.api.field_behavior) = REQUIRED];
+}

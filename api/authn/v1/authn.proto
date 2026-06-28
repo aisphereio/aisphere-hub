@@ -1,0 +1,372 @@
+syntax = "proto3";
+
+package aisphere.hub.authn.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/authn/v1;authnv1";
+
+// AuthnService is the authentication facade for aisphere-hub.
+//
+// Hub does not issue or persist local access tokens. Browser login, OAuth code
+// exchange, refresh, logout, token revocation and token introspection are
+// delegated to the configured identity provider (Casdoor by default through
+// aisphere-kit/kernel authn). API requests are authenticated by kit middleware
+// using IdP access tokens.
+//
+// ## Browser-friendly 302 routes (MUST be registered by the implementation)
+//
+// In addition to the JSON RPCs declared below, implementations MUST register
+// two browser-friendly HTTP routes that return a 302 redirect instead of a
+// JSON body. These exist because copying a JSON-encoded URL out of a response
+// body unescapes `&` into `\u0026` in many browsers and terminals, which
+// breaks the redirect URL.
+//
+//   GET /v1/authn/login     -> 302 to the IdP login URL
+//   GET /v1/authn/logout    -> 302 to the IdP logout URL
+//
+// They mirror the JSON `LoginURL` and `LogoutURL` RPCs but accept query
+// parameters (redirect_uri, state, scope, prompt, post_logout_redirect_uri,
+// id_token_hint) and perform the redirect server-side. They MUST be registered
+// manually in the service layer via srv.HandleFunc, since google.api.http
+// cannot express a 302 response. See the legacy backend
+// `internal/service/auth.go` for the registration pattern.
+//
+// ## Multi-tenancy
+//
+// All requests carry optional `org_id` and `app_id` fields. When unset, the
+// implementation falls back to the globally configured Casdoor organization
+// and application. Per-request values allow multi-tenant deployments to
+// target a specific org/app without restarting the service. This matches the
+// kernel authn contracts (LoginURLRequest, AuthCodeExchangeRequest,
+// RefreshTokenRequest, VerifyTokenRequest, RevokeTokenRequest all carry
+// OrgID/AppID).
+//
+// ## Migration from legacy /v3/auth/*
+//
+// This service replaces the legacy `api.auth.v1.AuthService` at /v3/auth/*.
+// Path is intentionally version-bumped to v1/authn to signal the contract
+// change (Principal no longer duplicated on MeResponse top-level, new RPCs
+// added). Deployments that need to keep legacy clients working should mount a
+// gateway-level path rewrite /v3/auth/* -> /v1/authn/* for a transition
+// period; the request/response bodies are wire-compatible except for the
+// removed flat fields on MeResponse.
+service AuthnService {
+  // LoginURL returns the IdP authorization URL as JSON for SPA/debug usage.
+  //
+  // Browser users should prefer GET /v1/authn/login, which is registered as a
+  // direct HTTP 302 route by the service implementation. See the service
+  // comment above.
+  rpc LoginURL(LoginURLRequest) returns (LoginURLResponse) {
+    option (google.api.http) = {
+      get: "/v1/authn/login-url"
+    };
+  }
+
+  // Exchange exchanges an OAuth authorization code for IdP tokens.
+  //
+  // Supports PKCE via the optional `code_verifier` field for public clients
+  // (SPAs, mobile apps) that cannot safely store a client secret. When the
+  // authorization request was made with a `code_challenge`, the same
+  // `code_verifier` MUST be supplied here.
+  //
+  // NOTE: kernel authn exposes CodeVerifier on AuthCodeExchangeRequest, but
+  // the current Casdoor SDK adapter (kernel/authn/casdoor/token.go) does not
+  // yet forward it to GetOAuthToken. The field is accepted on the wire for
+  // forward compatibility; verify the kernel version before relying on PKCE
+  // enforcement server-side.
+  rpc Exchange(ExchangeRequest) returns (TokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/authn/exchange"
+      body: "*"
+    };
+  }
+
+  // Refresh refreshes an IdP access token using a refresh token.
+  rpc Refresh(RefreshRequest) returns (TokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/authn/refresh"
+      body: "*"
+    };
+  }
+
+  // LogoutURL returns the IdP logout URL as JSON for SPA/debug usage.
+  //
+  // Browser users can also call GET /v1/authn/logout for a direct HTTP 302.
+  //
+  // Side effect: token revocation. When the request carries an
+  // `Authorization: Bearer <access_token>` header, OR an explicit
+  // `access_token` field is supplied in the request body, the implementation
+  // calls Revoke on that access token before returning the IdP logout URL.
+  // This adds the token to the local session blacklist so subsequent API
+  // calls with the same token are rejected even before the IdP session
+  // expires. The `access_token` field makes this previously-implicit side
+  // effect visible in the API contract.
+  //
+  // NOTE: kernel authn does not currently expose a LogoutURLBuilder
+  // interface. The hub data layer must construct the Casdoor logout URL
+  // itself using the configured Casdoor endpoint, client_id and
+  // post_logout_redirect_uri. See legacy backend internal/data/auth.go for
+  // the pattern (it built the URL via the old aisphere-kit authn adapter;
+  // the new hub will need to call casdoor SDK directly or compose the URL
+  // from config).
+  rpc LogoutURL(LogoutURLRequest) returns (LogoutURLResponse) {
+    option (google.api.http) = {
+      get: "/v1/authn/logout-url"
+    };
+  }
+
+  // Revoke explicitly revokes an access or refresh token.
+  //
+  // Use this for multi-device session management (e.g. "sign out everywhere"
+  // flows) where the caller wants to invalidate a token without navigating
+  // the IdP logout page.
+  //
+  // IdP-side revocation is best-effort; the local session blacklist is
+  // always updated so the token is rejected at the next API call regardless
+  // of whether the IdP actually revokes it.
+  //
+  // NOTE: the current Casdoor SDK adapter (kernel/authn/casdoor/token.go)
+  // returns ErrIdentityBackendFailed("casdoor sdk does not expose token
+  // revocation"). Until the kernel adapter is updated, this RPC will only
+  // update the local blacklist and return a warning. Callers that need
+  // full IdP-side revocation should use LogoutURL with id_token_hint.
+  rpc Revoke(RevokeRequest) returns (RevokeResponse) {
+    option (google.api.http) = {
+      post: "/v1/authn/revoke"
+      body: "*"
+    };
+  }
+
+  // Introspect validates a token and returns the principal it represents.
+  //
+  // Useful for debug tools, third-party integrations, and service-to-service
+  // calls that need to verify a token's validity and identity without going
+  // through the full request middleware chain. Mirrors RFC 7662 token
+  // introspection semantics (active=false when the token is invalid,
+  // expired, or revoked).
+  rpc Introspect(IntrospectRequest) returns (IntrospectResponse) {
+    option (google.api.http) = {
+      post: "/v1/authn/introspect"
+      body: "*"
+    };
+  }
+
+  // Me returns the current authenticated principal.
+  //
+  // Requires `Authorization: Bearer <access_token>`. The returned Principal
+  // includes `expires_at` so frontends can schedule proactive token refreshes
+  // before the token expires, rather than waiting for a 401 to trigger a
+  // reactive refresh.
+  rpc Me(MeRequest) returns (MeResponse) {
+    option (google.api.http) = {
+      get: "/v1/authn/me"
+    };
+  }
+}
+
+// LoginURLRequest asks the IdP for a hosted login URL.
+message LoginURLRequest {
+  string redirect_uri = 1 [(google.api.field_behavior) = REQUIRED];
+  string state = 2;
+  string scope = 3;
+  string prompt = 4;
+  // org_id optionally overrides the globally configured Casdoor organization
+  // for this login URL. When unset, the global config organization is used.
+  // Maps to kernel authn.LoginURLRequest.OrgID.
+  string org_id = 5;
+  // app_id optionally overrides the globally configured Casdoor application.
+  // Maps to kernel authn.LoginURLRequest.AppID.
+  string app_id = 6;
+}
+
+message LoginURLResponse {
+  string login_url = 1;
+}
+
+message ExchangeRequest {
+  string code = 1 [(google.api.field_behavior) = REQUIRED];
+  string redirect_uri = 2 [(google.api.field_behavior) = REQUIRED];
+  string state = 3;
+  // code_verifier is the PKCE code verifier. Required when the authorization
+  // request was made with a code_challenge; recommended for all public
+  // clients (SPAs, mobile apps) that cannot store a client secret.
+  // Maps to kernel authn.AuthCodeExchangeRequest.CodeVerifier.
+  //
+  // NOTE: see Exchange RPC comment — the current Casdoor adapter does not
+  // yet forward this to the SDK. The field is accepted on the wire for
+  // forward compatibility.
+  string code_verifier = 4;
+  string org_id = 5;
+  string app_id = 6;
+}
+
+message RefreshRequest {
+  string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
+  string scope = 2;
+  string org_id = 3;
+  string app_id = 4;
+}
+
+// TokenResponse is the OAuth2/OIDC token set returned by Exchange and Refresh.
+//
+// `expires_in` is seconds from issue time to expiry (OAuth2 standard). For a
+// wall-clock expiry, callers can compute issued_at + expires_in, or use the
+// `expires_at` field on Principal returned by Me/Introspect.
+message TokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string id_token = 3;
+  string token_type = 4;
+  int64 expires_in = 5;
+  string scope = 6;
+}
+
+message LogoutURLRequest {
+  string post_logout_redirect_uri = 1;
+  string id_token_hint = 2;
+  string state = 3;
+  // access_token explicitly identifies the token to revoke locally before
+  // returning the IdP logout URL. When unset, the implementation falls back
+  // to the `Authorization: Bearer <access_token>` request header.
+  //
+  // This field makes the implicit revocation side effect of LogoutURL
+  // visible in the API contract instead of being hidden in service code
+  // (legacy backend internal/biz/auth.go:LogoutURL).
+  //
+  // Revoke is best-effort. If the local session manager is unavailable the
+  // implementation MUST still return the logout URL and log a warning.
+  string access_token = 4;
+  string org_id = 5;
+  string app_id = 6;
+}
+
+message LogoutURLResponse {
+  string logout_url = 1;
+}
+
+// RevokeRequest asks the implementation to revoke a single token.
+message RevokeRequest {
+  // token is the access, refresh, or id token to revoke.
+  string token = 1 [(google.api.field_behavior) = REQUIRED];
+  // token_type hints which kind of token is being revoked. Accepted values:
+  //   "access_token"  (default)
+  //   "refresh_token"
+  //   "id_token"
+  // Maps to kernel authn.RevokeTokenRequest.TokenType.
+  string token_type = 2;
+  string org_id = 3;
+  string app_id = 4;
+}
+
+// RevokeResponse returns the outcome of a Revoke call.
+//
+// We do not use google.protobuf.Empty so callers can distinguish
+// "IdP-side revoked" from "only local blacklist updated" — important for
+// security-sensitive flows where the caller needs to know whether the token
+// may still be valid against other Resource Servers.
+message RevokeResponse {
+  // revoked is true when the token was successfully revoked (either IdP-side
+  // or local blacklist).
+  bool revoked = 1;
+  // idp_revoked is true when the IdP itself confirmed revocation. False
+  // means only the local session blacklist was updated; the token may still
+  // be valid against other Resource Servers until it expires.
+  bool idp_revoked = 2;
+  // message carries a human-readable note, e.g. "casdoor sdk does not expose
+  // token revocation; only local blacklist updated".
+  string message = 3;
+}
+
+message IntrospectRequest {
+  // token is the token to validate and inspect.
+  string token = 1 [(google.api.field_behavior) = REQUIRED];
+  // token_type hints which kind of token is being introspected. Accepted
+  // values: "access_token" (default), "refresh_token", "id_token".
+  // Maps to kernel authn.VerifyTokenRequest.TokenType.
+  string token_type = 2;
+  // issuer optionally restricts the accepted token issuer. When unset, the
+  // globally configured IdP issuer is used.
+  string issuer = 3;
+  // audience optionally restricts the accepted token audience. When unset,
+  // the audience check is skipped.
+  repeated string audience = 4;
+  string org_id = 5;
+  string app_id = 6;
+}
+
+// IntrospectResponse mirrors RFC 7662 token introspection.
+message IntrospectResponse {
+  // active indicates whether the token is currently valid (not expired, not
+  // revoked, signature OK, issuer/audience match if specified).
+  bool active = 1;
+  Principal principal = 2;
+  // scope is the space-delimited scope list attached to the token.
+  string scope = 3;
+  // expires_at is the token's expiration time. Zero value means unknown.
+  google.protobuf.Timestamp expires_at = 4;
+  // issued_at is the token's issue time. Zero value means unknown.
+  google.protobuf.Timestamp issued_at = 5;
+}
+
+message MeRequest {}
+
+message MeResponse {
+  Principal principal = 1;
+}
+
+// Principal is the normalized identity of the current caller.
+//
+// Field set is aligned with kernel authn.Principal (github.com/aisphereio/
+// kernel/authn.Principal). The kernel type has additional internal fields
+// (Provider, ExternalID, Issuer, Audience, TenantID, AppID, IssuedAt) that
+// are not exposed here because they are not useful to typical frontend
+// consumers; if a future use case needs them, add fields rather than
+// exposing the kernel struct verbatim.
+message Principal {
+  string subject_type = 1;
+  string subject_id = 2;
+  string username = 3;
+  string name = 4;
+  string display_name = 5;
+  string email = 6;
+  string avatar = 7;
+  string org_id = 8;
+  string project_id = 9;
+  repeated string roles = 10;
+  repeated string groups = 11;
+  bool is_authenticated = 12;
+  // phone is the user's phone number when available from the IdP.
+  // Maps to kernel authn.Principal.Phone.
+  string phone = 13;
+  // scopes are the OAuth/OIDC scopes attached to the current access token.
+  // Frontends can use this to gate UI affordances (e.g. hide "write"
+  // buttons when the token lacks the write scope).
+  // Maps to kernel authn.Principal.Scopes.
+  repeated string scopes = 14;
+  // auth_method records how the subject authenticated. Common values match
+  // the kernel authn.AuthMethod* constants: "oauth", "oidc", "jwt",
+  // "api_key", "mtls", "session", "dev_token", "none".
+  // Maps to kernel authn.Principal.AuthMethod.
+  string auth_method = 15;
+  // expires_at is when the current access token expires. Frontends should
+  // use this to schedule proactive token refreshes before the token
+  // expires, rather than waiting for a 401 to trigger a reactive refresh.
+  // Zero value means the expiry is unknown (e.g. the IdP did not return
+  // an exp claim).
+  // Maps to kernel authn.Principal.ExpiresAt.
+  google.protobuf.Timestamp expires_at = 16;
+  // attributes carries provider-specific claims (e.g. Casdoor owner/name,
+  // external ID, signin method, custom fields) that are not part of the
+  // canonical Principal schema. Values must be JSON-serializable.
+  // Maps to kernel authn.Principal.Attributes.
+  //
+  // NOTE: some attributes (such as `access_token`) are sensitive and
+  // SHOULD be filtered out by the service layer before returning to
+  // frontend clients. See kernel/authn/casdoor/token.go:principalFromClaims
+  // for the list of attributes currently set by the Casdoor adapter.
+  google.protobuf.Struct attributes = 17;
+}

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package aisphere.hub.audit.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/audit/v1;auditv1";
+
+// AuditService exposes a read-only audit log query API.
+//
+// Audit records are written by business modules (skill.create /
+// skill.delete / skill.share.* etc.) via auditx.Recorder. This service
+// lets frontend "activity feed" UIs query those records by actor,
+// resource, action, time range, etc.
+//
+// ## Authorization
+//
+// Querying audit records requires no special permission today — any
+// authenticated user can query any record. This is acceptable for dev
+// and small-team deployments. For multi-tenant production, gate this
+// RPC behind an "audit.read" permission via authz, OR filter results
+// by the caller's org / project so users only see their own org's
+// audit trail.
+service AuditService {
+  // QueryAuditRecords returns audit records matching the filter.
+  // Results are sorted by time descending (newest first).
+  rpc QueryAuditRecords(QueryAuditRecordsRequest) returns (QueryAuditRecordsResponse) {
+    option (google.api.http) = {
+      get: "/v1/audit/records"
+    };
+  }
+}
+
+// AuditRecord is one security audit event. Mirrors kernel auditx.Record.
+message AuditRecord {
+  string id = 1;
+  google.protobuf.Timestamp time = 2;
+  string action = 3;          // e.g. "skill.create", "skill.share.delete"
+  string result = 4;          // "success" | "denied" | "failure"
+  string severity = 5;        // "info" | "warning" | "critical"
+  string reason = 6;          // error message on failure / denial
+  AuditActor actor = 7;
+  AuditResource resource = 8;
+  string request_id = 9;
+  string trace_id = 10;
+  string client_ip = 11;
+  string user_agent = 12;
+  google.protobuf.Struct metadata = 13;
+}
+
+message AuditActor {
+  string subject_id = 1;
+  string subject_type = 2;
+  string tenant_id = 3;
+  string org_id = 4;
+  string project_id = 5;
+  string name = 6;
+  string email = 7;
+}
+
+message AuditResource {
+  string type = 1;
+  string id = 2;
+  string tenant_id = 3;
+  string org_id = 4;
+  string project_id = 5;
+}
+
+message QueryAuditRecordsRequest {
+  // Filter fields. Empty fields are wildcards.
+  string actor_id = 1;
+  string actor_type = 2;
+  string resource_type = 3;
+  string resource_id = 4;
+  string action = 5;
+  string result = 6;
+  string tenant_id = 7;
+  string org_id = 8;
+  string project_id = 9;
+  google.protobuf.Timestamp from = 10;
+  google.protobuf.Timestamp to = 11;
+  int32 limit = 12;  // default 100, max 1000
+}
+
+message QueryAuditRecordsResponse {
+  repeated AuditRecord records = 1;
+  int32 total = 2;  // number of records returned (not total in store)
+}
