@@ -102,6 +102,10 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 		srv.HandleFunc("/internal/dtm/skill/package/promote_compensate", dtmSkill.CompensatePackage)
 		srv.HandleFunc("/internal/dtm/skill/metadata/upsert", dtmSkill.UpsertMetadata)
 		srv.HandleFunc("/internal/dtm/skill/metadata/upsert_compensate", dtmSkill.CompensateMetadata)
+		srv.HandleFunc("/internal/dtm/skill/draft/object/promote", dtmSkill.PromoteDraftObject)
+		srv.HandleFunc("/internal/dtm/skill/draft/object/promote_compensate", dtmSkill.CompensateDraftObject)
+		srv.HandleFunc("/internal/dtm/skill/draft/metadata/upsert", dtmSkill.UpsertDraftMetadata)
+		srv.HandleFunc("/internal/dtm/skill/draft/metadata/upsert_compensate", dtmSkill.CompensateDraftMetadata)
 	}
 	srv.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

@@ -1,0 +1,1080 @@
+diff --git a/README.md b/README.md
+index 429ae4c..6fa1c86 100644
+--- a/README.md
++++ b/README.md
+@@ -83,3 +83,8 @@ go test ./...
+ The generated `go.mod` contains a local `replace github.com/aisphereio/kernel => ../kernel`
+ for development against the latest sibling Kernel module. Remove or adjust it
+ when publishing the service outside the local repository layout.
++
++
++## Skill storage
++
++Skill versions use directory-first S3 storage. See `docs/ai/skill-directory-first-storage.md`.
+diff --git a/docs/ai/skill-directory-first-storage.md b/docs/ai/skill-directory-first-storage.md
+new file mode 100644
+index 0000000..65642cb
+--- /dev/null
++++ b/docs/ai/skill-directory-first-storage.md
+@@ -0,0 +1,88 @@
++# Skill Directory-First Storage
++
++Status: breaking-change proposal implemented in API module.
++
++## Decision
++
++Skill runtime storage is **directory-first**:
++
++```text
++skills/{skill_name}/drafts/{draft_version}/objects/{content_sha256}
++skills/{skill_name}/versions/{version}/revisions/{tree_sha256}/files/{path}
++skills/{skill_name}/versions/{version}/revisions/{tree_sha256}/manifest.json
++```
++
++`package.zip` is no longer the primary persisted representation of a Skill version. A zip file is only:
++
++1. an **import format** uploaded by a user or CI system, parsed once into version files;
++2. an **export format** generated on demand when clients call the download endpoint.
++
++This avoids reading and extracting a zip just to show a file tree, read one file, or sync a Skill into a sandbox/file server.
++
++## Why not store only zip?
++
++Zip-only storage makes common operations expensive and awkward:
++
++- UI file tree needs a zip read + unzip or a separately maintained manifest.
++- Reading one file requires fetching the whole package.
++- Syncing to a sandbox or file server naturally wants a directory layout.
++- Updating one file forces rewriting the whole package.
++- Failed metadata commits after zip promotion need compensation but cannot help with partial runtime sync.
++
++Directory-first storage makes the S3 prefix itself the canonical runtime layout. The manifest records file metadata and object keys, so UI/runtime/sandbox consumers can list the tree and fetch only the files they need.
++
++## Version immutability
++
++Published versions are immutable snapshots. The object prefix includes the tree hash:
++
++```text
++skills/demo/versions/0.1.0/revisions/<tree_sha256>/files/SKILL.md
++skills/demo/versions/0.1.0/revisions/<tree_sha256>/files/prompts/main.md
++skills/demo/versions/0.1.0/revisions/<tree_sha256>/manifest.json
++```
++
++Even when the same semantic version is overwritten during development, the new commit writes a new revision prefix first. If PG metadata commit fails, DTM compensation deletes only the new revision prefix and does not corrupt the previously committed revision.
++
++## PG metadata
++
++PG stores control metadata only:
++
++- skill name, owner, visibility, current version;
++- skill version status and author;
++- `sha256` = canonical tree hash;
++- `size_bytes` = total file bytes;
++- `manifest_json` = storage control document with `revision_prefix`, `files_prefix`, `manifest_object_key`, `tree_sha256`.
++
++The file tree source of truth for committed versions is the S3 manifest. Draft workspaces still keep editable path metadata in PG because they are mutable.
++
++## DTM flow for commit/upload
++
++The version save saga is:
++
++```text
++1. Stage each file object under skills/_tmp/dtm/{gid}/version/...
++2. DTM branch promote_version_directory:
++   copy staged objects into the immutable version files prefix
++   write manifest.json
++3. DTM branch upsert_metadata:
++   write skill + skill_version metadata to PG
++4. Compensation:
++   delete only the new revision prefix / manifest objects
++```
++
++Because the final prefix contains `tree_sha256`, compensation is safe for overwrite scenarios.
++
++## Runtime sync
++
++A sandbox/file-server sync should:
++
++1. read skill version metadata from PG;
++2. fetch `manifest_object_key` from S3;
++3. for each manifest file entry, download `object_key` into local `{path}`;
++4. skip entries where `kind=directory`, creating local directories as needed.
++
++No zip extraction is needed for the runtime path.
++
++## Export download
++
++`DownloadSkillPackage` remains available for compatibility. It now builds a zip on demand from the version manifest and file objects. This keeps external UX simple without making zip the canonical storage model.
+diff --git a/docs/ai/skill-s3-first-dtm.md b/docs/ai/skill-s3-first-dtm.md
+index db0ea10..63f7283 100644
+--- a/docs/ai/skill-s3-first-dtm.md
++++ b/docs/ai/skill-s3-first-dtm.md
+@@ -129,3 +129,14 @@ skill:
+ ```
+ 
+ `service_base_url` must be reachable by the DTM server.
++
++## 2026-06 directory-first update
++
++The storage model has been changed from `package.zip`-first to directory-first. New versions are stored under an immutable S3 prefix:
++
++```text
++skills/{skill_name}/versions/{version}/revisions/{tree_sha256}/files/{path}
++skills/{skill_name}/versions/{version}/revisions/{tree_sha256}/manifest.json
++```
++
++The old `package.zip` object is no longer the primary runtime representation. Zip upload is parsed into directory objects; zip download is generated on demand from the manifest.
+diff --git a/internal/biz/skill.go b/internal/biz/skill.go
+index 2fdb73b..982efb4 100644
+--- a/internal/biz/skill.go
++++ b/internal/biz/skill.go
+@@ -631,8 +631,19 @@ func (uc *SkillUsecase) UploadSkillPackage(ctx context.Context, principal authn.
+ 		}),
+ 	}
+ 
+-	// 4. Build file rows from zip resources.
+-	files := make([]*SkillFile, 0, len(parsed.Resources))
++	// 4. Build version files from zip resources. SKILL.md is the entrypoint
++	// and must be stored as a normal version file, not just parsed for metadata.
++	files := make([]*SkillFile, 0, len(parsed.Resources)+1)
++	files = append(files, &SkillFile{
++		SkillName: name,
++		Version:   versionName,
++		Path:      "SKILL.md",
++		Name:      "SKILL.md",
++		Type:      "text/markdown; charset=utf-8",
++		Size:      int64(len([]byte(parsed.SkillMD))),
++		Binary:    false,
++		Content:   parsed.SkillMD,
++	})
+ 	for _, r := range parsed.Resources {
+ 		files = append(files, &SkillFile{
+ 			SkillName: name,
+@@ -1408,6 +1419,7 @@ type skillzipBridgeResult struct {
+ 	Name        string
+ 	Description string
+ 	Version     string
++	SkillMD     string
+ 	Metadata    map[string]string
+ 	Resources   []skillzipBridgeResource
+ }
+diff --git a/internal/biz/skill_draft.go b/internal/biz/skill_draft.go
+index 427103d..3b49984 100644
+--- a/internal/biz/skill_draft.go
++++ b/internal/biz/skill_draft.go
+@@ -165,18 +165,12 @@ func (uc *SkillUsecase) CommitSkillDraft(ctx context.Context, principal authn.Pr
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-	md5sum := md5Hex(packageBytes)
+-	sha256sum := sha256Hex(packageBytes)
+ 	version := &SkillVersion{
+ 		SkillName: in.SkillName,
+ 		Version:   versionName,
+ 		Status:    SkillVersionStatusDraft,
+ 		Author:    principal.SubjectID,
+ 		CommitMsg: in.CommitMsg,
+-		MD5:       md5sum,
+-		SHA256:    sha256sum,
+-		SizeBytes: int64(len(packageBytes)),
+-		Revision:  sha256sum,
+ 		ManifestJSON: mustJSON(map[string]any{
+ 			"name":       skill.Name,
+ 			"version":    versionName,
+diff --git a/internal/biz/skillzip_bridge.go b/internal/biz/skillzip_bridge.go
+index b6380ed..ca01b74 100644
+--- a/internal/biz/skillzip_bridge.go
++++ b/internal/biz/skillzip_bridge.go
+@@ -32,6 +32,7 @@ func parseSkillZip(b []byte) (*skillzipBridgeResult, error) {
+ 		Name:        parsed.Name,
+ 		Description: parsed.Description,
+ 		Version:     parsed.Version,
++		SkillMD:     parsed.SkillMD,
+ 		Metadata:    parsed.Metadata,
+ 		Resources:   resources,
+ 	}, nil
+diff --git a/internal/data/skill.go b/internal/data/skill.go
+index 575acaf..5c59343 100644
+--- a/internal/data/skill.go
++++ b/internal/data/skill.go
+@@ -762,11 +762,7 @@ func (r *skillRepo) cleanupS3ObjectsAsync(keys []string) {
+ 	go func() {
+ 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+ 		defer cancel()
+-		for _, key := range dedupeStrings(keys) {
+-			if err := r.resources.ObjectStore.DeleteObject(ctx, key); err != nil {
+-				r.logger(ctx).Warn("skill s3 async cleanup failed", logx.String("key", key), logx.Err(err))
+-			}
+-		}
++		r.cleanupS3ObjectsSync(ctx, keys)
+ 	}()
+ }
+ 
+diff --git a/internal/data/skill_draft.go b/internal/data/skill_draft.go
+index f90f8e3..9e4552d 100644
+--- a/internal/data/skill_draft.go
++++ b/internal/data/skill_draft.go
+@@ -1,8 +1,6 @@
+ package data
+ 
+ import (
+-	"archive/zip"
+-	"bytes"
+ 	"context"
+ 	"crypto/sha256"
+ 	"encoding/base64"
+@@ -317,37 +315,14 @@ func (r *skillRepo) BuildSkillPackageFromDraft(ctx context.Context, name, versio
+ 	if len(rows) == 0 {
+ 		return nil, nil, errorx.BadRequest(errorx.Code("SKILL_DRAFT_EMPTY"), "skill draft has no files")
+ 	}
+-	buf := bytes.NewBuffer(nil)
+-	zw := zip.NewWriter(buf)
+ 	files := make([]*biz.SkillFile, 0, len(rows))
+ 	for _, row := range rows {
+ 		if row.Kind == skillDraftKindDirectory {
+-			_, _ = zw.Create(row.Path + "/")
+ 			files = append(files, draftRowToSkillFile(&row, false))
+ 			continue
+ 		}
+ 		content, binary, err := r.readDraftObjectContent(ctx, row)
+ 		if err != nil {
+-			_ = zw.Close()
+-			return nil, nil, err
+-		}
+-		var body []byte
+-		if binary {
+-			body, err = base64.StdEncoding.DecodeString(content)
+-			if err != nil {
+-				_ = zw.Close()
+-				return nil, nil, errorx.Wrap(err, errorx.Code("SKILL_DRAFT_FILE_INVALID"), errorx.WithMessage("binary draft file is invalid base64"))
+-			}
+-		} else {
+-			body = []byte(content)
+-		}
+-		w, err := zw.Create(row.Path)
+-		if err != nil {
+-			_ = zw.Close()
+-			return nil, nil, err
+-		}
+-		if _, err := w.Write(body); err != nil {
+-			_ = zw.Close()
+ 			return nil, nil, err
+ 		}
+ 		f := draftRowToSkillFile(&row, false)
+@@ -355,10 +330,10 @@ func (r *skillRepo) BuildSkillPackageFromDraft(ctx context.Context, name, versio
+ 		f.Binary = binary
+ 		files = append(files, f)
+ 	}
+-	if err := zw.Close(); err != nil {
+-		return nil, nil, err
+-	}
+-	return buf.Bytes(), files, nil
++	// Directory-first storage does not build a zip during commit. The first
++	// return value is kept for interface compatibility and export downloads are
++	// zipped on demand from the immutable version directory.
++	return nil, files, nil
+ }
+ 
+ func (r *skillRepo) upsertDraftDirectory(ctx context.Context, name, version, dirPath, actor string) (*biz.SkillFile, error) {
+diff --git a/internal/data/skill_s3first.go b/internal/data/skill_s3first.go
+index 926c991..30cc37d 100644
+--- a/internal/data/skill_s3first.go
++++ b/internal/data/skill_s3first.go
+@@ -4,6 +4,7 @@ import (
+ 	"archive/zip"
+ 	"bytes"
+ 	"context"
++	"crypto/md5"
+ 	"crypto/sha256"
+ 	"encoding/base64"
+ 	"encoding/hex"
+@@ -14,6 +15,7 @@ import (
+ 	"net/http"
+ 	"path"
+ 	"sort"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -31,14 +33,29 @@ import (
+ const (
+ 	skillPackageContentType  = "application/zip"
+ 	skillManifestContentType = "application/json"
+-	skillManifestSchemaV1    = 1
++	skillManifestSchemaV2    = 2
++
++	// skillStorageFormatDirectory means the released version is stored as a
++	// real S3 prefix directory. Zip files are only import/export artifacts.
++	skillStorageFormatDirectory = "directory"
+ )
+ 
+ type skillStorageControl struct {
+-	Storage           string `json:"storage"`
+-	PackageObjectKey  string `json:"package_object_key"`
+-	PackageSHA256     string `json:"package_sha256"`
+-	PackageSize       int64  `json:"package_size"`
++	Storage string `json:"storage"`
++	Format  string `json:"format"`
++
++	// RevisionPrefix is the immutable root for one committed version snapshot:
++	// skills/{name}/versions/{version}/revisions/{tree_sha}/
++	RevisionPrefix string `json:"revision_prefix,omitempty"`
++	FilesPrefix    string `json:"files_prefix,omitempty"`
++	TreeSHA256     string `json:"tree_sha256,omitempty"`
++
++	// Package* are kept for backward-compatible JSON parsing. New versions do
++	// not store package.zip as the primary object.
++	PackageObjectKey string `json:"package_object_key,omitempty"`
++	PackageSHA256    string `json:"package_sha256,omitempty"`
++	PackageSize      int64  `json:"package_size,omitempty"`
++
+ 	ManifestObjectKey string `json:"manifest_object_key"`
+ 	ManifestSHA256    string `json:"manifest_sha256"`
+ 	ManifestSize      int64  `json:"manifest_size"`
+@@ -48,87 +65,152 @@ type skillStorageControl struct {
+ }
+ 
+ type skillPackageManifest struct {
+-	SchemaVersion    int                        `json:"schema_version"`
+-	SkillName        string                     `json:"skill_name"`
+-	Version          string                     `json:"version"`
+-	PackageObjectKey string                     `json:"package_object_key"`
+-	PackageSHA256    string                     `json:"package_sha256"`
+-	PackageSize      int64                      `json:"package_size"`
+-	Files            []skillPackageManifestFile `json:"files"`
+-	Metadata         map[string]any             `json:"metadata,omitempty"`
+-	CreatedAt        string                     `json:"created_at"`
++	SchemaVersion int    `json:"schema_version"`
++	StorageFormat string `json:"storage_format"`
++	SkillName     string `json:"skill_name"`
++	Version       string `json:"version"`
++
++	RevisionPrefix string `json:"revision_prefix,omitempty"`
++	FilesPrefix    string `json:"files_prefix,omitempty"`
++	TreeSHA256     string `json:"tree_sha256,omitempty"`
++	TotalFileSize  int64  `json:"total_file_size,omitempty"`
++
++	// Package* are deprecated. They exist only so older JSON does not fail to
++	// unmarshal while we migrate to directory-first storage.
++	PackageObjectKey string `json:"package_object_key,omitempty"`
++	PackageSHA256    string `json:"package_sha256,omitempty"`
++	PackageSize      int64  `json:"package_size,omitempty"`
++
++	Files     []skillPackageManifestFile `json:"files"`
++	Metadata  map[string]any             `json:"metadata,omitempty"`
++	CreatedAt string                     `json:"created_at"`
+ }
+ 
+ type skillPackageManifestFile struct {
+-	Path   string `json:"path"`
+-	Name   string `json:"name"`
+-	Type   string `json:"type"`
+-	Size   int64  `json:"size"`
+-	Binary bool   `json:"binary"`
+-	SHA256 string `json:"sha256,omitempty"`
++	Path        string `json:"path"`
++	Name        string `json:"name"`
++	Type        string `json:"type"`
++	Kind        string `json:"kind,omitempty"`
++	ContentType string `json:"content_type,omitempty"`
++	Size        int64  `json:"size"`
++	Binary      bool   `json:"binary"`
++	SHA256      string `json:"sha256,omitempty"`
++	ObjectKey   string `json:"object_key,omitempty"`
++}
++
++type skillVersionFileObjectPayload struct {
++	Path        string `json:"path"`
++	Name        string `json:"name"`
++	Type        string `json:"type"`
++	Kind        string `json:"kind"`
++	ContentType string `json:"content_type"`
++	Size        int64  `json:"size"`
++	Binary      bool   `json:"binary"`
++	SHA256      string `json:"sha256,omitempty"`
++	TempKey     string `json:"temp_key,omitempty"`
++	ObjectKey   string `json:"object_key,omitempty"`
++}
++
++type skillVersionFileObjectWrite struct {
++	skillVersionFileObjectPayload
++	Body []byte `json:"-"`
+ }
+ 
+ type skillPackageSagaPayload struct {
+-	GID               string            `json:"gid"`
+-	Skill             *biz.Skill        `json:"skill"`
+-	Version           *biz.SkillVersion `json:"version"`
+-	Overwrite         bool              `json:"overwrite"`
+-	TempPackageKey    string            `json:"temp_package_key"`
+-	PackageObjectKey  string            `json:"package_object_key"`
+-	ManifestObjectKey string            `json:"manifest_object_key"`
+-	ManifestJSON      string            `json:"manifest_json"`
+-	ManifestSHA256    string            `json:"manifest_sha256"`
+-	PackageSHA256     string            `json:"package_sha256"`
+-	PackageSize       int64             `json:"package_size"`
+-	FileCount         int               `json:"file_count"`
+-	TotalFileSize     int64             `json:"total_file_size"`
+-	RetentionMax      int               `json:"retention_max"`
++	GID       string            `json:"gid"`
++	Skill     *biz.Skill        `json:"skill"`
++	Version   *biz.SkillVersion `json:"version"`
++	Overwrite bool              `json:"overwrite"`
++
++	RevisionPrefix    string                          `json:"revision_prefix"`
++	FilesPrefix       string                          `json:"files_prefix"`
++	Files             []skillVersionFileObjectPayload `json:"files"`
++	ManifestObjectKey string                          `json:"manifest_object_key"`
++	ManifestJSON      string                          `json:"manifest_json"`
++	ManifestSHA256    string                          `json:"manifest_sha256"`
++	TreeSHA256        string                          `json:"tree_sha256"`
++	FileCount         int                             `json:"file_count"`
++	TotalFileSize     int64                           `json:"total_file_size"`
++	RetentionMax      int                             `json:"retention_max"`
++
++	// Deprecated package fields kept so old branch payloads decode safely.
++	TempPackageKey   string `json:"temp_package_key,omitempty"`
++	PackageObjectKey string `json:"package_object_key,omitempty"`
++	PackageSHA256    string `json:"package_sha256,omitempty"`
++	PackageSize      int64  `json:"package_size,omitempty"`
++}
++
++type skillVersionDirectoryPlan struct {
++	RevisionPrefix    string
++	FilesPrefix       string
++	ManifestObjectKey string
++	ManifestBytes     []byte
++	ManifestSHA256    string
++	TreeSHA256        string
++	FileCount         int
++	TotalFileSize     int64
++	Files             []skillVersionFileObjectWrite
+ }
+ 
+ func (r *skillRepo) saveSkillPackageS3First(ctx context.Context, skill *biz.Skill, version *biz.SkillVersion, files []*biz.SkillFile, packageBytes []byte, overwrite bool) (*biz.SkillVersion, error) {
++	_ = packageBytes // Zip is now an import/export artifact, not primary storage.
+ 	if r.resources == nil || r.resources.ObjectStore == nil {
+ 		return nil, errorx.Unavailable(errorx.Code("SKILL_OBJECT_STORE_REQUIRED"), "skill storage requires object store; enable data.object_store")
+ 	}
+ 	if skill == nil || version == nil {
+ 		return nil, biz.ErrSkillInvalidArgument
+ 	}
+-	packageKey := skillPackageObjectKey(skill.Name, version.Version)
+-	manifestKey := skillManifestObjectKey(skill.Name, version.Version)
+-	manifestBytes, manifestHash, fileCount, totalFileSize, err := buildSkillPackageManifest(skill, version, files, packageKey)
++	plan, err := buildSkillVersionDirectoryPlan(skill, version, files)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+ 
+-	version.Revision = packageKey
++	version.MD5 = md5HexData([]byte(plan.TreeSHA256))
++	version.SHA256 = plan.TreeSHA256
++	version.SizeBytes = plan.TotalFileSize
++	version.Revision = "objectstore://" + plan.RevisionPrefix
+ 	version.ManifestJSON = buildSkillStorageControlJSON(skillStorageControl{
+ 		Storage:           "s3",
+-		PackageObjectKey:  packageKey,
+-		PackageSHA256:     version.SHA256,
+-		PackageSize:       int64(len(packageBytes)),
+-		ManifestObjectKey: manifestKey,
+-		ManifestSHA256:    manifestHash,
+-		ManifestSize:      int64(len(manifestBytes)),
+-		FileCount:         fileCount,
+-		TotalFileSize:     totalFileSize,
++		Format:            skillStorageFormatDirectory,
++		RevisionPrefix:    plan.RevisionPrefix,
++		FilesPrefix:       plan.FilesPrefix,
++		TreeSHA256:        plan.TreeSHA256,
++		ManifestObjectKey: plan.ManifestObjectKey,
++		ManifestSHA256:    plan.ManifestSHA256,
++		ManifestSize:      int64(len(plan.ManifestBytes)),
++		FileCount:         plan.FileCount,
++		TotalFileSize:     plan.TotalFileSize,
+ 		UpdatedAtUnix:     time.Now().Unix(),
+ 	})
+-	skill.SourceType = "s3"
+-	skill.SourceURI = "objectstore://" + packageKey
++	skill.SourceType = "s3-prefix"
++	skill.SourceURI = "objectstore://" + plan.FilesPrefix
+ 
+-	if r.resources.DTM != nil {
+-		return r.saveSkillPackageWithDTM(ctx, skill, version, overwrite, packageBytes, packageKey, manifestKey, manifestBytes, manifestHash, fileCount, totalFileSize)
++	if r.resources.DTM != nil && r.resources.DTM.Enabled() {
++		return r.saveSkillPackageWithDTM(ctx, skill, version, overwrite, plan)
+ 	}
+-	return r.saveSkillPackageDirectS3(ctx, skill, version, overwrite, packageBytes, packageKey, manifestKey, manifestBytes)
++	return r.saveSkillPackageDirectS3(ctx, skill, version, overwrite, plan)
+ }
+ 
+-func (r *skillRepo) saveSkillPackageWithDTM(ctx context.Context, skill *biz.Skill, version *biz.SkillVersion, overwrite bool, packageBytes []byte, packageKey, manifestKey string, manifestBytes []byte, manifestHash string, fileCount int, totalFileSize int64) (*biz.SkillVersion, error) {
++func (r *skillRepo) saveSkillPackageWithDTM(ctx context.Context, skill *biz.Skill, version *biz.SkillVersion, overwrite bool, plan *skillVersionDirectoryPlan) (*biz.SkillVersion, error) {
+ 	gid, err := r.resources.DTM.NewGID(ctx)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-	tmpKey := skillTempPackageObjectKey(gid)
+-	if err := r.putObject(ctx, tmpKey, packageBytes, skillPackageContentType); err != nil {
+-		return nil, errorx.Wrap(err, errorx.Code("SKILL_PACKAGE_STAGE_FAILED"), errorx.WithMessage("failed to stage skill package in object store"))
++	payloadFiles := make([]skillVersionFileObjectPayload, 0, len(plan.Files))
++	stagedKeys := make([]string, 0, len(plan.Files))
++	for i := range plan.Files {
++		f := plan.Files[i]
++		if f.Kind == skillDraftKindDirectory {
++			payloadFiles = append(payloadFiles, f.skillVersionFileObjectPayload)
++			continue
++		}
++		f.TempKey = skillTempVersionFileObjectKey(gid, f.SHA256, i)
++		if err := r.putObject(ctx, f.TempKey, f.Body, f.ContentType); err != nil {
++			r.cleanupS3ObjectsSync(ctx, stagedKeys)
++			return nil, errorx.Wrap(err, errorx.Code("SKILL_VERSION_FILE_STAGE_FAILED"), errorx.WithMessage("failed to stage skill version file"))
++		}
++		stagedKeys = append(stagedKeys, f.TempKey)
++		payloadFiles = append(payloadFiles, f.skillVersionFileObjectPayload)
+ 	}
+ 
+ 	payload := skillPackageSagaPayload{
+@@ -136,57 +218,82 @@ func (r *skillRepo) saveSkillPackageWithDTM(ctx context.Context, skill *biz.Skil
+ 		Skill:             cloneSkillForSaga(skill),
+ 		Version:           cloneVersionForSaga(version),
+ 		Overwrite:         overwrite,
+-		TempPackageKey:    tmpKey,
+-		PackageObjectKey:  packageKey,
+-		ManifestObjectKey: manifestKey,
+-		ManifestJSON:      string(manifestBytes),
+-		ManifestSHA256:    manifestHash,
+-		PackageSHA256:     version.SHA256,
+-		PackageSize:       int64(len(packageBytes)),
+-		FileCount:         fileCount,
+-		TotalFileSize:     totalFileSize,
++		RevisionPrefix:    plan.RevisionPrefix,
++		FilesPrefix:       plan.FilesPrefix,
++		Files:             payloadFiles,
++		ManifestObjectKey: plan.ManifestObjectKey,
++		ManifestJSON:      string(plan.ManifestBytes),
++		ManifestSHA256:    plan.ManifestSHA256,
++		TreeSHA256:        plan.TreeSHA256,
++		FileCount:         plan.FileCount,
++		TotalFileSize:     plan.TotalFileSize,
+ 		RetentionMax:      r.resources.SkillConfig.Storage.MaxVersions,
+ 	}
+ 
+-	saga := dtmx.NewSaga(gid, "skill.package.save", dtmx.WithSagaWaitResult(true))
+-	saga = saga.AddHTTP("promote_package", r.resources.DTM.BranchURL("/skill/package/promote"), r.resources.DTM.BranchURL("/skill/package/promote_compensate"), payload)
++	saga := dtmx.NewSaga(gid, "skill.version.directory.save", dtmx.WithSagaWaitResult(true))
++	saga = saga.AddHTTP("promote_version_directory", r.resources.DTM.BranchURL("/skill/package/promote"), r.resources.DTM.BranchURL("/skill/package/promote_compensate"), payload)
+ 	saga = saga.AddHTTP("upsert_metadata", r.resources.DTM.BranchURL("/skill/metadata/upsert"), r.resources.DTM.BranchURL("/skill/metadata/upsert_compensate"), payload)
+ 	if _, err := r.resources.DTM.SubmitSaga(ctx, saga); err != nil {
+-		r.compensateS3Delete(ctx, tmpKey)
++		r.cleanupS3ObjectsSync(ctx, stagedKeys)
+ 		return nil, err
+ 	}
+-	go r.bestEffortDeleteObject(tmpKey)
++	go func(keys []string) {
++		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
++		defer cancel()
++		r.cleanupS3ObjectsSync(cleanupCtx, keys)
++	}(stagedKeys)
+ 	return r.GetSkillVersion(ctx, skill.Name, version.Version)
+ }
+ 
+-func (r *skillRepo) saveSkillPackageDirectS3(ctx context.Context, skill *biz.Skill, version *biz.SkillVersion, overwrite bool, packageBytes []byte, packageKey, manifestKey string, manifestBytes []byte) (*biz.SkillVersion, error) {
+-	if err := r.putObject(ctx, packageKey, packageBytes, skillPackageContentType); err != nil {
+-		return nil, errorx.Wrap(err, errorx.Code("SKILL_PACKAGE_UPLOAD_FAILED"), errorx.WithMessage("failed to upload skill package to object store"))
++func (r *skillRepo) saveSkillPackageDirectS3(ctx context.Context, skill *biz.Skill, version *biz.SkillVersion, overwrite bool, plan *skillVersionDirectoryPlan) (*biz.SkillVersion, error) {
++	uploaded := make([]string, 0, len(plan.Files)+1)
++	for i := range plan.Files {
++		f := plan.Files[i]
++		if f.Kind == skillDraftKindDirectory {
++			continue
++		}
++		if err := r.putObject(ctx, f.ObjectKey, f.Body, f.ContentType); err != nil {
++			r.cleanupS3ObjectsSync(ctx, uploaded)
++			return nil, errorx.Wrap(err, errorx.Code("SKILL_VERSION_FILE_UPLOAD_FAILED"), errorx.WithMessage("failed to upload skill version file"))
++		}
++		uploaded = append(uploaded, f.ObjectKey)
+ 	}
+-	if err := r.putObject(ctx, manifestKey, manifestBytes, skillManifestContentType); err != nil {
+-		r.compensateS3Delete(ctx, packageKey)
++	if err := r.putObject(ctx, plan.ManifestObjectKey, plan.ManifestBytes, skillManifestContentType); err != nil {
++		r.cleanupS3ObjectsSync(ctx, uploaded)
+ 		return nil, errorx.Wrap(err, errorx.Code("SKILL_MANIFEST_UPLOAD_FAILED"), errorx.WithMessage("failed to upload skill manifest to object store"))
+ 	}
+-	if err := r.commitSkillPackageMetadata(ctx, skillPackageSagaPayload{Skill: skill, Version: version, Overwrite: overwrite, PackageObjectKey: packageKey, ManifestObjectKey: manifestKey, RetentionMax: r.resources.SkillConfig.Storage.MaxVersions}); err != nil {
+-		r.cleanupS3ObjectsAsync([]string{packageKey, manifestKey})
++	uploaded = append(uploaded, plan.ManifestObjectKey)
++	if err := r.commitSkillPackageMetadata(ctx, skillPackageSagaPayload{Skill: skill, Version: version, Overwrite: overwrite, RevisionPrefix: plan.RevisionPrefix, FilesPrefix: plan.FilesPrefix, Files: payloadFilesFromWrites(plan.Files), ManifestObjectKey: plan.ManifestObjectKey, TreeSHA256: plan.TreeSHA256, RetentionMax: r.resources.SkillConfig.Storage.MaxVersions}); err != nil {
++		r.cleanupS3ObjectsAsync(uploaded)
+ 		return nil, err
+ 	}
+ 	return r.GetSkillVersion(ctx, skill.Name, version.Version)
+ }
+ 
+-// BranchPromoteSkillPackage is the S3 action branch invoked by DTM.
++// BranchPromoteSkillPackage is the S3 action branch invoked by DTM. Despite
++// the historical name, this now promotes a staged version directory, not a zip.
+ func (r *skillRepo) BranchPromoteSkillPackage(ctx context.Context, payload skillPackageSagaPayload) error {
+ 	if r.resources == nil || r.resources.ObjectStore == nil {
+ 		return errorx.Unavailable(errorx.Code("SKILL_OBJECT_STORE_REQUIRED"), "skill storage requires object store")
+ 	}
+-	if payload.TempPackageKey == "" || payload.PackageObjectKey == "" || payload.ManifestObjectKey == "" {
++	if payload.ManifestObjectKey == "" || payload.ManifestJSON == "" {
+ 		return biz.ErrSkillInvalidArgument
+ 	}
+-	// Idempotency: if final object already exists with the expected SHA256,
+-	// treat the promote as success. DTM may retry action branches.
+-	if ok := r.objectExists(ctx, payload.PackageObjectKey); !ok {
+-		if _, err := r.resources.ObjectStore.CopyObject(ctx, payload.TempPackageKey, payload.PackageObjectKey, objectstorex.PutOptions{ContentType: skillPackageContentType}); err != nil {
+-			return errorx.Wrap(err, errorx.Code("SKILL_PACKAGE_PROMOTE_FAILED"), errorx.WithMessage("failed to promote staged skill package"))
++	for _, f := range payload.Files {
++		if f.Kind == skillDraftKindDirectory {
++			continue
++		}
++		if f.ObjectKey == "" {
++			return biz.ErrSkillInvalidArgument
++		}
++		if r.objectExists(ctx, f.ObjectKey) {
++			continue
++		}
++		if f.TempKey == "" {
++			return biz.ErrSkillInvalidArgument
++		}
++		if _, err := r.resources.ObjectStore.CopyObject(ctx, f.TempKey, f.ObjectKey, objectstorex.PutOptions{ContentType: f.ContentType}); err != nil {
++			return errorx.Wrap(err, errorx.Code("SKILL_VERSION_FILE_PROMOTE_FAILED"), errorx.WithMessage("failed to promote staged skill version file"))
+ 		}
+ 	}
+ 	if err := r.putObject(ctx, payload.ManifestObjectKey, []byte(payload.ManifestJSON), skillManifestContentType); err != nil {
+@@ -196,7 +303,7 @@ func (r *skillRepo) BranchPromoteSkillPackage(ctx context.Context, payload skill
+ }
+ 
+ func (r *skillRepo) BranchCompensateSkillPackage(ctx context.Context, payload skillPackageSagaPayload) error {
+-	r.cleanupS3ObjectsSync(ctx, []string{payload.PackageObjectKey, payload.ManifestObjectKey})
++	r.cleanupS3ObjectsSync(ctx, append(payloadFinalObjectKeys(payload), payload.ManifestObjectKey, payload.RevisionPrefix))
+ 	return nil
+ }
+ 
+@@ -243,7 +350,8 @@ func (r *skillRepo) commitSkillPackageMetadata(ctx context.Context, payload skil
+ 		var existing skillVersionModel
+ 		existingErr := tx.Where("skill_name = ? AND version = ?", versionRow.SkillName, versionRow.Version).First(&existing).Error
+ 		if existingErr == nil {
+-			if !payload.Overwrite && existing.SHA256 == versionRow.SHA256 && skillVersionPackageObjectKey(rowToSkillVersion(&existing)) == payload.PackageObjectKey {
++			existingVersion := rowToSkillVersion(&existing)
++			if !payload.Overwrite && existing.SHA256 == versionRow.SHA256 && skillVersionManifestObjectKey(existingVersion) == payload.ManifestObjectKey {
+ 				// Idempotent DTM retry of an already committed metadata branch.
+ 				return nil
+ 			}
+@@ -268,8 +376,8 @@ func (r *skillRepo) commitSkillPackageMetadata(ctx context.Context, payload skil
+ 			}
+ 			return mapped
+ 		}
+-		// S3-first: do not insert aihub_skill_files rows. The manifest stored in
+-		// S3 is the file tree source of truth; PG only stores control metadata.
++		// Directory-first: PG stores control metadata only. The manifest in S3 is
++		// the version file tree source of truth.
+ 		return nil
+ 	})
+ 	if err != nil {
+@@ -304,7 +412,7 @@ func (r *skillRepo) listSkillVersionFilesFromManifest(ctx context.Context, name,
+ 	}
+ 	out := make([]*biz.SkillFile, 0, len(manifest.Files))
+ 	for _, f := range manifest.Files {
+-		out = append(out, &biz.SkillFile{SkillName: name, Version: version, Path: f.Path, Name: f.Name, Type: f.Type, Size: f.Size, Binary: f.Binary})
++		out = append(out, manifestFileToSkillFile(name, version, f, false))
+ 	}
+ 	return out, nil
+ }
+@@ -325,15 +433,25 @@ func (r *skillRepo) getSkillVersionFileFromS3(ctx context.Context, name, version
+ 	if target == nil {
+ 		return nil, biz.ErrSkillFileNotFound
+ 	}
+-	body, err := r.readPackageObject(ctx, manifest.PackageObjectKey)
+-	if err != nil {
+-		return nil, err
++	out := manifestFileToSkillFile(name, version, *target, false)
++	if isManifestDirectory(*target) {
++		return out, nil
+ 	}
+-	content, binary, err := extractFileFromZip(body, cleanPath)
++	if target.ObjectKey == "" {
++		return nil, errorx.NotFound(errorx.Code("SKILL_FILE_OBJECT_MISSING"), "skill file has no object key")
++	}
++	body, err := r.readObjectBytes(ctx, target.ObjectKey, downloadSkillPackageMaxBytes, "SKILL_FILE_DOWNLOAD_FAILED")
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-	return &biz.SkillFile{SkillName: name, Version: version, Path: target.Path, Name: target.Name, Type: target.Type, Size: target.Size, Binary: binary, Content: content}, nil
++	if target.Binary {
++		out.Content = base64.StdEncoding.EncodeToString(body)
++		out.Binary = true
++	} else {
++		out.Content = string(body)
++		out.Binary = false
++	}
++	return out, nil
+ }
+ 
+ func (r *skillRepo) downloadSkillPackageS3First(ctx context.Context, name, version, ifNoneMatch string) (*biz.SkillPackageDownload, error) {
+@@ -345,11 +463,11 @@ func (r *skillRepo) downloadSkillPackageS3First(ctx context.Context, name, versi
+ 	if ifNoneMatch != "" && ifNoneMatch == etag {
+ 		return &biz.SkillPackageDownload{SkillName: name, Version: version, ETag: etag, MD5: meta.MD5, SHA256: meta.SHA256, NotModified: true}, nil
+ 	}
+-	key := skillVersionPackageObjectKey(meta)
+-	if key == "" {
+-		return nil, errorx.NotFound(errorx.Code("SKILL_PACKAGE_MISSING"), "skill version has no package object key")
++	manifest, err := r.loadSkillManifest(ctx, name, version)
++	if err != nil {
++		return nil, err
+ 	}
+-	body, err := r.readPackageObject(ctx, key)
++	body, err := r.buildZipFromVersionManifest(ctx, manifest)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -384,44 +502,191 @@ func (r *skillRepo) loadSkillManifest(ctx context.Context, name, version string)
+ 	return &manifest, nil
+ }
+ 
+-func (r *skillRepo) readPackageObject(ctx context.Context, key string) ([]byte, error) {
++func (r *skillRepo) readObjectBytes(ctx context.Context, key string, maxBytes int64, code string) ([]byte, error) {
+ 	rc, _, err := r.resources.ObjectStore.GetObject(ctx, key, objectstorex.GetOptions{})
+ 	if err != nil {
+ 		if errors.Is(err, objectstorex.ErrNotFound) {
+-			return nil, errorx.Wrap(biz.ErrSkillVersionNotFound, errorx.Code("SKILL_PACKAGE_MISSING"), errorx.WithMessage("skill package object not found in object store"))
++			return nil, errorx.Wrap(biz.ErrSkillVersionNotFound, errorx.Code("SKILL_OBJECT_MISSING"), errorx.WithMessage("skill object not found in object store"))
+ 		}
+-		return nil, errorx.Wrap(err, errorx.Code("SKILL_PACKAGE_DOWNLOAD_FAILED"), errorx.WithMessage("failed to download skill package from object store"))
++		return nil, errorx.Wrap(err, errorx.Code(code), errorx.WithMessage("failed to download skill object from object store"))
+ 	}
+ 	defer rc.Close()
+-	body, err := io.ReadAll(io.LimitReader(rc, downloadSkillPackageMaxBytes+1))
++	body, err := io.ReadAll(io.LimitReader(rc, maxBytes+1))
+ 	if err != nil {
+-		return nil, errorx.Wrap(err, errorx.Code("SKILL_PACKAGE_DOWNLOAD_FAILED"), errorx.WithMessage("failed to read skill package body"))
++		return nil, errorx.Wrap(err, errorx.Code(code), errorx.WithMessage("failed to read skill object body"))
+ 	}
+-	if int64(len(body)) > downloadSkillPackageMaxBytes {
+-		return nil, errorx.BadRequest(errorx.Code("SKILL_PACKAGE_TOO_LARGE"), "skill package exceeds download size limit")
++	if int64(len(body)) > maxBytes {
++		return nil, errorx.BadRequest(errorx.Code("SKILL_OBJECT_TOO_LARGE"), "skill object exceeds size limit")
+ 	}
+ 	return body, nil
+ }
+ 
+-func buildSkillPackageManifest(skill *biz.Skill, version *biz.SkillVersion, files []*biz.SkillFile, packageKey string) ([]byte, string, int, int64, error) {
+-	items := make([]skillPackageManifestFile, 0, len(files))
+-	var total int64
++func (r *skillRepo) buildZipFromVersionManifest(ctx context.Context, manifest *skillPackageManifest) ([]byte, error) {
++	buf := bytes.NewBuffer(nil)
++	zw := zip.NewWriter(buf)
++	files := append([]skillPackageManifestFile(nil), manifest.Files...)
++	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+ 	for _, f := range files {
+-		if f == nil {
++		if isManifestDirectory(f) {
++			_, _ = zw.Create(f.Path + "/")
+ 			continue
+ 		}
+-		sha := sha256FileContent(f)
+-		items = append(items, skillPackageManifestFile{Path: f.Path, Name: f.Name, Type: f.Type, Size: f.Size, Binary: f.Binary, SHA256: sha})
+-		total += f.Size
++		if f.ObjectKey == "" {
++			_ = zw.Close()
++			return nil, errorx.NotFound(errorx.Code("SKILL_FILE_OBJECT_MISSING"), "skill file has no object key")
++		}
++		body, err := r.readObjectBytes(ctx, f.ObjectKey, downloadSkillPackageMaxBytes, "SKILL_PACKAGE_EXPORT_FAILED")
++		if err != nil {
++			_ = zw.Close()
++			return nil, err
++		}
++		w, err := zw.Create(f.Path)
++		if err != nil {
++			_ = zw.Close()
++			return nil, err
++		}
++		if _, err := w.Write(body); err != nil {
++			_ = zw.Close()
++			return nil, err
++		}
++		if int64(buf.Len()) > downloadSkillPackageMaxBytes {
++			_ = zw.Close()
++			return nil, errorx.BadRequest(errorx.Code("SKILL_PACKAGE_TOO_LARGE"), "exported skill package exceeds download size limit")
++		}
++	}
++	if err := zw.Close(); err != nil {
++		return nil, err
++	}
++	if int64(buf.Len()) > downloadSkillPackageMaxBytes {
++		return nil, errorx.BadRequest(errorx.Code("SKILL_PACKAGE_TOO_LARGE"), "exported skill package exceeds download size limit")
++	}
++	return buf.Bytes(), nil
++}
++
++func buildSkillVersionDirectoryPlan(skill *biz.Skill, version *biz.SkillVersion, files []*biz.SkillFile) (*skillVersionDirectoryPlan, error) {
++	entries := make(map[string]*skillVersionFileObjectWrite, len(files)*2)
++	addDir := func(p string) error {
++		clean, err := cleanSkillPath(p)
++		if err != nil {
++			return err
++		}
++		if existing, ok := entries[clean]; ok && existing.Kind != skillDraftKindDirectory {
++			return errorx.Conflict(errorx.Code("SKILL_VERSION_PATH_CONFLICT"), "skill path conflicts with directory")
++		}
++		entries[clean] = &skillVersionFileObjectWrite{skillVersionFileObjectPayload: skillVersionFileObjectPayload{Path: clean, Name: path.Base(clean), Kind: skillDraftKindDirectory, Type: skillDraftKindDirectory}}
++		return nil
+ 	}
+-	sort.Slice(items, func(i, j int) bool { return items[i].Path < items[j].Path })
+-	manifest := skillPackageManifest{SchemaVersion: skillManifestSchemaV1, SkillName: skill.Name, Version: version.Version, PackageObjectKey: packageKey, PackageSHA256: version.SHA256, PackageSize: version.SizeBytes, Files: items, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
++	for _, f := range files {
++		if f == nil {
++			continue
++		}
++		clean, err := cleanSkillPath(f.Path)
++		if err != nil {
++			return nil, err
++		}
++		kind := skillDraftKindFile
++		if strings.EqualFold(strings.TrimSpace(f.Type), skillDraftKindDirectory) {
++			kind = skillDraftKindDirectory
++		}
++		if kind == skillDraftKindDirectory {
++			for _, parent := range parentDirs(clean) {
++				if err := addDir(parent); err != nil {
++					return nil, err
++				}
++			}
++			if err := addDir(clean); err != nil {
++				return nil, err
++			}
++			continue
++		}
++		for _, parent := range parentDirs(clean) {
++			if err := addDir(parent); err != nil {
++				return nil, err
++			}
++		}
++		body, binary, err := skillFileContentBytes(f)
++		if err != nil {
++			return nil, err
++		}
++		sha := sha256.Sum256(body)
++		shaHex := hex.EncodeToString(sha[:])
++		contentType := skillVersionContentType(f, clean, body, binary)
++		entries[clean] = &skillVersionFileObjectWrite{skillVersionFileObjectPayload: skillVersionFileObjectPayload{
++			Path:        clean,
++			Name:        firstNonEmptyStringData(f.Name, path.Base(clean)),
++			Type:        strings.TrimSpace(f.Type),
++			Kind:        skillDraftKindFile,
++			ContentType: contentType,
++			Size:        int64(len(body)),
++			Binary:      binary,
++			SHA256:      shaHex,
++		}, Body: body}
++	}
++	if len(entries) == 0 {
++		return nil, errorx.BadRequest(errorx.Code("SKILL_VERSION_EMPTY"), "skill version has no files")
++	}
++	writes := make([]skillVersionFileObjectWrite, 0, len(entries))
++	for _, w := range entries {
++		writes = append(writes, *w)
++	}
++	sort.Slice(writes, func(i, j int) bool { return writes[i].Path < writes[j].Path })
++	treeHash := computeSkillTreeSHA256(writes)
++	revisionPrefix := skillVersionRevisionPrefix(skill.Name, version.Version, treeHash)
++	filesPrefix := revisionPrefix + "files/"
++	manifestKey := revisionPrefix + "manifest.json"
++	var total int64
++	var fileCount int
++	manifestFiles := make([]skillPackageManifestFile, 0, len(writes))
++	for i := range writes {
++		if writes[i].Kind != skillDraftKindDirectory {
++			writes[i].ObjectKey = skillVersionFileObjectKey(filesPrefix, writes[i].Path)
++			fileCount++
++			total += writes[i].Size
++		}
++		manifestFiles = append(manifestFiles, skillPackageManifestFile{
++			Path:        writes[i].Path,
++			Name:        writes[i].Name,
++			Type:        writes[i].Type,
++			Kind:        writes[i].Kind,
++			ContentType: writes[i].ContentType,
++			Size:        writes[i].Size,
++			Binary:      writes[i].Binary,
++			SHA256:      writes[i].SHA256,
++			ObjectKey:   writes[i].ObjectKey,
++		})
++	}
++	manifest := skillPackageManifest{SchemaVersion: skillManifestSchemaV2, StorageFormat: skillStorageFormatDirectory, SkillName: skill.Name, Version: version.Version, RevisionPrefix: revisionPrefix, FilesPrefix: filesPrefix, TreeSHA256: treeHash, TotalFileSize: total, Files: manifestFiles, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+ 	body, err := json.Marshal(manifest)
+ 	if err != nil {
+-		return nil, "", 0, 0, err
++		return nil, err
++	}
++	manifestHash := sha256.Sum256(body)
++	return &skillVersionDirectoryPlan{RevisionPrefix: revisionPrefix, FilesPrefix: filesPrefix, ManifestObjectKey: manifestKey, ManifestBytes: body, ManifestSHA256: hex.EncodeToString(manifestHash[:]), TreeSHA256: treeHash, FileCount: fileCount, TotalFileSize: total, Files: writes}, nil
++}
++
++func computeSkillTreeSHA256(files []skillVersionFileObjectWrite) string {
++	h := sha256.New()
++	for _, f := range files {
++		_, _ = io.WriteString(h, f.Path)
++		_, _ = io.WriteString(h, "\x00")
++		_, _ = io.WriteString(h, f.Kind)
++		_, _ = io.WriteString(h, "\x00")
++		_, _ = io.WriteString(h, f.SHA256)
++		_, _ = io.WriteString(h, "\x00")
++		_, _ = io.WriteString(h, strconv.FormatInt(f.Size, 10))
++		_, _ = io.WriteString(h, "\n")
++	}
++	return hex.EncodeToString(h.Sum(nil))
++}
++
++func skillVersionContentType(f *biz.SkillFile, filePath string, body []byte, binary bool) string {
++	if f != nil {
++		t := strings.TrimSpace(f.Type)
++		if strings.Contains(t, "/") {
++			return t
++		}
+ 	}
+-	sum := sha256.Sum256(body)
+-	return body, hex.EncodeToString(sum[:]), len(items), total, nil
++	return detectSkillContentType(filePath, body, binary)
+ }
+ 
+ func buildSkillStorageControlJSON(c skillStorageControl) string {
+@@ -463,6 +728,12 @@ func collectVersionObjectKeys(v *skillVersionModel) []string {
+ 	}
+ 	var c skillStorageControl
+ 	_ = json.Unmarshal(v.ManifestJSON, &c)
++	if c.RevisionPrefix != "" {
++		out = append(out, c.RevisionPrefix)
++	}
++	if c.FilesPrefix != "" {
++		out = append(out, c.FilesPrefix)
++	}
+ 	if c.PackageObjectKey != "" {
+ 		out = append(out, c.PackageObjectKey)
+ 	}
+@@ -472,12 +743,43 @@ func collectVersionObjectKeys(v *skillVersionModel) []string {
+ 	return dedupeStrings(out)
+ }
+ 
+-func skillManifestObjectKey(skillName, version string) string {
+-	return fmt.Sprintf("skills/%s/versions/%s/manifest.json", skillName, version)
++func skillVersionRevisionPrefix(skillName, version, treeHash string) string {
++	return fmt.Sprintf("skills/%s/versions/%s/revisions/%s/", skillName, version, treeHash)
++}
++
++func skillVersionFileObjectKey(filesPrefix, filePath string) string {
++	return filesPrefix + strings.TrimPrefix(filePath, "/")
++}
++
++func skillTempVersionFileObjectKey(gid, sha string, index int) string {
++	return fmt.Sprintf("skills/_tmp/dtm/%s/version/%06d-%s", gid, index, sha)
++}
++
++func payloadFilesFromWrites(in []skillVersionFileObjectWrite) []skillVersionFileObjectPayload {
++	out := make([]skillVersionFileObjectPayload, 0, len(in))
++	for _, f := range in {
++		out = append(out, f.skillVersionFileObjectPayload)
++	}
++	return out
++}
++
++func payloadFinalObjectKeys(payload skillPackageSagaPayload) []string {
++	out := make([]string, 0, len(payload.Files)+3)
++	for _, f := range payload.Files {
++		if f.ObjectKey != "" {
++			out = append(out, f.ObjectKey)
++		}
++	}
++	return out
++}
++
++func manifestFileToSkillFile(name, version string, f skillPackageManifestFile, includeContent bool) *biz.SkillFile {
++	_ = includeContent
++	return &biz.SkillFile{SkillName: name, Version: version, Path: f.Path, Name: f.Name, Type: firstNonEmptyStringData(f.Type, f.ContentType, f.Kind), Size: f.Size, Binary: f.Binary}
+ }
+ 
+-func skillTempPackageObjectKey(gid string) string {
+-	return fmt.Sprintf("skills/_tmp/dtm/%s/package.zip", gid)
++func isManifestDirectory(f skillPackageManifestFile) bool {
++	return f.Kind == skillDraftKindDirectory || f.Type == skillDraftKindDirectory
+ }
+ 
+ func (r *skillRepo) objectExists(ctx context.Context, key string) bool {
+@@ -496,6 +798,19 @@ func (r *skillRepo) cleanupS3ObjectsSync(ctx context.Context, keys []string) {
+ 		if key == "" {
+ 			continue
+ 		}
++		if strings.HasSuffix(key, "/") {
++			objects, err := r.resources.ObjectStore.ListObjects(ctx, objectstorex.ListOptions{Prefix: key, Recursive: true})
++			if err != nil {
++				r.logger(ctx).Warn("skill s3 prefix cleanup list failed", logx.String("prefix", key), logx.Err(err))
++				continue
++			}
++			for _, obj := range objects {
++				if err := r.resources.ObjectStore.DeleteObject(ctx, obj.Key); err != nil {
++					r.logger(ctx).Warn("skill s3 cleanup failed", logx.String("key", obj.Key), logx.Err(err))
++				}
++			}
++			continue
++		}
+ 		if err := r.resources.ObjectStore.DeleteObject(ctx, key); err != nil {
+ 			r.logger(ctx).Warn("skill s3 cleanup failed", logx.String("key", key), logx.Err(err))
+ 		}
+@@ -538,31 +853,9 @@ func (r *skillRepo) enforceSkillVersionRetention(ctx context.Context, skillName
+ 	r.cleanupS3ObjectsAsync(keys)
+ }
+ 
+-func extractFileFromZip(zipBytes []byte, filePath string) (content string, binary bool, err error) {
+-	zr, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+-	if err != nil {
+-		return "", false, err
+-	}
+-	for _, f := range zr.File {
+-		clean := path.Clean(strings.TrimPrefix(strings.ReplaceAll(f.Name, "\\", "/"), "/"))
+-		if clean == filePath || strings.HasSuffix(clean, "/"+filePath) {
+-			rc, err := f.Open()
+-			if err != nil {
+-				return "", false, err
+-			}
+-			defer rc.Close()
+-			data, err := io.ReadAll(io.LimitReader(rc, 64<<20))
+-			if err != nil {
+-				return "", false, err
+-			}
+-			binary = containsNUL(data)
+-			if binary {
+-				return base64.StdEncoding.EncodeToString(data), true, nil
+-			}
+-			return string(data), false, nil
+-		}
+-	}
+-	return "", false, biz.ErrSkillFileNotFound
++func md5HexData(b []byte) string {
++	sum := md5.Sum(b)
++	return hex.EncodeToString(sum[:])
+ }
+ 
+ func containsNUL(b []byte) bool {
+@@ -574,20 +867,6 @@ func containsNUL(b []byte) bool {
+ 	return false
+ }
+ 
+-func sha256FileContent(f *biz.SkillFile) string {
+-	if f == nil {
+-		return ""
+-	}
+-	var data []byte
+-	if f.Binary {
+-		data, _ = base64.StdEncoding.DecodeString(f.Content)
+-	} else {
+-		data = []byte(f.Content)
+-	}
+-	sum := sha256.Sum256(data)
+-	return hex.EncodeToString(sum[:])
+-}
+-
+ func cloneSkillForSaga(s *biz.Skill) *biz.Skill {
+ 	if s == nil {
+ 		return nil

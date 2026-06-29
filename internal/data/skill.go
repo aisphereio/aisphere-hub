@@ -750,11 +750,7 @@ func (r *skillRepo) cleanupS3ObjectsAsync(keys []string) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		for _, key := range dedupeStrings(keys) {
-			if err := r.resources.ObjectStore.DeleteObject(ctx, key); err != nil {
-				r.logger(ctx).Warn("skill s3 async cleanup failed", logx.String("key", key), logx.Err(err))
-			}
-		}
+		r.cleanupS3ObjectsSync(ctx, keys)
 	}()
 }
 

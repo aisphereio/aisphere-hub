@@ -54,6 +54,7 @@ func NewSkillService(uc *biz.SkillUsecase) *SkillService {
 // RegisterHTTPServer registers the proto-generated HTTP routes.
 func (s *SkillService) RegisterHTTPServer(srv *khttp.Server) {
 	v1.RegisterSkillServiceHTTPServer(srv, s)
+	s.registerDraftHTTPRoutes(srv)
 }
 
 // --- Skill CRUD ---
@@ -222,6 +223,178 @@ func (s *SkillService) DownloadSkillVersion(ctx context.Context, req *v1.Downloa
 		return nil, err
 	}
 	return skillPackageDownloadDOToDTO(out), nil
+}
+
+// --- Skill draft workspace ---
+
+// The current proto set does not yet generate draft workspace endpoints, but
+// the online editor needs path-level persistence before a whole zip package is
+// committed. Keep these as normal kernel HTTP routes so the frontend can autosave
+// files/directories while the protobuf contract catches up.
+type skillDraftFileRequest struct {
+	Version       string `json:"version"`
+	Path          string `json:"path"`
+	Type          string `json:"type"`
+	Content       string `json:"content"`
+	Binary        bool   `json:"binary"`
+	CreateParents bool   `json:"create_parents"`
+}
+
+type skillDraftDeleteRequest struct {
+	Version   string `json:"version"`
+	Path      string `json:"path"`
+	Recursive bool   `json:"recursive"`
+}
+
+type skillDraftMoveRequest struct {
+	Version   string `json:"version"`
+	OldPath   string `json:"old_path"`
+	NewPath   string `json:"new_path"`
+	Overwrite bool   `json:"overwrite"`
+}
+
+type skillDraftCommitRequest struct {
+	Version   string `json:"version"`
+	CommitMsg string `json:"commit_msg"`
+	Overwrite bool   `json:"overwrite"`
+	Submit    bool   `json:"submit"`
+	Publish   bool   `json:"publish"`
+	Online    bool   `json:"online"`
+}
+
+type skillDraftFilesResponse struct {
+	Files []*v1.SkillFile `json:"files"`
+}
+
+func (s *SkillService) registerDraftHTTPRoutes(srv *khttp.Server) {
+	r := srv.Route("/")
+	r.GET("/v1/skills/{name}/draft/files", s.listSkillDraftFiles)
+	r.GET("/v1/skills/{name}/draft/file", s.getSkillDraftFile)
+	r.PUT("/v1/skills/{name}/draft/file", s.upsertSkillDraftFile)
+	r.POST("/v1/skills/{name}/draft/dir", s.upsertSkillDraftDirectory)
+	r.DELETE("/v1/skills/{name}/draft/path", s.deleteSkillDraftPath)
+	r.POST("/v1/skills/{name}/draft/path:move", s.moveSkillDraftPath)
+	r.POST("/v1/skills/{name}/draft:commit", s.commitSkillDraft)
+}
+
+func (s *SkillService) listSkillDraftFiles(ctx khttp.Context) error {
+	principal := principalFromContext(ctx)
+	name := ctx.Vars().Get("name")
+	version := ctx.Query().Get("version")
+	files, err := s.uc.ListSkillDraftFiles(ctx, principal, name, version)
+	if err != nil {
+		return err
+	}
+	out := &skillDraftFilesResponse{Files: make([]*v1.SkillFile, 0, len(files))}
+	for _, f := range files {
+		out.Files = append(out.Files, skillFileDOToDTO(f, false))
+	}
+	return ctx.Result(200, out)
+}
+
+func (s *SkillService) getSkillDraftFile(ctx khttp.Context) error {
+	principal := principalFromContext(ctx)
+	name := ctx.Vars().Get("name")
+	version := ctx.Query().Get("version")
+	filePath := ctx.Query().Get("path")
+	out, err := s.uc.GetSkillDraftFile(ctx, principal, name, version, filePath)
+	if err != nil {
+		return err
+	}
+	return ctx.Result(200, skillFileDOToDTO(out, true))
+}
+
+func (s *SkillService) upsertSkillDraftFile(ctx khttp.Context) error {
+	principal := principalFromContext(ctx)
+	name := ctx.Vars().Get("name")
+	var req skillDraftFileRequest
+	if err := ctx.Bind(&req); err != nil {
+		return err
+	}
+	out, err := s.uc.UpsertSkillDraftFile(ctx, principal, biz.SkillDraftFileInput{
+		SkillName:     name,
+		Version:       req.Version,
+		Path:          req.Path,
+		Type:          req.Type,
+		Content:       req.Content,
+		Binary:        req.Binary,
+		CreateParents: req.CreateParents,
+	})
+	if err != nil {
+		return err
+	}
+	return ctx.Result(200, skillFileDOToDTO(out, true))
+}
+
+func (s *SkillService) upsertSkillDraftDirectory(ctx khttp.Context) error {
+	principal := principalFromContext(ctx)
+	name := ctx.Vars().Get("name")
+	var req skillDraftFileRequest
+	if err := ctx.Bind(&req); err != nil {
+		return err
+	}
+	out, err := s.uc.UpsertSkillDraftFile(ctx, principal, biz.SkillDraftFileInput{
+		SkillName:     name,
+		Version:       req.Version,
+		Path:          req.Path,
+		Type:          "directory",
+		CreateParents: true,
+	})
+	if err != nil {
+		return err
+	}
+	return ctx.Result(200, skillFileDOToDTO(out, false))
+}
+
+func (s *SkillService) deleteSkillDraftPath(ctx khttp.Context) error {
+	principal := principalFromContext(ctx)
+	name := ctx.Vars().Get("name")
+	var req skillDraftDeleteRequest
+	if ctx.Request().Body != nil && ctx.Request().ContentLength > 0 {
+		if err := ctx.Bind(&req); err != nil {
+			return err
+		}
+	}
+	if req.Version == "" {
+		req.Version = ctx.Query().Get("version")
+	}
+	if req.Path == "" {
+		req.Path = ctx.Query().Get("path")
+	}
+	if !req.Recursive {
+		req.Recursive, _ = strconv.ParseBool(ctx.Query().Get("recursive"))
+	}
+	if err := s.uc.DeleteSkillDraftPath(ctx, principal, biz.SkillDraftDeleteInput{SkillName: name, Version: req.Version, Path: req.Path, Recursive: req.Recursive}); err != nil {
+		return err
+	}
+	return ctx.Result(200, &emptypb.Empty{})
+}
+
+func (s *SkillService) moveSkillDraftPath(ctx khttp.Context) error {
+	principal := principalFromContext(ctx)
+	name := ctx.Vars().Get("name")
+	var req skillDraftMoveRequest
+	if err := ctx.Bind(&req); err != nil {
+		return err
+	}
+	if err := s.uc.MoveSkillDraftPath(ctx, principal, biz.SkillDraftMoveInput{SkillName: name, Version: req.Version, OldPath: req.OldPath, NewPath: req.NewPath, Overwrite: req.Overwrite}); err != nil {
+		return err
+	}
+	return ctx.Result(200, &emptypb.Empty{})
+}
+
+func (s *SkillService) commitSkillDraft(ctx khttp.Context) error {
+	principal := principalFromContext(ctx)
+	name := ctx.Vars().Get("name")
+	var req skillDraftCommitRequest
+	if err := ctx.Bind(&req); err != nil {
+		return err
+	}
+	out, err := s.uc.CommitSkillDraft(ctx, principal, biz.SkillDraftCommitInput{SkillName: name, Version: req.Version, CommitMsg: req.CommitMsg, Overwrite: req.Overwrite, Submit: req.Submit, Publish: req.Publish, Online: req.Online})
+	if err != nil {
+		return err
+	}
+	return ctx.Result(200, skillVersionDOToDTO(out))
 }
 
 // --- SkillFile ---

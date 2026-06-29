@@ -18,6 +18,7 @@ import (
 	"github.com/aisphereio/kernel/dbx"
 	_ "github.com/aisphereio/kernel/dbx/postgres"
 	"github.com/aisphereio/kernel/dtmx"
+	_ "github.com/aisphereio/kernel/dtmx/dtm"
 	"github.com/aisphereio/kernel/errorx"
 	"github.com/aisphereio/kernel/logx"
 	"github.com/aisphereio/kernel/metricsx"
@@ -32,7 +33,7 @@ type Resources struct {
 	DB          dbx.DB
 	Cache       cachex.Cache
 	ObjectStore objectstorex.Client
-	DTM         dtmx.Client
+	DTM         dtmx.Manager
 	DTMConfig   dtmx.Config
 	SkillConfig conf.SkillConfig
 	// Audit is the audit recorder used by business modules to write
@@ -61,9 +62,6 @@ type Resources struct {
 	// login URL construction is cheap and includes a per-request state
 	// parameter that should NOT be cached.
 	LoginService authn.LoginService
-	// LogoutService builds IdP logout URLs when the provider supports Kernel's
-	// provider-neutral authn.LogoutService contract.
-	LogoutService authn.LogoutService
 	// TokenService exchanges codes, refreshes tokens, verifies tokens, and
 	// revokes tokens. When Cache is configured this is wrapped by
 	// authn.CachedClient so VerifyToken hits the cache; ExchangeCode and
@@ -187,7 +185,8 @@ func NewResources(ctx context.Context, cfg conf.Bootstrap) (*Resources, func(), 
 		}
 		logger.Info("dtm initialized", logx.String("server", dtmCfg.Server), logx.String("service_base_url", dtmCfg.ServiceBaseURL))
 		r.DTM = client
-		r.DTMConfig = client.Config()
+		r.DTMConfig = dtmCfg
+		r.closers = append(r.closers, client.Close)
 	}
 	r.SkillConfig = cfg.Skill
 
@@ -216,9 +215,6 @@ func NewResources(ctx context.Context, cfg conf.Bootstrap) (*Resources, func(), 
 			r.Casdoor = client
 			// LoginService is always the raw client (cheap, per-request state).
 			r.LoginService = client
-			if logoutSvc, ok := any(client).(authn.LogoutService); ok {
-				r.LogoutService = logoutSvc
-			}
 			// TokenService is wrapped with CachedClient when cache is available,
 			// so VerifyToken (high-frequency, called on every authenticated
 			// request via middleware) hits the cache. ExchangeCode / RefreshToken

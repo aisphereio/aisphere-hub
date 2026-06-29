@@ -32,6 +32,7 @@ func parseSkillZip(b []byte) (*skillzipBridgeResult, error) {
 		Name:        parsed.Name,
 		Description: parsed.Description,
 		Version:     parsed.Version,
+		SkillMD:     parsed.SkillMD,
 		Metadata:    parsed.Metadata,
 		Resources:   resources,
 	}, nil

@@ -51,6 +51,8 @@ type authnRepo struct {
 	blacklist sync.Map // key = sha256(token) -> expiry time.Time
 }
 
+const defaultLoginScope = "openid profile email"
+
 // NewAuthnRepo creates a new biz.AuthnRepo backed by kernel authn + Casdoor.
 //
 // cfg is the hub authn config; it is used to build logout URLs and to look
@@ -89,7 +91,7 @@ func (r *authnRepo) LoginURL(ctx context.Context, req biz.AuthnLoginURLRequest) 
 	loginURL, err := svc.BuildLoginURL(ctx, authn.LoginURLRequest{
 		RedirectURI: req.RedirectURI,
 		State:       req.State,
-		Scope:       req.Scope,
+		Scope:       loginScope(req.Scope),
 		OrgID:       req.OrgID,
 		AppID:       req.AppID,
 	})
@@ -157,25 +159,10 @@ func (r *authnRepo) Refresh(ctx context.Context, req biz.AuthnRefreshRequest) (o
 	return authTokenFromKernel(tokenSet), nil
 }
 
-// LogoutURL builds the IdP logout URL through Kernel's provider-neutral
-// authn.LogoutService when available. A Casdoor-specific fallback is kept so
-// older providers can still operate until they implement LogoutService.
+// LogoutURL builds the IdP logout URL from Hub's Casdoor configuration.
 func (r *authnRepo) LogoutURL(ctx context.Context, req biz.AuthnLogoutURLRequest) (out string, err error) {
 	ctx, logger, started := observability.Begin(ctx, r.logger(), "authn.repo", "logout_url", logx.Bool("has_state", req.State != ""), logx.Bool("has_id_token_hint", req.IDTokenHint != ""))
 	defer func() { observability.End(ctx, logger, r.metrics(), "authn.repo", "logout_url", started, err) }()
-	if r != nil && r.resources != nil && r.resources.LogoutService != nil {
-		logoutURL, err := r.resources.LogoutService.BuildLogoutURL(ctx, authn.LogoutURLRequest{
-			PostLogoutRedirectURI: req.PostLogoutRedirectURI,
-			IDTokenHint:           req.IDTokenHint,
-			State:                 req.State,
-			OrgID:                 req.OrgID,
-			AppID:                 req.AppID,
-		})
-		if err != nil {
-			return "", err
-		}
-		return logoutURL.URL, nil
-	}
 	return r.fallbackCasdoorLogoutURL(req)
 }
 
@@ -373,6 +360,14 @@ func (r *authnRepo) loginService() (authn.LoginService, error) {
 		return nil, errorx.Unavailable(errorx.Code("AUTHN_LOGIN_SERVICE_NOT_CONFIGURED"), "casdoor login service is not configured; enable security.authn and set provider=casdoor")
 	}
 	return r.resources.LoginService, nil
+}
+
+func loginScope(scope string) string {
+	scope = strings.TrimSpace(scope)
+	if scope != "" {
+		return scope
+	}
+	return defaultLoginScope
 }
 
 func (r *authnRepo) tokenService() (authn.TokenService, error) {

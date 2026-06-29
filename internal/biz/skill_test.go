@@ -20,12 +20,14 @@ package biz
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/aisphereio/kernel/auditx"
 	"github.com/aisphereio/kernel/authn"
+	"github.com/aisphereio/kernel/errorx"
 	"github.com/aisphereio/kernel/logx"
 )
 
@@ -227,6 +229,67 @@ func (r *fakeSkillRepo) GetSkillVersionFile(ctx context.Context, name, version, 
 		}
 	}
 	return nil, ErrSkillFileNotFound
+}
+
+func (r *fakeSkillRepo) ListSkillDraftFiles(ctx context.Context, name, version string) ([]*SkillFile, error) {
+	return r.ListSkillVersionFiles(ctx, name, version)
+}
+
+func (r *fakeSkillRepo) GetSkillDraftFile(ctx context.Context, name, version, filePath string) (*SkillFile, error) {
+	return r.GetSkillVersionFile(ctx, name, version, filePath)
+}
+
+func (r *fakeSkillRepo) UpsertSkillDraftFile(ctx context.Context, file *SkillFile, actor string) (*SkillFile, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.files[file.SkillName] == nil {
+		r.files[file.SkillName] = map[string][]*SkillFile{}
+	}
+	files := r.files[file.SkillName][file.Version]
+	for i, existing := range files {
+		if existing.Path == file.Path {
+			files[i] = file
+			r.files[file.SkillName][file.Version] = files
+			return file, nil
+		}
+	}
+	r.files[file.SkillName][file.Version] = append(files, file)
+	return file, nil
+}
+
+func (r *fakeSkillRepo) DeleteSkillDraftPath(ctx context.Context, name, version, filePath string, recursive bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	files := r.files[name][version]
+	kept := files[:0]
+	for _, f := range files {
+		if f.Path == filePath || (recursive && strings.HasPrefix(f.Path, filePath+"/")) {
+			continue
+		}
+		kept = append(kept, f)
+	}
+	r.files[name][version] = kept
+	return nil
+}
+
+func (r *fakeSkillRepo) MoveSkillDraftPath(ctx context.Context, name, version, oldPath, newPath string, overwrite bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, f := range r.files[name][version] {
+		if f.Path == oldPath {
+			f.Path = newPath
+			f.Name = newPath
+			return nil
+		}
+	}
+	return ErrSkillFileNotFound
+}
+
+func (r *fakeSkillRepo) BuildSkillPackageFromDraft(ctx context.Context, name, version string) ([]byte, []*SkillFile, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	files := append([]*SkillFile(nil), r.files[name][version]...)
+	return []byte("fake-draft-package"), files, nil
 }
 
 func (r *fakeSkillRepo) SaveSkillPackage(ctx context.Context, skill *Skill, version *SkillVersion, files []*SkillFile, packageBytes []byte, overwrite bool) (*SkillVersion, error) {
@@ -548,8 +611,8 @@ func TestGetSkill_DeniesNonOwnerPrivate(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-owner reading private skill, got nil")
 	}
-	if !errors.Is(err, ErrSkillPermissionDenied) {
-		t.Errorf("expected ErrSkillPermissionDenied, got %v", err)
+	if errorx.CodeOf(err) != errorx.Code("SKILL_PERMISSION_DENIED") {
+		t.Errorf("expected SKILL_PERMISSION_DENIED, got %v", err)
 	}
 }
 
@@ -567,14 +630,14 @@ func TestUpdateSkill_RequiresEditPermission(t *testing.T) {
 	}
 
 	// u_2 tries to update → 403 (authz denies edit).
-	err = uc.UpdateSkill(context.Background(), testPrincipal("u_2"), &Skill{
+	_, err = uc.UpdateSkill(context.Background(), testPrincipal("u_2"), &Skill{
 		Name: "skill-1", DisplayName: "hacked",
 	})
 	if err == nil {
 		t.Fatal("expected error for non-owner update, got nil")
 	}
-	if !errors.Is(err, ErrSkillPermissionDenied) {
-		t.Errorf("expected ErrSkillPermissionDenied, got %v", err)
+	if errorx.CodeOf(err) != errorx.Code("SKILL_PERMISSION_DENIED") {
+		t.Errorf("expected SKILL_PERMISSION_DENIED, got %v", err)
 	}
 }
 

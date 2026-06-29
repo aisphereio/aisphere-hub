@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -228,6 +229,16 @@ type SkillRepo interface {
 
 	ListSkillVersionFiles(ctx context.Context, name, version string) ([]*SkillFile, error)
 	GetSkillVersionFile(ctx context.Context, name, version, filePath string) (*SkillFile, error)
+
+	// Draft workspace operations are used by the online skill editor. Draft
+	// files are persisted immediately (S3 object + PG metadata), so browser
+	// refreshes do not lose newly-created text, files, or directories.
+	ListSkillDraftFiles(ctx context.Context, name, version string) ([]*SkillFile, error)
+	GetSkillDraftFile(ctx context.Context, name, version, filePath string) (*SkillFile, error)
+	UpsertSkillDraftFile(ctx context.Context, file *SkillFile, actor string) (*SkillFile, error)
+	DeleteSkillDraftPath(ctx context.Context, name, version, filePath string, recursive bool) error
+	MoveSkillDraftPath(ctx context.Context, name, version, oldPath, newPath string, overwrite bool) error
+	BuildSkillPackageFromDraft(ctx context.Context, name, version string) ([]byte, []*SkillFile, error)
 
 	// SaveSkillPackage stores the package content in object storage and
 	// persists only PG control metadata (skill/version rows, object keys,
@@ -621,8 +632,19 @@ func (uc *SkillUsecase) UploadSkillPackage(ctx context.Context, principal authn.
 		}),
 	}
 
-	// 4. Build file rows from zip resources.
-	files := make([]*SkillFile, 0, len(parsed.Resources))
+	// 4. Build version files from zip resources. SKILL.md is the entrypoint
+	// and must be stored as a normal version file, not just parsed for metadata.
+	files := make([]*SkillFile, 0, len(parsed.Resources)+1)
+	files = append(files, &SkillFile{
+		SkillName: name,
+		Version:   versionName,
+		Path:      "SKILL.md",
+		Name:      "SKILL.md",
+		Type:      "text/markdown; charset=utf-8",
+		Size:      int64(len([]byte(parsed.SkillMD))),
+		Binary:    false,
+		Content:   parsed.SkillMD,
+	})
 	for _, r := range parsed.Resources {
 		files = append(files, &SkillFile{
 			SkillName: name,
@@ -1021,12 +1043,18 @@ func (uc *SkillUsecase) requireSkillPermission(ctx context.Context, principal au
 	if !principal.IsAuthenticated() {
 		return ErrSkillPermissionDenied
 	}
-	return uc.authz.Require(ctx, AuthzCheckRequest{
+	if err := uc.authz.Require(ctx, AuthzCheckRequest{
 		Subject:    AuthzSubjectRef{Type: "user", ID: principal.SubjectID},
 		Resource:   AuthzObjectRef{Type: "skill", ID: name},
 		Permission: permission,
 		OrgID:      principal.OrgID,
-	})
+	}); err != nil {
+		if errors.Is(err, ErrAuthzPermissionDenied) || errorx.CodeOf(err) == errorx.Code("AUTHZ_PERMISSION_DENIED") {
+			return ErrSkillPermissionDenied
+		}
+		return err
+	}
+	return nil
 }
 
 // requireSkillRead is like requireSkillPermission but with ownership +
@@ -1362,6 +1390,7 @@ var skillzipParseSkillFromZip = func(b []byte) (*skillzipSkill, error) {
 		Name:        parsed.Name,
 		Description: parsed.Description,
 		Version:     parsed.Version,
+		SkillMD:     parsed.SkillMD,
 		Metadata:    parsed.Metadata,
 		Resources:   convertResources(parsed.Resources),
 	}, nil
@@ -1374,6 +1403,7 @@ type skillzipSkill struct {
 	Name        string
 	Description string
 	Version     string
+	SkillMD     string
 	Metadata    map[string]string
 	Resources   []skillzipResource
 }
@@ -1398,6 +1428,7 @@ type skillzipBridgeResult struct {
 	Name        string
 	Description string
 	Version     string
+	SkillMD     string
 	Metadata    map[string]string
 	Resources   []skillzipBridgeResource
 }

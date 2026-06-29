@@ -96,9 +96,17 @@ POST /internal/dtm/skill/package/promote
 POST /internal/dtm/skill/package/promote_compensate
 POST /internal/dtm/skill/metadata/upsert
 POST /internal/dtm/skill/metadata/upsert_compensate
+
+# draft workspace DTM branches
+POST /internal/dtm/skill/draft/object/promote
+POST /internal/dtm/skill/draft/object/promote_compensate
+POST /internal/dtm/skill/draft/metadata/upsert
+POST /internal/dtm/skill/draft/metadata/upsert_compensate
 ```
 
-These paths are authn-public because DTM calls them as an internal coordinator. They should be exposed only on a trusted network or behind infrastructure ACLs.
+These paths are authn-public because DTM calls them as an internal coordinator. They should be exposed only on a trusted network or behind infrastructure ACLs. Branch callbacks also validate `dtm.branch_secret` through `dtmx.ValidateBranchRequest` when the secret is configured.
+
+See `docs/ai/skill-draft-workspace-dtm.md` for the online editor draft workspace design.
 
 ## Config
 
@@ -121,3 +129,14 @@ skill:
 ```
 
 `service_base_url` must be reachable by the DTM server.
+
+## 2026-06 directory-first update
+
+The storage model has been changed from `package.zip`-first to directory-first. New versions are stored under an immutable S3 prefix:
+
+```text
+skills/{skill_name}/versions/{version}/revisions/{tree_sha256}/files/{path}
+skills/{skill_name}/versions/{version}/revisions/{tree_sha256}/manifest.json
+```
+
+The old `package.zip` object is no longer the primary runtime representation. Zip upload is parsed into directory objects; zip download is generated on demand from the manifest.
