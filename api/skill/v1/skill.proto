@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package aisphere.hub.skill.v1;
 
+import "aisphere/access/v1/access.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
@@ -27,10 +28,9 @@ option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 //
 // ## Authz
 //
-// All RPCs require a Bearer token (kernel authn middleware enforces this).
-// Per-skill authorization (owner / shared / public visibility) is enforced
-// in the biz layer via accessx.Guard. Public-skill read fallback lets any
-// authenticated user read skills with visibility=public.
+// Access policy is declared at the proto layer and consumed by Kernel/Gateway
+// generators. Resource-level ownership/public/share fallbacks remain in the
+// Hub biz layer.
 //
 // ## Status machine (SkillVersion)
 //
@@ -47,6 +47,11 @@ service SkillService {
       post: "/v1/skills"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "create" resource: "aihub:skill:*" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill.create" risk: "medium" }
+    };
   }
 
   // UpdateSkill updates mutable fields of one canonical skill. owner_id /
@@ -58,6 +63,11 @@ service SkillService {
       put: "/v1/skills/{name}"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "update" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill.update" risk: "medium" }
+    };
   }
 
   // ListSkills lists canonical skills visible to the caller. Visibility
@@ -67,12 +77,20 @@ service SkillService {
     option (google.api.http) = {
       get: "/v1/skills"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill.list" risk: "low" }
+    };
   }
 
   // GetSkill returns one canonical skill by name.
   rpc GetSkill(GetSkillRequest) returns (Skill) {
     option (google.api.http) = {
       get: "/v1/skills/{name}"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill.get" risk: "low" }
     };
   }
 
@@ -82,6 +100,11 @@ service SkillService {
   rpc DeleteSkill(DeleteSkillRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/v1/skills/{name}"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "delete" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill.delete" risk: "high" }
     };
   }
 
@@ -94,6 +117,11 @@ service SkillService {
       post: "/v1/skills:upload"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "upload" resource: "aihub:skill:*" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill.upload" risk: "medium" }
+    };
   }
 
   // ListSkillVersions lists versions of one canonical skill, oldest first.
@@ -101,12 +129,20 @@ service SkillService {
     option (google.api.http) = {
       get: "/v1/skills/{name}/versions"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill_version.list" risk: "low" }
+    };
   }
 
   // GetSkillVersion returns one version metadata record.
   rpc GetSkillVersion(GetSkillVersionRequest) returns (SkillVersion) {
     option (google.api.http) = {
       get: "/v1/skills/{name}/versions/{version}"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill_version.get" risk: "low" }
     };
   }
 
@@ -116,6 +152,11 @@ service SkillService {
       post: "/v1/skills/{name}/versions/{version}:submit"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "submit" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_version.submit" risk: "medium" }
+    };
   }
 
   // PublishSkillVersion marks a submitted version as published.
@@ -123,6 +164,11 @@ service SkillService {
     option (google.api.http) = {
       post: "/v1/skills/{name}/versions/{version}:publish"
       body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "publish" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_version.publish" risk: "high" }
     };
   }
 
@@ -134,6 +180,11 @@ service SkillService {
       post: "/v1/skills/{name}/versions/{version}:online"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "online" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_version.online" risk: "high" }
+    };
   }
 
   // OfflineSkillVersion removes one online version from catalog/runtime use.
@@ -141,6 +192,11 @@ service SkillService {
     option (google.api.http) = {
       post: "/v1/skills/{name}/versions/{version}:offline"
       body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "offline" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_version.offline" risk: "high" }
     };
   }
 
@@ -150,6 +206,10 @@ service SkillService {
     option (google.api.http) = {
       get: "/v1/skills/{name}/versions/{version}/download"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill_version.download" risk: "low" }
+    };
   }
 
   // ListSkillVersionFiles lists files stored for one skill version.
@@ -157,12 +217,20 @@ service SkillService {
     option (google.api.http) = {
       get: "/v1/skills/{name}/versions/{version}/files"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill_file.list" risk: "low" }
+    };
   }
 
   // GetSkillVersionFile returns one text or base64-encoded file content.
   rpc GetSkillVersionFile(GetSkillVersionFileRequest) returns (SkillFile) {
     option (google.api.http) = {
       get: "/v1/skills/{name}/versions/{version}/file"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill_file.get" risk: "low" }
     };
   }
 
@@ -180,6 +248,11 @@ service SkillService {
     option (google.api.http) = {
       get: "/v1/skills/{name}/shares"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "share:list" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_share.list" risk: "medium" }
+    };
   }
 
   // CreateSkillShare grants a viewer or editor relation on the named
@@ -190,6 +263,11 @@ service SkillService {
       post: "/v1/skills/{name}/shares"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "share:create" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_share.create" risk: "high" }
+    };
   }
 
   // DeleteSkillShare revokes ALL relations between the named skill and
@@ -197,6 +275,11 @@ service SkillService {
   rpc DeleteSkillShare(DeleteSkillShareRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/v1/skills/{name}/shares/{subject_type}/{subject_id}"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "share:delete" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_share.delete" risk: "high" }
     };
   }
 }
