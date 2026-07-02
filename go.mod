@@ -3,7 +3,7 @@ module github.com/aisphereio/aisphere-hub
 go 1.25.8
 
 require (
-	github.com/aisphereio/kernel v0.0.9
+	github.com/aisphereio/kernel v0.2.1
 	google.golang.org/genproto/googleapis/api v0.0.0-20260511170946-3700d4141b60
 	google.golang.org/grpc v1.81.0
 	google.golang.org/protobuf v1.36.11
@@ -91,8 +91,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect
 )
-
-// Local development uses the latest sibling kernel module because this API
-// depends on dtmx.Manager/Saga branch APIs that may not be published yet.
-// Remove or adjust this replace before publishing generated services.
-replace github.com/aisphereio/kernel => ../kernel
