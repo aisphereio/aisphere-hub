@@ -18,6 +18,7 @@ message AccessPolicy {
   RateLimit rate_limit = 4;
   Breaker breaker = 5;
   string reason = 6;
+  Gateway gateway = 7;
 }
 
 enum Exposure {
@@ -27,6 +28,18 @@ enum Exposure {
   AUTHORIZED = 3;
   INTERNAL = 4;
   SYSTEM = 5;
+}
+
+message Gateway {
+  GatewayPublish publish = 1;
+  repeated string profiles = 2;
+  repeated string tags = 3;
+}
+
+enum GatewayPublish {
+  GATEWAY_PUBLISH_UNSPECIFIED = 0;
+  ENABLED = 1;
+  DISABLED = 2;
 }
 
 message Authz {
