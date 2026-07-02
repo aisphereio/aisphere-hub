@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package aisphere.options.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/aisphereio/kernel/api/aisphere/options/v1;optionsv1";
+
+extend google.protobuf.MethodOptions {
+  AuthzRule authz = 51001;
+  AuditRule audit = 51002;
+  CapabilityRule capability = 51003;
+}
+
+message AuthzRule {
+  string action = 1;
+  string resource = 2;
+  string audience = 3;
+  AuthzMode mode = 4;
+}
+
+enum AuthzMode {
+  AUTHZ_MODE_UNSPECIFIED = 0;
+  CHECK_ONLY = 1;
+  SCOPED_TOKEN = 2;
+  SELF_CHECK = 3;
+}
+
+message AuditRule {
+  string event = 1;
+  string risk = 2;
+}
+
+message CapabilityRule {
+  string name = 1;
+  string group = 2;
+}
