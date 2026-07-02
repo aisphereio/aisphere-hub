@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package aisphere.access.v1;
+
+import "aisphere/options/v1/authz.proto";
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/aisphereio/kernel/api/aisphere/access/v1;accessv1";
+
+extend google.protobuf.MethodOptions {
+  AccessPolicy policy = 51010;
+}
+
+message AccessPolicy {
+  Exposure exposure = 1;
+  Authz authz = 2;
+  Audit audit = 3;
+  RateLimit rate_limit = 4;
+  Breaker breaker = 5;
+  string reason = 6;
+}
+
+enum Exposure {
+  EXPOSURE_UNSPECIFIED = 0;
+  PUBLIC = 1;
+  AUTHENTICATED = 2;
+  AUTHORIZED = 3;
+  INTERNAL = 4;
+  SYSTEM = 5;
+}
+
+message Authz {
+  string action = 1;
+  string resource = 2;
+  string audience = 3;
+  aisphere.options.v1.AuthzMode mode = 4;
+}
+
+message Audit {
+  bool enabled = 1;
+  string event = 2;
+  string risk = 3;
+}
+
+message RateLimit {
+  bool enabled = 1;
+  string key = 2;
+  double qps = 3;
+  int32 burst = 4;
+  Backend backend = 5;
+}
+
+enum Backend {
+  BACKEND_UNSPECIFIED = 0;
+  MEMORY = 1;
+  REDIS = 2;
+  EXTERNAL = 3;
+}
+
+message Breaker {
+  bool enabled = 1;
+  string name = 2;
+}
