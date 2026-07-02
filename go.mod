@@ -4,6 +4,7 @@ go 1.25.8
 
 require (
 	github.com/aisphereio/kernel v0.2.1
+	go.etcd.io/etcd/client/v3 v3.6.12
 	google.golang.org/genproto/googleapis/api v0.0.0-20260511170946-3700d4141b60
 	google.golang.org/grpc v1.81.0
 	google.golang.org/protobuf v1.36.11
@@ -17,6 +18,8 @@ require (
 	github.com/casdoor/casdoor-go-sdk v1.46.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/coreos/go-semver v0.3.1 // indirect
+	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dtm-labs/client v1.16.6 // indirect
 	github.com/dtm-labs/dtmdriver v0.0.6 // indirect
@@ -67,6 +70,8 @@ require (
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
+	go.etcd.io/etcd/api/v3 v3.6.12 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.6.12 // indirect
 	go.mongodb.org/mongo-driver v1.9.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
