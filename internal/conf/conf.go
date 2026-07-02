@@ -18,6 +18,7 @@ type Bootstrap struct {
 	Log      logx.Config    `json:"log" yaml:"log"`
 	Data     DataConfig     `json:"data" yaml:"data"`
 	Security SecurityConfig `json:"security" yaml:"security"`
+	Gateway  GatewayConfig  `json:"gateway" yaml:"gateway"`
 	Audit    AuditConfig    `json:"audit" yaml:"audit"`
 	Metrics  MetricsConfig  `json:"metrics" yaml:"metrics"`
 	DTM      dtmx.Config    `json:"dtm" yaml:"dtm"`
@@ -93,6 +94,18 @@ type AuthzConfig struct {
 	Provider    string         `json:"provider" yaml:"provider"`
 	DevAllowAll bool           `json:"dev_allow_all" yaml:"dev_allow_all"`
 	SpiceDB     spicedb.Config `json:"spicedb" yaml:"spicedb"`
+}
+
+type GatewayConfig struct {
+	RouteRegistry RouteRegistryConfig `json:"route_registry" yaml:"route_registry"`
+}
+
+type RouteRegistryConfig struct {
+	Provider       string        `json:"provider" yaml:"provider"`
+	Prefix         string        `json:"prefix" yaml:"prefix"`
+	Endpoints      []string      `json:"endpoints" yaml:"endpoints"`
+	DialTimeout    time.Duration `json:"dial_timeout_ns" yaml:"dial_timeout_ns"`
+	RequestTimeout time.Duration `json:"request_timeout_ns" yaml:"request_timeout_ns"`
 }
 
 type AuditConfig struct {
