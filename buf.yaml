@@ -1,6 +1,16 @@
 version: v2
 modules:
   - path: api
-  - path: internal
+lint:
+  use:
+    - STANDARD
+  except:
+    - ENUM_VALUE_PREFIX
+    - RPC_RESPONSE_STANDARD_NAME
 deps:
   - buf.build/googleapis/googleapis
+  - buf.build/grpc-ecosystem/grpc-gateway
+  - buf.build/bufbuild/protovalidate
+breaking:
+  use:
+    - FILE
