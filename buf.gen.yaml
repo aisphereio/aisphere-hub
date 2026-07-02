@@ -19,9 +19,37 @@ plugins:
     opt:
       - paths=source_relative
 
-  - local: protoc-gen-openapi
-    out: .
+  - local: protoc-gen-grpc-gateway
+    out: api
+    opt:
+      - paths=source_relative
+      - generate_unbound_methods=false
+
+  - local: protoc-gen-go-errors
+    out: api
+    opt:
+      - paths=source_relative
+
+  - local: protoc-gen-go-authz
+    out: api
+    opt:
+      - paths=source_relative
+
+  - local: protoc-gen-go-gateway
+    out: api
+    opt:
+      - paths=source_relative
+
+  - local: protoc-gen-go-kernel
+    out: api
+    opt:
+      - paths=source_relative
+
+  - local: protoc-gen-openapiv2
+    out: docs/openapi
     strategy: all
     opt:
-      - fq_schema_naming=true
-      - default_response=false
+      - logtostderr=true
+      - allow_merge=true
+      - merge_file_name=aisphere-hub
+      - use_go_templates=true
