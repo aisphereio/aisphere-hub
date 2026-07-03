@@ -286,9 +286,8 @@ type SkillRepo interface {
 //     transitions: requires skill.edit / skill.delete via
 //     authz. No fallback — write operations MUST be
 //     authorized. Ownership fallback is intentionally NOT
-//     applied here; if the owner auto-grant failed at
-//     create time, the operator must repair it explicitly
-//     via the authz WriteRelationships API.
+//     applied here; startup relationship bootstrap repairs
+//     missing owner tuples from the durable owner_id field.
 type SkillUsecase struct {
 	repo    SkillRepo
 	authz   *AuthzUsecase

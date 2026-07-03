@@ -185,34 +185,66 @@ func (r *skillRepo) DeleteSkillDraftPath(ctx context.Context, name, version, fil
 	if err != nil {
 		return err
 	}
-	q := db.Where("skill_name = ? AND version = ?", name, version)
-	if recursive {
-		q = q.Where("path = ? OR path LIKE ?", cleanPath, cleanPath+"/%")
-	} else {
-		q = q.Where("path = ?", cleanPath)
-	}
-	var rows []skillDraftFileModel
-	if err := q.Find(&rows).Error; err != nil {
-		return mapSkillDBError(err)
-	}
-	if len(rows) == 0 {
-		return biz.ErrSkillFileNotFound
-	}
-	keys := make([]string, 0, len(rows))
-	ids := make([]int64, 0, len(rows))
-	for i := range rows {
-		ids = append(ids, rows[i].ID)
-		if rows[i].ObjectKey != "" {
-			keys = append(keys, rows[i].ObjectKey)
+	var keys []string
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		var target skillDraftFileModel
+		err := tx.Where("skill_name = ? AND version = ? AND path = ?", name, version, cleanPath).First(&target).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return biz.ErrSkillFileNotFound
+			}
+			return mapSkillDBError(err)
 		}
-	}
-	if err := db.Where("id IN ?", ids).Delete(&skillDraftFileModel{}).Error; err != nil {
-		return mapSkillDBError(err)
+
+		var childCount int64
+		if target.Kind == skillDraftKindDirectory && !recursive {
+			if err := tx.Model(&skillDraftFileModel{}).Where("skill_name = ? AND version = ? AND path LIKE ?", name, version, cleanPath+"/%").Count(&childCount).Error; err != nil {
+				return mapSkillDBError(err)
+			}
+		}
+		if err := rejectNonRecursiveNonEmptyDraftDirectoryDelete(&target, recursive, childCount); err != nil {
+			return err
+		}
+
+		q := tx.Where("skill_name = ? AND version = ?", name, version)
+		if recursive {
+			q = q.Where("path = ? OR path LIKE ?", cleanPath, cleanPath+"/%")
+		} else {
+			q = q.Where("path = ?", cleanPath)
+		}
+		var rows []skillDraftFileModel
+		if err := q.Find(&rows).Error; err != nil {
+			return mapSkillDBError(err)
+		}
+		if len(rows) == 0 {
+			return biz.ErrSkillFileNotFound
+		}
+
+		ids := make([]int64, 0, len(rows))
+		for i := range rows {
+			ids = append(ids, rows[i].ID)
+			if rows[i].ObjectKey != "" {
+				keys = append(keys, rows[i].ObjectKey)
+			}
+		}
+		if err := tx.Where("id IN ?", ids).Delete(&skillDraftFileModel{}).Error; err != nil {
+			return mapSkillDBError(err)
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 	for _, key := range dedupeStrings(keys) {
 		_ = r.cleanupDraftObjectIfUnreferenced(ctx, key)
 	}
 	return nil
+}
+
+func rejectNonRecursiveNonEmptyDraftDirectoryDelete(target *skillDraftFileModel, recursive bool, childCount int64) error {
+	if recursive || target == nil || target.Kind != skillDraftKindDirectory || childCount <= 0 {
+		return nil
+	}
+	return errorx.Conflict(errorx.Code("SKILL_DRAFT_DIRECTORY_NOT_EMPTY"), "draft directory is not empty; set recursive=true")
 }
 
 func (r *skillRepo) MoveSkillDraftPath(ctx context.Context, name, version, oldPath, newPath string, overwrite bool) error {

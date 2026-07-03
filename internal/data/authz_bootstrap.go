@@ -21,6 +21,7 @@ package data
 
 import (
 	"context"
+	"strings"
 
 	"github.com/aisphereio/kernel/authz"
 	"github.com/aisphereio/kernel/logx"
@@ -174,8 +175,10 @@ definition skill_version {
 //   - If AuthzService is nil (authz disabled), returns nil immediately.
 //   - If ReadSchema returns an error other than "schema not found",
 //     returns the error so main.go can surface it.
-//   - If ReadSchema returns a non-empty schema text, returns nil
-//     (operator has already installed a schema; we do NOT overwrite).
+//   - If ReadSchema returns a non-empty schema text that already contains
+//     Hub definitions, returns nil.
+//   - If ReadSchema returns a non-empty schema text that only contains the
+//     Kernel base definitions, writes HubAuthzSchema to add the skill model.
 //   - If ReadSchema returns empty schema text, writes HubAuthzSchema.
 //
 // The function is safe to call on every startup — it only writes when
@@ -204,10 +207,16 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 			logx.Err(err),
 		)
 	} else if schema.Text != "" {
-		log.WithContext(ctx).Info("authz schema already installed; skipping bootstrap",
-			logx.Int("size", len(schema.Text)),
+		if hasHubAuthzDefinitions(schema.Text) {
+			log.WithContext(ctx).Info("authz schema already installed; skipping bootstrap",
+				logx.Int("size", len(schema.Text)),
+			)
+			return nil
+		}
+		log.WithContext(ctx).Warn("authz schema missing hub definitions; applying hub schema",
+			logx.Int("current_size", len(schema.Text)),
+			logx.String("schema_version", HubAuthzSchemaVersion),
 		)
-		return nil
 	}
 
 	if err := resources.AuthzService.WriteSchema(ctx, authz.Schema{Text: HubAuthzSchema}); err != nil {
@@ -220,4 +229,106 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 		logx.Int("size", len(HubAuthzSchema)),
 	)
 	return nil
+}
+
+func hasHubAuthzDefinitions(schema string) bool {
+	normalized := strings.ToLower(schema)
+	return strings.Contains(normalized, "definition skill ") &&
+		strings.Contains(normalized, "definition skill_version ")
+}
+
+const authzRelationshipBootstrapBatchSize = 100
+
+type skillOwnerRelationshipRow struct {
+	Name    string
+	OwnerID string
+}
+
+// BootstrapAuthzRelationships repairs the SpiceDB projection for durable hub
+// rows that already exist in PostgreSQL. The normal request path writes the
+// skill:{name}#owner@user:{owner_id} tuple during CreateSkill; this startup
+// pass covers historical rows and previous best-effort grant failures.
+//
+// SpiceDB writes are idempotent because kernel/authz/spicedb uses TOUCH for
+// WriteRelationships, so this function is safe to run on every startup.
+func BootstrapAuthzRelationships(ctx context.Context, resources *Resources, log logx.Logger) error {
+	if resources == nil || resources.AuthzService == nil {
+		if log != nil {
+			log.WithContext(ctx).Info("authz relationship bootstrap skipped: authz not configured")
+		}
+		return nil
+	}
+	if resources.DB == nil {
+		if log != nil {
+			log.WithContext(ctx).Info("authz relationship bootstrap skipped: db not configured")
+		}
+		return nil
+	}
+	if log == nil {
+		log = logx.Noop()
+	}
+	log = log.Named("authz.relationship_bootstrap")
+
+	var rows []skillOwnerRelationshipRow
+	if err := resources.DB.GORM(ctx).
+		Model(&skillModel{}).
+		Select("name, owner_id").
+		Where("name <> '' AND owner_id <> ''").
+		Find(&rows).Error; err != nil {
+		log.WithContext(ctx).Error("load skill owner relationships failed", logx.Err(err))
+		return err
+	}
+
+	rels := skillOwnerRelationships(rows)
+	if len(rels) == 0 {
+		log.WithContext(ctx).Info("authz relationship bootstrap skipped: no skill owners found")
+		return nil
+	}
+
+	written := 0
+	for start := 0; start < len(rels); start += authzRelationshipBootstrapBatchSize {
+		end := start + authzRelationshipBootstrapBatchSize
+		if end > len(rels) {
+			end = len(rels)
+		}
+		result, err := resources.AuthzService.WriteRelationships(ctx, rels[start:end]...)
+		if err != nil {
+			log.WithContext(ctx).Error("write skill owner relationships failed",
+				logx.Int("batch_start", start),
+				logx.Int("batch_size", end-start),
+				logx.Err(err),
+			)
+			return err
+		}
+		written += result.Written
+	}
+
+	log.WithContext(ctx).Info("authz relationships bootstrapped",
+		logx.Int("skills", len(rels)),
+		logx.Int("written", written),
+	)
+	return nil
+}
+
+func skillOwnerRelationships(rows []skillOwnerRelationshipRow) []authz.Relationship {
+	rels := make([]authz.Relationship, 0, len(rows))
+	seen := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		name := strings.TrimSpace(row.Name)
+		ownerID := strings.TrimSpace(row.OwnerID)
+		if name == "" || ownerID == "" {
+			continue
+		}
+		key := name + "\x00" + ownerID
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		rels = append(rels, authz.Relationship{
+			Resource: authz.ObjectRef{Type: "skill", ID: name},
+			Relation: "owner",
+			Subject:  authz.SubjectRef{Type: authz.SubjectTypeUser, ID: ownerID},
+		})
+	}
+	return rels
 }

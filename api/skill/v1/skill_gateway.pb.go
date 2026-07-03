@@ -129,6 +129,55 @@ func SkillServiceGatewayManifest() gatewayx.Manifest {
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHENTICATED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
+				ID:       "skill.list.skill.draft.files",
+				Method:   "GET",
+				Path:     "/v1/skills/{name}/draft/files",
+				Upstream: gatewayx.UpstreamRef{Service: "skill-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/ListSkillDraftFiles"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHENTICATED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.get.skill.draft.file",
+				Method:   "GET",
+				Path:     "/v1/skills/{name}/draft/file",
+				Upstream: gatewayx.UpstreamRef{Service: "skill-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/GetSkillDraftFile"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHENTICATED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.upsert.skill.draft.file",
+				Method:   "PUT",
+				Path:     "/v1/skills/{name}/draft/file",
+				Upstream: gatewayx.UpstreamRef{Service: "aihub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/UpsertSkillDraftFile"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.upsert.skill.draft.directory",
+				Method:   "POST",
+				Path:     "/v1/skills/{name}/draft/dir",
+				Upstream: gatewayx.UpstreamRef{Service: "aihub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/UpsertSkillDraftDirectory"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.delete.skill.draft.path",
+				Method:   "DELETE",
+				Path:     "/v1/skills/{name}/draft/path",
+				Upstream: gatewayx.UpstreamRef{Service: "aihub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/DeleteSkillDraftPath"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.move.skill.draft.path",
+				Method:   "POST",
+				Path:     "/v1/skills/{name}/draft/path:move",
+				Upstream: gatewayx.UpstreamRef{Service: "aihub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/MoveSkillDraftPath"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.commit.skill.draft",
+				Method:   "POST",
+				Path:     "/v1/skills/{name}/draft:commit",
+				Upstream: gatewayx.UpstreamRef{Service: "aihub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/CommitSkillDraft"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
 				ID:       "skill.list.skill.shares",
 				Method:   "GET",
 				Path:     "/v1/skills/{name}/shares",
@@ -408,6 +457,111 @@ func SkillServiceGatewayBindGetSkillVersionFile(req gatewayx.DispatchRequest, ma
 	return out, nil
 }
 
+// SkillServiceGatewayBindListSkillDraftFiles binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/ListSkillDraftFiles.
+func SkillServiceGatewayBindListSkillDraftFiles(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ListSkillDraftFilesRequest, error) {
+	out := &ListSkillDraftFilesRequest{}
+	if v, ok := req.Body.(*ListSkillDraftFilesRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(ListSkillDraftFilesRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+// SkillServiceGatewayBindGetSkillDraftFile binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/GetSkillDraftFile.
+func SkillServiceGatewayBindGetSkillDraftFile(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*GetSkillDraftFileRequest, error) {
+	out := &GetSkillDraftFileRequest{}
+	if v, ok := req.Body.(*GetSkillDraftFileRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(GetSkillDraftFileRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+// SkillServiceGatewayBindUpsertSkillDraftFile binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/UpsertSkillDraftFile.
+func SkillServiceGatewayBindUpsertSkillDraftFile(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*UpsertSkillDraftFileRequest, error) {
+	out := &UpsertSkillDraftFileRequest{}
+	if v, ok := req.Body.(*UpsertSkillDraftFileRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(UpsertSkillDraftFileRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+// SkillServiceGatewayBindUpsertSkillDraftDirectory binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/UpsertSkillDraftDirectory.
+func SkillServiceGatewayBindUpsertSkillDraftDirectory(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*UpsertSkillDraftDirectoryRequest, error) {
+	out := &UpsertSkillDraftDirectoryRequest{}
+	if v, ok := req.Body.(*UpsertSkillDraftDirectoryRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(UpsertSkillDraftDirectoryRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+// SkillServiceGatewayBindDeleteSkillDraftPath binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/DeleteSkillDraftPath.
+func SkillServiceGatewayBindDeleteSkillDraftPath(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*DeleteSkillDraftPathRequest, error) {
+	out := &DeleteSkillDraftPathRequest{}
+	if v, ok := req.Body.(*DeleteSkillDraftPathRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(DeleteSkillDraftPathRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+// SkillServiceGatewayBindMoveSkillDraftPath binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/MoveSkillDraftPath.
+func SkillServiceGatewayBindMoveSkillDraftPath(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*MoveSkillDraftPathRequest, error) {
+	out := &MoveSkillDraftPathRequest{}
+	if v, ok := req.Body.(*MoveSkillDraftPathRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(MoveSkillDraftPathRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+// SkillServiceGatewayBindCommitSkillDraft binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/CommitSkillDraft.
+func SkillServiceGatewayBindCommitSkillDraft(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*CommitSkillDraftRequest, error) {
+	out := &CommitSkillDraftRequest{}
+	if v, ok := req.Body.(*CommitSkillDraftRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(CommitSkillDraftRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
 // SkillServiceGatewayBindListSkillShares binds the matched HTTP Gateway request to the gRPC request for /skill.v1.SkillService/ListSkillShares.
 func SkillServiceGatewayBindListSkillShares(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ListSkillSharesRequest, error) {
 	out := &ListSkillSharesRequest{}
@@ -507,6 +661,27 @@ func RegisterSkillServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, cli
 		return err
 	}
 	if err := registry.Register("/skill.v1.SkillService/GetSkillVersionFile", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindGetSkillVersionFile, client.GetSkillVersionFile)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/ListSkillDraftFiles", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindListSkillDraftFiles, client.ListSkillDraftFiles)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/GetSkillDraftFile", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindGetSkillDraftFile, client.GetSkillDraftFile)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/UpsertSkillDraftFile", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindUpsertSkillDraftFile, client.UpsertSkillDraftFile)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/UpsertSkillDraftDirectory", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindUpsertSkillDraftDirectory, client.UpsertSkillDraftDirectory)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/DeleteSkillDraftPath", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindDeleteSkillDraftPath, client.DeleteSkillDraftPath)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/MoveSkillDraftPath", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindMoveSkillDraftPath, client.MoveSkillDraftPath)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/CommitSkillDraft", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindCommitSkillDraft, client.CommitSkillDraft)); err != nil {
 		return err
 	}
 	if err := registry.Register("/skill.v1.SkillService/ListSkillShares", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindListSkillShares, client.ListSkillShares)); err != nil {

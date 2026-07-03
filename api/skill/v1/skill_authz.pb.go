@@ -118,6 +118,61 @@ var SkillServiceAuthzRules = authz.Rules{
 		AuditEvent: "aihub.skill_version.offline",
 		AuditRisk:  "high",
 	},
+	"/skill.v1.SkillService/UpsertSkillDraftFile": {
+		Service:    "skill.v1.SkillService",
+		Method:     "UpsertSkillDraftFile",
+		FullMethod: "/skill.v1.SkillService/UpsertSkillDraftFile",
+		Action:     "draft:file:write",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_file.write",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/UpsertSkillDraftDirectory": {
+		Service:    "skill.v1.SkillService",
+		Method:     "UpsertSkillDraftDirectory",
+		FullMethod: "/skill.v1.SkillService/UpsertSkillDraftDirectory",
+		Action:     "draft:dir:write",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_dir.write",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/DeleteSkillDraftPath": {
+		Service:    "skill.v1.SkillService",
+		Method:     "DeleteSkillDraftPath",
+		FullMethod: "/skill.v1.SkillService/DeleteSkillDraftPath",
+		Action:     "draft:path:delete",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_path.delete",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/MoveSkillDraftPath": {
+		Service:    "skill.v1.SkillService",
+		Method:     "MoveSkillDraftPath",
+		FullMethod: "/skill.v1.SkillService/MoveSkillDraftPath",
+		Action:     "draft:path:move",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_path.move",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/CommitSkillDraft": {
+		Service:    "skill.v1.SkillService",
+		Method:     "CommitSkillDraft",
+		FullMethod: "/skill.v1.SkillService/CommitSkillDraft",
+		Action:     "draft:commit",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft.commit",
+		AuditRisk:  "medium",
+	},
 	"/skill.v1.SkillService/ListSkillShares": {
 		Service:    "skill.v1.SkillService",
 		Method:     "ListSkillShares",
@@ -256,6 +311,61 @@ const SkillServiceAuthzManifestJSON = `{
     },
     {
       "service": "skill.v1.SkillService",
+      "method": "UpsertSkillDraftFile",
+      "full_method": "/skill.v1.SkillService/UpsertSkillDraftFile",
+      "action": "draft:file:write",
+      "resource": "aihub:skill:{name}",
+      "audience": "aihub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "aihub.skill_draft_file.write",
+      "audit_risk": "medium"
+    },
+    {
+      "service": "skill.v1.SkillService",
+      "method": "UpsertSkillDraftDirectory",
+      "full_method": "/skill.v1.SkillService/UpsertSkillDraftDirectory",
+      "action": "draft:dir:write",
+      "resource": "aihub:skill:{name}",
+      "audience": "aihub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "aihub.skill_draft_dir.write",
+      "audit_risk": "medium"
+    },
+    {
+      "service": "skill.v1.SkillService",
+      "method": "DeleteSkillDraftPath",
+      "full_method": "/skill.v1.SkillService/DeleteSkillDraftPath",
+      "action": "draft:path:delete",
+      "resource": "aihub:skill:{name}",
+      "audience": "aihub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "aihub.skill_draft_path.delete",
+      "audit_risk": "medium"
+    },
+    {
+      "service": "skill.v1.SkillService",
+      "method": "MoveSkillDraftPath",
+      "full_method": "/skill.v1.SkillService/MoveSkillDraftPath",
+      "action": "draft:path:move",
+      "resource": "aihub:skill:{name}",
+      "audience": "aihub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "aihub.skill_draft_path.move",
+      "audit_risk": "medium"
+    },
+    {
+      "service": "skill.v1.SkillService",
+      "method": "CommitSkillDraft",
+      "full_method": "/skill.v1.SkillService/CommitSkillDraft",
+      "action": "draft:commit",
+      "resource": "aihub:skill:{name}",
+      "audience": "aihub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "aihub.skill_draft.commit",
+      "audit_risk": "medium"
+    },
+    {
+      "service": "skill.v1.SkillService",
       "method": "ListSkillShares",
       "full_method": "/skill.v1.SkillService/ListSkillShares",
       "action": "share:list",
@@ -372,6 +482,16 @@ func _SkillServiceNormalizeOperation(operation string) string {
 		return "/skill.v1.SkillService/OnlineSkillVersion"
 	case "OfflineSkillVersion", "skill.v1.SkillService/OfflineSkillVersion":
 		return "/skill.v1.SkillService/OfflineSkillVersion"
+	case "UpsertSkillDraftFile", "skill.v1.SkillService/UpsertSkillDraftFile":
+		return "/skill.v1.SkillService/UpsertSkillDraftFile"
+	case "UpsertSkillDraftDirectory", "skill.v1.SkillService/UpsertSkillDraftDirectory":
+		return "/skill.v1.SkillService/UpsertSkillDraftDirectory"
+	case "DeleteSkillDraftPath", "skill.v1.SkillService/DeleteSkillDraftPath":
+		return "/skill.v1.SkillService/DeleteSkillDraftPath"
+	case "MoveSkillDraftPath", "skill.v1.SkillService/MoveSkillDraftPath":
+		return "/skill.v1.SkillService/MoveSkillDraftPath"
+	case "CommitSkillDraft", "skill.v1.SkillService/CommitSkillDraft":
+		return "/skill.v1.SkillService/CommitSkillDraft"
 	case "ListSkillShares", "skill.v1.SkillService/ListSkillShares":
 		return "/skill.v1.SkillService/ListSkillShares"
 	case "CreateSkillShare", "skill.v1.SkillService/CreateSkillShare":
@@ -770,8 +890,211 @@ func (c *SkillServiceSecureClient) ListSkillVersionFiles(ctx context.Context, in
 	return c.raw.ListSkillVersionFiles(ctx, in, opts...)
 }
 
-func (c *SkillServiceSecureClient) GetSkillVersionFile(ctx context.Context, in *GetSkillVersionFileRequest, opts ...grpc.CallOption) (*SkillFile, error) {
+func (c *SkillServiceSecureClient) GetSkillVersionFile(ctx context.Context, in *GetSkillVersionFileRequest, opts ...grpc.CallOption) (*GetSkillVersionFileResponse, error) {
 	return c.raw.GetSkillVersionFile(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) ListSkillDraftFiles(ctx context.Context, in *ListSkillDraftFilesRequest, opts ...grpc.CallOption) (*ListSkillDraftFilesResponse, error) {
+	return c.raw.ListSkillDraftFiles(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) GetSkillDraftFile(ctx context.Context, in *GetSkillDraftFileRequest, opts ...grpc.CallOption) (*GetSkillDraftFileResponse, error) {
+	return c.raw.GetSkillDraftFile(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) UpsertSkillDraftFile(ctx context.Context, in *UpsertSkillDraftFileRequest, opts ...grpc.CallOption) (*UpsertSkillDraftFileResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillServiceAuthzRules["/skill.v1.SkillService/UpsertSkillDraftFile"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.UpsertSkillDraftFile(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) UpsertSkillDraftDirectory(ctx context.Context, in *UpsertSkillDraftDirectoryRequest, opts ...grpc.CallOption) (*UpsertSkillDraftDirectoryResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillServiceAuthzRules["/skill.v1.SkillService/UpsertSkillDraftDirectory"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.UpsertSkillDraftDirectory(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) DeleteSkillDraftPath(ctx context.Context, in *DeleteSkillDraftPathRequest, opts ...grpc.CallOption) (*DeleteSkillDraftPathResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillServiceAuthzRules["/skill.v1.SkillService/DeleteSkillDraftPath"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.DeleteSkillDraftPath(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) MoveSkillDraftPath(ctx context.Context, in *MoveSkillDraftPathRequest, opts ...grpc.CallOption) (*MoveSkillDraftPathResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillServiceAuthzRules["/skill.v1.SkillService/MoveSkillDraftPath"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.MoveSkillDraftPath(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) CommitSkillDraft(ctx context.Context, in *CommitSkillDraftRequest, opts ...grpc.CallOption) (*CommitSkillDraftResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillServiceAuthzRules["/skill.v1.SkillService/CommitSkillDraft"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.CommitSkillDraft(ctx, in, opts...)
 }
 
 func (c *SkillServiceSecureClient) ListSkillShares(ctx context.Context, in *ListSkillSharesRequest, opts ...grpc.CallOption) (*ListSkillSharesResponse, error) {

@@ -103,6 +103,10 @@ func main() {
 		logger.Warn("authz schema bootstrap failed; authz checks will fail until fixed", logx.Err(err))
 	}
 
+	if err := data.BootstrapAuthzRelationships(bootstrapCtx, resources, logger); err != nil {
+		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
+	}
+
 	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, authnService, authzService, auditService, skillService)
 	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, authnService, authzService, auditService, skillService)
 

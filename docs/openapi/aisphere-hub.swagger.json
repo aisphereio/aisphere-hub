@@ -1065,6 +1065,289 @@
         ]
       }
     },
+    "/v1/skills/{name}/draft/dir": {
+      "post": {
+        "summary": "UpsertSkillDraftDirectory creates a directory in the draft workspace.",
+        "operationId": "SkillService_UpsertSkillDraftDirectory",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillFile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceUpsertSkillDraftDirectoryBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/draft/file": {
+      "get": {
+        "summary": "GetSkillDraftFile returns one draft file's metadata and content.",
+        "operationId": "SkillService_GetSkillDraftFile",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillFile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      },
+      "put": {
+        "summary": "UpsertSkillDraftFile creates or updates a draft file.",
+        "operationId": "SkillService_UpsertSkillDraftFile",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillFile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceUpsertSkillDraftFileBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/draft/files": {
+      "get": {
+        "summary": "ListSkillDraftFiles lists the editable draft workspace tree.",
+        "operationId": "SkillService_ListSkillDraftFiles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillDraftFilesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/draft/path": {
+      "delete": {
+        "summary": "DeleteSkillDraftPath deletes a file or directory from the draft workspace.",
+        "operationId": "SkillService_DeleteSkillDraftPath",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSkillDraftPathResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "recursive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/draft/path:move": {
+      "post": {
+        "summary": "MoveSkillDraftPath renames or moves a draft workspace path.",
+        "operationId": "SkillService_MoveSkillDraftPath",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MoveSkillDraftPathResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceMoveSkillDraftPathBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/draft:commit": {
+      "post": {
+        "summary": "CommitSkillDraft materializes the draft workspace into a SkillVersion.",
+        "operationId": "SkillService_CommitSkillDraft",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceCommitSkillDraftBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
     "/v1/skills/{name}/shares": {
       "get": {
         "summary": "ListSkillShares lists subjects that have any relation on the named\nskill. Requires skill.read (with ownership + public fallback).",
@@ -1293,7 +1576,7 @@
         "operationId": "SkillService_GetSkillVersionFile",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/v1SkillFile"
             }
@@ -1621,6 +1904,29 @@
     }
   },
   "definitions": {
+    "SkillServiceCommitSkillDraftBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "commitMsg": {
+          "type": "string"
+        },
+        "overwrite": {
+          "type": "boolean"
+        },
+        "submit": {
+          "type": "boolean"
+        },
+        "publish": {
+          "type": "boolean"
+        },
+        "online": {
+          "type": "boolean"
+        }
+      }
+    },
     "SkillServiceCreateSkillShareBody": {
       "type": "object",
       "properties": {
@@ -1643,6 +1949,27 @@
         "relation",
         "subjectType",
         "subjectId"
+      ]
+    },
+    "SkillServiceMoveSkillDraftPathBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "oldPath": {
+          "type": "string"
+        },
+        "newPath": {
+          "type": "string"
+        },
+        "overwrite": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "oldPath",
+        "newPath"
       ]
     },
     "SkillServiceOfflineSkillVersionBody": {
@@ -1696,6 +2023,46 @@
       },
       "required": [
         "visibility"
+      ]
+    },
+    "SkillServiceUpsertSkillDraftDirectoryBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "SkillServiceUpsertSkillDraftFileBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "createParents": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
       ]
     },
     "protobufAny": {
@@ -1935,6 +2302,14 @@
         }
       }
     },
+    "v1CommitSkillDraftResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
     "v1CreateSkillRequest": {
       "type": "object",
       "properties": {
@@ -2016,6 +2391,9 @@
         }
       }
     },
+    "v1DeleteSkillDraftPathResponse": {
+      "type": "object"
+    },
     "v1DeleteSkillResponse": {
       "type": "object"
     },
@@ -2075,11 +2453,27 @@
       },
       "description": "ExchangeResponse is the OAuth2/OIDC token set returned by Exchange.\n\n`expires_in` is seconds from issue time to expiry (OAuth2 standard). For a\nwall-clock expiry, callers can compute issued_at + expires_in, or use the\n`expires_at` field on Principal returned by Me/Introspect."
     },
+    "v1GetSkillDraftFileResponse": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/definitions/v1SkillFile"
+        }
+      }
+    },
     "v1GetSkillResponse": {
       "type": "object",
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
+        }
+      }
+    },
+    "v1GetSkillVersionFileResponse": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/definitions/v1SkillFile"
         }
       }
     },
@@ -2150,6 +2544,18 @@
         }
       },
       "description": "IntrospectResponse mirrors RFC 7662 token introspection."
+    },
+    "v1ListSkillDraftFilesResponse": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkillFile"
+          }
+        }
+      }
     },
     "v1ListSkillSharesResponse": {
       "type": "object",
@@ -2261,6 +2667,9 @@
           "$ref": "#/definitions/v1Principal"
         }
       }
+    },
+    "v1MoveSkillDraftPathResponse": {
+      "type": "object"
     },
     "v1ObjectRef": {
       "type": "object",
@@ -2834,6 +3243,22 @@
       "properties": {
         "version": {
           "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
+    "v1UpsertSkillDraftDirectoryResponse": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/definitions/v1SkillFile"
+        }
+      }
+    },
+    "v1UpsertSkillDraftFileResponse": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/definitions/v1SkillFile"
         }
       }
     },

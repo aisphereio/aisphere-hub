@@ -124,6 +124,61 @@ var SkillServiceKernelAuthzRules = authz.Rules{
 		AuditEvent: "aihub.skill_version.offline",
 		AuditRisk:  "high",
 	},
+	"/skill.v1.SkillService/UpsertSkillDraftFile": {
+		Service:    "skill.v1.SkillService",
+		Method:     "UpsertSkillDraftFile",
+		FullMethod: "/skill.v1.SkillService/UpsertSkillDraftFile",
+		Action:     "draft:file:write",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_file.write",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/UpsertSkillDraftDirectory": {
+		Service:    "skill.v1.SkillService",
+		Method:     "UpsertSkillDraftDirectory",
+		FullMethod: "/skill.v1.SkillService/UpsertSkillDraftDirectory",
+		Action:     "draft:dir:write",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_dir.write",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/DeleteSkillDraftPath": {
+		Service:    "skill.v1.SkillService",
+		Method:     "DeleteSkillDraftPath",
+		FullMethod: "/skill.v1.SkillService/DeleteSkillDraftPath",
+		Action:     "draft:path:delete",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_path.delete",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/MoveSkillDraftPath": {
+		Service:    "skill.v1.SkillService",
+		Method:     "MoveSkillDraftPath",
+		FullMethod: "/skill.v1.SkillService/MoveSkillDraftPath",
+		Action:     "draft:path:move",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft_path.move",
+		AuditRisk:  "medium",
+	},
+	"/skill.v1.SkillService/CommitSkillDraft": {
+		Service:    "skill.v1.SkillService",
+		Method:     "CommitSkillDraft",
+		FullMethod: "/skill.v1.SkillService/CommitSkillDraft",
+		Action:     "draft:commit",
+		Resource:   "aihub:skill:{name}",
+		Audience:   "aihub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "aihub.skill_draft.commit",
+		AuditRisk:  "medium",
+	},
 	"/skill.v1.SkillService/ListSkillShares": {
 		Service:    "skill.v1.SkillService",
 		Method:     "ListSkillShares",
@@ -383,6 +438,105 @@ func SkillServiceKernelRequestInfoResolver(ctx context.Context, operation string
 		info.Labels["audit_event"] = "aihub.skill_file.get"
 		info.Labels["audit_risk"] = "low"
 		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/ListSkillDraftFiles":
+		info := requestx.Info{
+			Service:   "skill.v1.SkillService",
+			Method:    "ListSkillDraftFiles",
+			Operation: "/skill.v1.SkillService/ListSkillDraftFiles",
+			Exposure:  v1.Exposure_AUTHENTICATED,
+			Labels:    map[string]string{},
+		}
+		info.Labels["authz_mode"] = "UNSPECIFIED"
+		info.Labels["audit_event"] = "aihub.skill_draft_file.list"
+		info.Labels["audit_risk"] = "low"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/GetSkillDraftFile":
+		info := requestx.Info{
+			Service:   "skill.v1.SkillService",
+			Method:    "GetSkillDraftFile",
+			Operation: "/skill.v1.SkillService/GetSkillDraftFile",
+			Exposure:  v1.Exposure_AUTHENTICATED,
+			Labels:    map[string]string{},
+		}
+		info.Labels["authz_mode"] = "UNSPECIFIED"
+		info.Labels["audit_event"] = "aihub.skill_draft_file.get"
+		info.Labels["audit_risk"] = "low"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/UpsertSkillDraftFile":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillService",
+			Method:        "UpsertSkillDraftFile",
+			Operation:     "/skill.v1.SkillService/UpsertSkillDraftFile",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "draft:file:write",
+			Resource:      "aihub:skill:{name}",
+			TargetService: "aihub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "aihub.skill_draft_file.write"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/UpsertSkillDraftDirectory":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillService",
+			Method:        "UpsertSkillDraftDirectory",
+			Operation:     "/skill.v1.SkillService/UpsertSkillDraftDirectory",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "draft:dir:write",
+			Resource:      "aihub:skill:{name}",
+			TargetService: "aihub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "aihub.skill_draft_dir.write"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/DeleteSkillDraftPath":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillService",
+			Method:        "DeleteSkillDraftPath",
+			Operation:     "/skill.v1.SkillService/DeleteSkillDraftPath",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "draft:path:delete",
+			Resource:      "aihub:skill:{name}",
+			TargetService: "aihub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "aihub.skill_draft_path.delete"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/MoveSkillDraftPath":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillService",
+			Method:        "MoveSkillDraftPath",
+			Operation:     "/skill.v1.SkillService/MoveSkillDraftPath",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "draft:path:move",
+			Resource:      "aihub:skill:{name}",
+			TargetService: "aihub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "aihub.skill_draft_path.move"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/CommitSkillDraft":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillService",
+			Method:        "CommitSkillDraft",
+			Operation:     "/skill.v1.SkillService/CommitSkillDraft",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "draft:commit",
+			Resource:      "aihub:skill:{name}",
+			TargetService: "aihub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "aihub.skill_draft.commit"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
 	case "/skill.v1.SkillService/ListSkillShares":
 		info := requestx.Info{
 			Service:       "skill.v1.SkillService",
@@ -490,6 +644,20 @@ func _SkillServiceKernelNormalizeOperation(operation string) string {
 		return "/skill.v1.SkillService/ListSkillVersionFiles"
 	case "GetSkillVersionFile", "skill.v1.SkillService/GetSkillVersionFile":
 		return "/skill.v1.SkillService/GetSkillVersionFile"
+	case "ListSkillDraftFiles", "skill.v1.SkillService/ListSkillDraftFiles":
+		return "/skill.v1.SkillService/ListSkillDraftFiles"
+	case "GetSkillDraftFile", "skill.v1.SkillService/GetSkillDraftFile":
+		return "/skill.v1.SkillService/GetSkillDraftFile"
+	case "UpsertSkillDraftFile", "skill.v1.SkillService/UpsertSkillDraftFile":
+		return "/skill.v1.SkillService/UpsertSkillDraftFile"
+	case "UpsertSkillDraftDirectory", "skill.v1.SkillService/UpsertSkillDraftDirectory":
+		return "/skill.v1.SkillService/UpsertSkillDraftDirectory"
+	case "DeleteSkillDraftPath", "skill.v1.SkillService/DeleteSkillDraftPath":
+		return "/skill.v1.SkillService/DeleteSkillDraftPath"
+	case "MoveSkillDraftPath", "skill.v1.SkillService/MoveSkillDraftPath":
+		return "/skill.v1.SkillService/MoveSkillDraftPath"
+	case "CommitSkillDraft", "skill.v1.SkillService/CommitSkillDraft":
+		return "/skill.v1.SkillService/CommitSkillDraft"
 	case "ListSkillShares", "skill.v1.SkillService/ListSkillShares":
 		return "/skill.v1.SkillService/ListSkillShares"
 	case "CreateSkillShare", "skill.v1.SkillService/CreateSkillShare":

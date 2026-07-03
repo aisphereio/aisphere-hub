@@ -80,7 +80,17 @@ data:
       write_timeout_ns: 3000000000
       metrics_enabled: true
   object_store:
-    enabled: false
+    enabled: true
+    config:
+      driver: minio
+      endpoint: "${MINIO_ENDPOINT}"
+      use_ssl: false
+      access_key: "${MINIO_ACCESS_KEY}"
+      secret_key: "${MINIO_SECRET_KEY}"
+      bucket: "${MINIO_BUCKET}"
+      ensure_bucket: true
+      presign_expiry_ns: 900000000000
+      metrics_enabled: true
 
 security:
   authn:

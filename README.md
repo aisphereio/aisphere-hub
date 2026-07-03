@@ -5,7 +5,7 @@ Aisphere Hub is the business service for AIHub capabilities, starting with Skill
 This repository is being migrated to the current Aisphere platform stack:
 
 ```text
-kernel v0.2.1
+kernel v0.2.2
   -> generated HTTP/gRPC bindings
   -> generated access / gateway / kernel metadata
   -> aisphere-gateway route registry
@@ -16,7 +16,7 @@ The Hub should not become a second IAM. Platform login, token verification, and 
 
 ## Current status
 
-- Uses `github.com/aisphereio/kernel v0.2.1`.
+- Uses `github.com/aisphereio/kernel v0.2.2`.
 - Uses Kernel code generation tools through `make tools`.
 - `buf.gen.yaml` includes `protoc-gen-go-authz`, `protoc-gen-go-gateway`, and `protoc-gen-go-kernel`.
 - Kernel access proto definitions are vendored under `api/aisphere/...` so Hub protos can declare `aisphere.access.v1.policy`.
@@ -42,8 +42,10 @@ docs/ai/              Engineering notes for AI-assisted maintenance
 ## Run locally
 
 ```bash
-go run ./cmd/aisphere-hub -conf ./configs/config.yaml
+go run ./cmd/aisphere-hub -conf ./configs
 ```
+
+> `-conf` 参数指向配置**目录**（默认值即为 `configs`），`configx` 会读取目录下的 `config.local.yaml` 等文件。不要传 `config.yaml` 文件路径。
 
 Default transport ports:
 
@@ -67,6 +69,13 @@ Default transport ports:
 - `GET /v1/skills/{name}/versions/{version}/download`
 - `GET /v1/skills/{name}/versions/{version}/files`
 - `GET /v1/skills/{name}/versions/{version}/file`
+- `GET /v1/skills/{name}/draft/files`
+- `GET /v1/skills/{name}/draft/file`
+- `PUT /v1/skills/{name}/draft/file`
+- `POST /v1/skills/{name}/draft/dir`
+- `DELETE /v1/skills/{name}/draft/path`
+- `POST /v1/skills/{name}/draft/path:move`
+- `POST /v1/skills/{name}/draft:commit`
 - `GET /v1/skills/{name}/shares`
 - `POST /v1/skills/{name}/shares`
 - `DELETE /v1/skills/{name}/shares/{subject_type}/{subject_id}`

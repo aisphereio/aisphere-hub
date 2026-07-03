@@ -17,18 +17,23 @@ var _ = new(context.Context)
 
 const _ = http.SupportPackageIsVersion3
 
+const OperationSkillServiceCommitSkillDraft = "/skill.v1.SkillService/CommitSkillDraft"
 const OperationSkillServiceCreateSkill = "/skill.v1.SkillService/CreateSkill"
 const OperationSkillServiceCreateSkillShare = "/skill.v1.SkillService/CreateSkillShare"
 const OperationSkillServiceDeleteSkill = "/skill.v1.SkillService/DeleteSkill"
+const OperationSkillServiceDeleteSkillDraftPath = "/skill.v1.SkillService/DeleteSkillDraftPath"
 const OperationSkillServiceDeleteSkillShare = "/skill.v1.SkillService/DeleteSkillShare"
 const OperationSkillServiceDownloadSkillVersion = "/skill.v1.SkillService/DownloadSkillVersion"
 const OperationSkillServiceGetSkill = "/skill.v1.SkillService/GetSkill"
+const OperationSkillServiceGetSkillDraftFile = "/skill.v1.SkillService/GetSkillDraftFile"
 const OperationSkillServiceGetSkillVersion = "/skill.v1.SkillService/GetSkillVersion"
 const OperationSkillServiceGetSkillVersionFile = "/skill.v1.SkillService/GetSkillVersionFile"
+const OperationSkillServiceListSkillDraftFiles = "/skill.v1.SkillService/ListSkillDraftFiles"
 const OperationSkillServiceListSkillShares = "/skill.v1.SkillService/ListSkillShares"
 const OperationSkillServiceListSkillVersionFiles = "/skill.v1.SkillService/ListSkillVersionFiles"
 const OperationSkillServiceListSkillVersions = "/skill.v1.SkillService/ListSkillVersions"
 const OperationSkillServiceListSkills = "/skill.v1.SkillService/ListSkills"
+const OperationSkillServiceMoveSkillDraftPath = "/skill.v1.SkillService/MoveSkillDraftPath"
 const OperationSkillServiceOfflineSkillVersion = "/skill.v1.SkillService/OfflineSkillVersion"
 const OperationSkillServiceOnlineSkillVersion = "/skill.v1.SkillService/OnlineSkillVersion"
 const OperationSkillServicePublishSkillVersion = "/skill.v1.SkillService/PublishSkillVersion"
@@ -36,8 +41,12 @@ const OperationSkillServiceSubmitSkillVersion = "/skill.v1.SkillService/SubmitSk
 const OperationSkillServiceUpdateSkill = "/skill.v1.SkillService/UpdateSkill"
 const OperationSkillServiceUpdateSkillVisibility = "/skill.v1.SkillService/UpdateSkillVisibility"
 const OperationSkillServiceUploadSkillPackage = "/skill.v1.SkillService/UploadSkillPackage"
+const OperationSkillServiceUpsertSkillDraftDirectory = "/skill.v1.SkillService/UpsertSkillDraftDirectory"
+const OperationSkillServiceUpsertSkillDraftFile = "/skill.v1.SkillService/UpsertSkillDraftFile"
 
 type SkillServiceHTTPServer interface {
+	// CommitSkillDraft CommitSkillDraft materializes the draft workspace into a SkillVersion.
+	CommitSkillDraft(context.Context, *CommitSkillDraftRequest) (*CommitSkillDraftResponse, error)
 	// CreateSkill CreateSkill creates one canonical skill. The caller becomes the owner.
 	CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error)
 	// CreateSkillShare CreateSkillShare grants a viewer or editor relation on the named
@@ -48,6 +57,8 @@ type SkillServiceHTTPServer interface {
 	// versions and files. S3 objects are purged best-effort after the DB
 	// transaction commits.
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
+	// DeleteSkillDraftPath DeleteSkillDraftPath deletes a file or directory from the draft workspace.
+	DeleteSkillDraftPath(context.Context, *DeleteSkillDraftPathRequest) (*DeleteSkillDraftPathResponse, error)
 	// DeleteSkillShare DeleteSkillShare revokes ALL relations between the named skill and
 	// the named subject. Requires skill.edit.
 	DeleteSkillShare(context.Context, *DeleteSkillShareRequest) (*DeleteSkillShareResponse, error)
@@ -56,10 +67,14 @@ type SkillServiceHTTPServer interface {
 	DownloadSkillVersion(context.Context, *DownloadSkillVersionRequest) (*SkillPackageDownload, error)
 	// GetSkill GetSkill returns one canonical skill by name.
 	GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error)
+	// GetSkillDraftFile GetSkillDraftFile returns one draft file's metadata and content.
+	GetSkillDraftFile(context.Context, *GetSkillDraftFileRequest) (*GetSkillDraftFileResponse, error)
 	// GetSkillVersion GetSkillVersion returns one version metadata record.
 	GetSkillVersion(context.Context, *GetSkillVersionRequest) (*GetSkillVersionResponse, error)
 	// GetSkillVersionFile GetSkillVersionFile returns one text or base64-encoded file content.
-	GetSkillVersionFile(context.Context, *GetSkillVersionFileRequest) (*SkillFile, error)
+	GetSkillVersionFile(context.Context, *GetSkillVersionFileRequest) (*GetSkillVersionFileResponse, error)
+	// ListSkillDraftFiles ListSkillDraftFiles lists the editable draft workspace tree.
+	ListSkillDraftFiles(context.Context, *ListSkillDraftFilesRequest) (*ListSkillDraftFilesResponse, error)
 	// ListSkillShares ListSkillShares lists subjects that have any relation on the named
 	// skill. Requires skill.read (with ownership + public fallback).
 	ListSkillShares(context.Context, *ListSkillSharesRequest) (*ListSkillSharesResponse, error)
@@ -71,6 +86,8 @@ type SkillServiceHTTPServer interface {
 	// rules: caller sees (a) skills they own, (b) skills shared with them
 	// via accessx grants, (c) skills with visibility=public.
 	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
+	// MoveSkillDraftPath MoveSkillDraftPath renames or moves a draft workspace path.
+	MoveSkillDraftPath(context.Context, *MoveSkillDraftPathRequest) (*MoveSkillDraftPathResponse, error)
 	// OfflineSkillVersion OfflineSkillVersion removes one online version from catalog/runtime use.
 	OfflineSkillVersion(context.Context, *OfflineSkillVersionRequest) (*OfflineSkillVersionResponse, error)
 	// OnlineSkillVersion OnlineSkillVersion makes one published version consumable by
@@ -94,13 +111,20 @@ type SkillServiceHTTPServer interface {
 	// declaring name, description, version. Other files become version
 	// files; binary files are base64-encoded in the DB content column.
 	UploadSkillPackage(context.Context, *UploadSkillPackageRequest) (*UploadSkillPackageResponse, error)
+	// UpsertSkillDraftDirectory UpsertSkillDraftDirectory creates a directory in the draft workspace.
+	UpsertSkillDraftDirectory(context.Context, *UpsertSkillDraftDirectoryRequest) (*UpsertSkillDraftDirectoryResponse, error)
+	// UpsertSkillDraftFile UpsertSkillDraftFile creates or updates a draft file.
+	UpsertSkillDraftFile(context.Context, *UpsertSkillDraftFileRequest) (*UpsertSkillDraftFileResponse, error)
 }
 
 func RegisterSkillServiceHTTPServer(s *http.Server, srv SkillServiceHTTPServer) {
 	r := s.Route("/")
+	r.Handle("DELETE", "/v1/skills/{name}/draft/path", _SkillService_DeleteSkillDraftPath0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/v1/skills/{name}", _SkillService_DeleteSkill0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/v1/skills/{name}/shares/{subject_type}/{subject_id}", _SkillService_DeleteSkillShare0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills", _SkillService_ListSkills0_HTTP_Handler(srv))
+	r.Handle("GET", "/v1/skills/{name}/draft/file", _SkillService_GetSkillDraftFile0_HTTP_Handler(srv))
+	r.Handle("GET", "/v1/skills/{name}/draft/files", _SkillService_ListSkillDraftFiles0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/shares", _SkillService_ListSkillShares0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/versions", _SkillService_ListSkillVersions0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}", _SkillService_GetSkill0_HTTP_Handler(srv))
@@ -110,13 +134,42 @@ func RegisterSkillServiceHTTPServer(s *http.Server, srv SkillServiceHTTPServer) 
 	r.Handle("GET", "/v1/skills/{name}/versions/{version}", _SkillService_GetSkillVersion0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills", _SkillService_CreateSkill0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills:upload", _SkillService_UploadSkillPackage0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/skills/{name}/draft/dir", _SkillService_UpsertSkillDraftDirectory0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/skills/{name}/draft/path:move", _SkillService_MoveSkillDraftPath0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/skills/{name}/draft:commit", _SkillService_CommitSkillDraft0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/shares", _SkillService_CreateSkillShare0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}:visibility", _SkillService_UpdateSkillVisibility0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/versions/{version}:offline", _SkillService_OfflineSkillVersion0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/versions/{version}:online", _SkillService_OnlineSkillVersion0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/versions/{version}:publish", _SkillService_PublishSkillVersion0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/versions/{version}:submit", _SkillService_SubmitSkillVersion0_HTTP_Handler(srv))
+	r.Handle("PUT", "/v1/skills/{name}/draft/file", _SkillService_UpsertSkillDraftFile0_HTTP_Handler(srv))
 	r.Handle("PUT", "/v1/skills/{name}", _SkillService_UpdateSkill0_HTTP_Handler(srv))
+}
+
+func _SkillService_DeleteSkillDraftPath0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteSkillDraftPathRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceDeleteSkillDraftPath)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteSkillDraftPath(ctx, req.(*DeleteSkillDraftPathRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteSkillDraftPathResponse)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _SkillService_DeleteSkill0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
@@ -187,6 +240,56 @@ func _SkillService_ListSkills0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx
 			return err
 		}
 		reply := out.(*ListSkillsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _SkillService_GetSkillDraftFile0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetSkillDraftFileRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceGetSkillDraftFile)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetSkillDraftFile(ctx, req.(*GetSkillDraftFileRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*GetSkillDraftFileResponse)
+		return ctx.Result(200, reply.File)
+	}
+}
+
+func _SkillService_ListSkillDraftFiles0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListSkillDraftFilesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceListSkillDraftFiles)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListSkillDraftFiles(ctx, req.(*ListSkillDraftFilesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListSkillDraftFilesResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -311,8 +414,8 @@ func _SkillService_GetSkillVersionFile0_HTTP_Handler(srv SkillServiceHTTPServer)
 		if err != nil {
 			return err
 		}
-		reply := out.(*SkillFile)
-		return ctx.Result(200, reply)
+		reply := out.(*GetSkillVersionFileResponse)
+		return ctx.Result(200, reply.File)
 	}
 }
 
@@ -406,6 +509,81 @@ func _SkillService_UploadSkillPackage0_HTTP_Handler(srv SkillServiceHTTPServer) 
 			return err
 		}
 		reply := out.(*UploadSkillPackageResponse)
+		return ctx.Result(200, reply.Version)
+	}
+}
+
+func _SkillService_UpsertSkillDraftDirectory0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpsertSkillDraftDirectoryRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceUpsertSkillDraftDirectory)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpsertSkillDraftDirectory(ctx, req.(*UpsertSkillDraftDirectoryRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*UpsertSkillDraftDirectoryResponse)
+		return ctx.Result(200, reply.File)
+	}
+}
+
+func _SkillService_MoveSkillDraftPath0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in MoveSkillDraftPathRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceMoveSkillDraftPath)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.MoveSkillDraftPath(ctx, req.(*MoveSkillDraftPathRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*MoveSkillDraftPathResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _SkillService_CommitSkillDraft0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CommitSkillDraftRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceCommitSkillDraft)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CommitSkillDraft(ctx, req.(*CommitSkillDraftRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CommitSkillDraftResponse)
 		return ctx.Result(200, reply.Version)
 	}
 }
@@ -560,6 +738,31 @@ func _SkillService_SubmitSkillVersion0_HTTP_Handler(srv SkillServiceHTTPServer) 
 	}
 }
 
+func _SkillService_UpsertSkillDraftFile0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpsertSkillDraftFileRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceUpsertSkillDraftFile)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpsertSkillDraftFile(ctx, req.(*UpsertSkillDraftFileRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*UpsertSkillDraftFileResponse)
+		return ctx.Result(200, reply.File)
+	}
+}
+
 func _SkillService_UpdateSkill0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in UpdateSkillRequest
@@ -586,6 +789,8 @@ func _SkillService_UpdateSkill0_HTTP_Handler(srv SkillServiceHTTPServer) func(ct
 }
 
 type SkillServiceHTTPClient interface {
+	// CommitSkillDraft CommitSkillDraft materializes the draft workspace into a SkillVersion.
+	CommitSkillDraft(ctx context.Context, req *CommitSkillDraftRequest, opts ...http.CallOption) (rsp *CommitSkillDraftResponse, err error)
 	// CreateSkill CreateSkill creates one canonical skill. The caller becomes the owner.
 	CreateSkill(ctx context.Context, req *CreateSkillRequest, opts ...http.CallOption) (rsp *CreateSkillResponse, err error)
 	// CreateSkillShare CreateSkillShare grants a viewer or editor relation on the named
@@ -596,6 +801,8 @@ type SkillServiceHTTPClient interface {
 	// versions and files. S3 objects are purged best-effort after the DB
 	// transaction commits.
 	DeleteSkill(ctx context.Context, req *DeleteSkillRequest, opts ...http.CallOption) (rsp *DeleteSkillResponse, err error)
+	// DeleteSkillDraftPath DeleteSkillDraftPath deletes a file or directory from the draft workspace.
+	DeleteSkillDraftPath(ctx context.Context, req *DeleteSkillDraftPathRequest, opts ...http.CallOption) (rsp *DeleteSkillDraftPathResponse, err error)
 	// DeleteSkillShare DeleteSkillShare revokes ALL relations between the named skill and
 	// the named subject. Requires skill.edit.
 	DeleteSkillShare(ctx context.Context, req *DeleteSkillShareRequest, opts ...http.CallOption) (rsp *DeleteSkillShareResponse, err error)
@@ -604,10 +811,14 @@ type SkillServiceHTTPClient interface {
 	DownloadSkillVersion(ctx context.Context, req *DownloadSkillVersionRequest, opts ...http.CallOption) (rsp *SkillPackageDownload, err error)
 	// GetSkill GetSkill returns one canonical skill by name.
 	GetSkill(ctx context.Context, req *GetSkillRequest, opts ...http.CallOption) (rsp *GetSkillResponse, err error)
+	// GetSkillDraftFile GetSkillDraftFile returns one draft file's metadata and content.
+	GetSkillDraftFile(ctx context.Context, req *GetSkillDraftFileRequest, opts ...http.CallOption) (rsp *GetSkillDraftFileResponse, err error)
 	// GetSkillVersion GetSkillVersion returns one version metadata record.
 	GetSkillVersion(ctx context.Context, req *GetSkillVersionRequest, opts ...http.CallOption) (rsp *GetSkillVersionResponse, err error)
 	// GetSkillVersionFile GetSkillVersionFile returns one text or base64-encoded file content.
-	GetSkillVersionFile(ctx context.Context, req *GetSkillVersionFileRequest, opts ...http.CallOption) (rsp *SkillFile, err error)
+	GetSkillVersionFile(ctx context.Context, req *GetSkillVersionFileRequest, opts ...http.CallOption) (rsp *GetSkillVersionFileResponse, err error)
+	// ListSkillDraftFiles ListSkillDraftFiles lists the editable draft workspace tree.
+	ListSkillDraftFiles(ctx context.Context, req *ListSkillDraftFilesRequest, opts ...http.CallOption) (rsp *ListSkillDraftFilesResponse, err error)
 	// ListSkillShares ListSkillShares lists subjects that have any relation on the named
 	// skill. Requires skill.read (with ownership + public fallback).
 	ListSkillShares(ctx context.Context, req *ListSkillSharesRequest, opts ...http.CallOption) (rsp *ListSkillSharesResponse, err error)
@@ -619,6 +830,8 @@ type SkillServiceHTTPClient interface {
 	// rules: caller sees (a) skills they own, (b) skills shared with them
 	// via accessx grants, (c) skills with visibility=public.
 	ListSkills(ctx context.Context, req *ListSkillsRequest, opts ...http.CallOption) (rsp *ListSkillsResponse, err error)
+	// MoveSkillDraftPath MoveSkillDraftPath renames or moves a draft workspace path.
+	MoveSkillDraftPath(ctx context.Context, req *MoveSkillDraftPathRequest, opts ...http.CallOption) (rsp *MoveSkillDraftPathResponse, err error)
 	// OfflineSkillVersion OfflineSkillVersion removes one online version from catalog/runtime use.
 	OfflineSkillVersion(ctx context.Context, req *OfflineSkillVersionRequest, opts ...http.CallOption) (rsp *OfflineSkillVersionResponse, err error)
 	// OnlineSkillVersion OnlineSkillVersion makes one published version consumable by
@@ -642,6 +855,10 @@ type SkillServiceHTTPClient interface {
 	// declaring name, description, version. Other files become version
 	// files; binary files are base64-encoded in the DB content column.
 	UploadSkillPackage(ctx context.Context, req *UploadSkillPackageRequest, opts ...http.CallOption) (rsp *UploadSkillPackageResponse, err error)
+	// UpsertSkillDraftDirectory UpsertSkillDraftDirectory creates a directory in the draft workspace.
+	UpsertSkillDraftDirectory(ctx context.Context, req *UpsertSkillDraftDirectoryRequest, opts ...http.CallOption) (rsp *UpsertSkillDraftDirectoryResponse, err error)
+	// UpsertSkillDraftFile UpsertSkillDraftFile creates or updates a draft file.
+	UpsertSkillDraftFile(ctx context.Context, req *UpsertSkillDraftFileRequest, opts ...http.CallOption) (rsp *UpsertSkillDraftFileResponse, err error)
 }
 
 type SkillServiceHTTPClientImpl struct {
@@ -650,6 +867,24 @@ type SkillServiceHTTPClientImpl struct {
 
 func NewSkillServiceHTTPClient(client *http.Client) SkillServiceHTTPClient {
 	return &SkillServiceHTTPClientImpl{client}
+}
+
+// CommitSkillDraft CommitSkillDraft materializes the draft workspace into a SkillVersion.
+func (c *SkillServiceHTTPClientImpl) CommitSkillDraft(ctx context.Context, in *CommitSkillDraftRequest, opts ...http.CallOption) (*CommitSkillDraftResponse, error) {
+	var out CommitSkillDraftResponse
+	pattern := "/v1/skills/{name}/draft:commit"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationSkillServiceCommitSkillDraft),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out.Version, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 // CreateSkill CreateSkill creates one canonical skill. The caller becomes the owner.
@@ -700,6 +935,23 @@ func (c *SkillServiceHTTPClientImpl) DeleteSkill(ctx context.Context, in *Delete
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationSkillServiceDeleteSkill),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// DeleteSkillDraftPath DeleteSkillDraftPath deletes a file or directory from the draft workspace.
+func (c *SkillServiceHTTPClientImpl) DeleteSkillDraftPath(ctx context.Context, in *DeleteSkillDraftPathRequest, opts ...http.CallOption) (*DeleteSkillDraftPathResponse, error) {
+	var out DeleteSkillDraftPathResponse
+	pattern := "/v1/skills/{name}/draft/path"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSkillServiceDeleteSkillDraftPath),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
@@ -762,6 +1014,23 @@ func (c *SkillServiceHTTPClientImpl) GetSkill(ctx context.Context, in *GetSkillR
 	return &out, nil
 }
 
+// GetSkillDraftFile GetSkillDraftFile returns one draft file's metadata and content.
+func (c *SkillServiceHTTPClientImpl) GetSkillDraftFile(ctx context.Context, in *GetSkillDraftFileRequest, opts ...http.CallOption) (*GetSkillDraftFileResponse, error) {
+	var out GetSkillDraftFileResponse
+	pattern := "/v1/skills/{name}/draft/file"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSkillServiceGetSkillDraftFile),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.File, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // GetSkillVersion GetSkillVersion returns one version metadata record.
 func (c *SkillServiceHTTPClientImpl) GetSkillVersion(ctx context.Context, in *GetSkillVersionRequest, opts ...http.CallOption) (*GetSkillVersionResponse, error) {
 	var out GetSkillVersionResponse
@@ -780,13 +1049,30 @@ func (c *SkillServiceHTTPClientImpl) GetSkillVersion(ctx context.Context, in *Ge
 }
 
 // GetSkillVersionFile GetSkillVersionFile returns one text or base64-encoded file content.
-func (c *SkillServiceHTTPClientImpl) GetSkillVersionFile(ctx context.Context, in *GetSkillVersionFileRequest, opts ...http.CallOption) (*SkillFile, error) {
-	var out SkillFile
+func (c *SkillServiceHTTPClientImpl) GetSkillVersionFile(ctx context.Context, in *GetSkillVersionFileRequest, opts ...http.CallOption) (*GetSkillVersionFileResponse, error) {
+	var out GetSkillVersionFileResponse
 	pattern := "/v1/skills/{name}/versions/{version}/file"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationSkillServiceGetSkillVersionFile),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.File, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ListSkillDraftFiles ListSkillDraftFiles lists the editable draft workspace tree.
+func (c *SkillServiceHTTPClientImpl) ListSkillDraftFiles(ctx context.Context, in *ListSkillDraftFilesRequest, opts ...http.CallOption) (*ListSkillDraftFilesResponse, error) {
+	var out ListSkillDraftFilesResponse
+	pattern := "/v1/skills/{name}/draft/files"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSkillServiceListSkillDraftFiles),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -861,6 +1147,24 @@ func (c *SkillServiceHTTPClientImpl) ListSkills(ctx context.Context, in *ListSki
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// MoveSkillDraftPath MoveSkillDraftPath renames or moves a draft workspace path.
+func (c *SkillServiceHTTPClientImpl) MoveSkillDraftPath(ctx context.Context, in *MoveSkillDraftPathRequest, opts ...http.CallOption) (*MoveSkillDraftPathResponse, error) {
+	var out MoveSkillDraftPathResponse
+	pattern := "/v1/skills/{name}/draft/path:move"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationSkillServiceMoveSkillDraftPath),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -996,6 +1300,42 @@ func (c *SkillServiceHTTPClientImpl) UploadSkillPackage(ctx context.Context, in 
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out.Version, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpsertSkillDraftDirectory UpsertSkillDraftDirectory creates a directory in the draft workspace.
+func (c *SkillServiceHTTPClientImpl) UpsertSkillDraftDirectory(ctx context.Context, in *UpsertSkillDraftDirectoryRequest, opts ...http.CallOption) (*UpsertSkillDraftDirectoryResponse, error) {
+	var out UpsertSkillDraftDirectoryResponse
+	pattern := "/v1/skills/{name}/draft/dir"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationSkillServiceUpsertSkillDraftDirectory),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out.File, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpsertSkillDraftFile UpsertSkillDraftFile creates or updates a draft file.
+func (c *SkillServiceHTTPClientImpl) UpsertSkillDraftFile(ctx context.Context, in *UpsertSkillDraftFileRequest, opts ...http.CallOption) (*UpsertSkillDraftFileResponse, error) {
+	var out UpsertSkillDraftFileResponse
+	pattern := "/v1/skills/{name}/draft/file"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationSkillServiceUpsertSkillDraftFile),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out.File, opts...)
 	if err != nil {
 		return nil, err
 	}

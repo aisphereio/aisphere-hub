@@ -247,13 +247,110 @@ service SkillService {
   }
 
   // GetSkillVersionFile returns one text or base64-encoded file content.
-  rpc GetSkillVersionFile(GetSkillVersionFileRequest) returns (SkillFile) {
+  rpc GetSkillVersionFile(GetSkillVersionFileRequest) returns (GetSkillVersionFileResponse) {
     option (google.api.http) = {
       get: "/v1/skills/{name}/versions/{version}/file"
+      response_body: "file"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHENTICATED
       audit: { enabled: true event: "aihub.skill_file.get" risk: "low" }
+    };
+  }
+
+  // --- Skill draft workspace ---
+  //
+  // Draft workspace endpoints are contract-backed and registered through
+  // generated Kernel HTTP/gRPC bindings. Service implementations MUST NOT
+  // hand-register duplicate HTTP routes for these paths.
+
+  // ListSkillDraftFiles lists the editable draft workspace tree.
+  rpc ListSkillDraftFiles(ListSkillDraftFilesRequest) returns (ListSkillDraftFilesResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/draft/files"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill_draft_file.list" risk: "low" }
+    };
+  }
+
+  // GetSkillDraftFile returns one draft file's metadata and content.
+  rpc GetSkillDraftFile(GetSkillDraftFileRequest) returns (GetSkillDraftFileResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/draft/file"
+      response_body: "file"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "aihub.skill_draft_file.get" risk: "low" }
+    };
+  }
+
+  // UpsertSkillDraftFile creates or updates a draft file.
+  rpc UpsertSkillDraftFile(UpsertSkillDraftFileRequest) returns (UpsertSkillDraftFileResponse) {
+    option (google.api.http) = {
+      put: "/v1/skills/{name}/draft/file"
+      body: "*"
+      response_body: "file"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "draft:file:write" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_draft_file.write" risk: "medium" }
+    };
+  }
+
+  // UpsertSkillDraftDirectory creates a directory in the draft workspace.
+  rpc UpsertSkillDraftDirectory(UpsertSkillDraftDirectoryRequest) returns (UpsertSkillDraftDirectoryResponse) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/draft/dir"
+      body: "*"
+      response_body: "file"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "draft:dir:write" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_draft_dir.write" risk: "medium" }
+    };
+  }
+
+  // DeleteSkillDraftPath deletes a file or directory from the draft workspace.
+  rpc DeleteSkillDraftPath(DeleteSkillDraftPathRequest) returns (DeleteSkillDraftPathResponse) {
+    option (google.api.http) = {
+      delete: "/v1/skills/{name}/draft/path"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "draft:path:delete" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_draft_path.delete" risk: "medium" }
+    };
+  }
+
+  // MoveSkillDraftPath renames or moves a draft workspace path.
+  rpc MoveSkillDraftPath(MoveSkillDraftPathRequest) returns (MoveSkillDraftPathResponse) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/draft/path:move"
+      body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "draft:path:move" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_draft_path.move" risk: "medium" }
+    };
+  }
+
+  // CommitSkillDraft materializes the draft workspace into a SkillVersion.
+  rpc CommitSkillDraft(CommitSkillDraftRequest) returns (CommitSkillDraftResponse) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/draft:commit"
+      body: "*"
+      response_body: "version"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "draft:commit" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill_draft.commit" risk: "medium" }
     };
   }
 
@@ -528,6 +625,88 @@ message GetSkillVersionFileRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
   string version = 2 [(google.api.field_behavior) = REQUIRED];
   string path = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetSkillVersionFileResponse {
+  SkillFile file = 1;
+}
+
+// --- Skill draft workspace ---
+
+message ListSkillDraftFilesRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;
+}
+
+message ListSkillDraftFilesResponse {
+  repeated SkillFile files = 1;
+}
+
+message GetSkillDraftFileRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;
+  string path = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetSkillDraftFileResponse {
+  SkillFile file = 1;
+}
+
+message UpsertSkillDraftFileRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;
+  string path = 3 [(google.api.field_behavior) = REQUIRED];
+  string type = 4;
+  string content = 5;
+  bool binary = 6;
+  bool create_parents = 7;
+}
+
+message UpsertSkillDraftFileResponse {
+  SkillFile file = 1;
+}
+
+message UpsertSkillDraftDirectoryRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;
+  string path = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpsertSkillDraftDirectoryResponse {
+  SkillFile file = 1;
+}
+
+message DeleteSkillDraftPathRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;
+  string path = 3 [(google.api.field_behavior) = REQUIRED];
+  bool recursive = 4;
+}
+
+message DeleteSkillDraftPathResponse {}
+
+message MoveSkillDraftPathRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;
+  string old_path = 3 [(google.api.field_behavior) = REQUIRED];
+  string new_path = 4 [(google.api.field_behavior) = REQUIRED];
+  bool overwrite = 5;
+}
+
+message MoveSkillDraftPathResponse {}
+
+message CommitSkillDraftRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;
+  string commit_msg = 3;
+  bool overwrite = 4;
+  bool submit = 5;
+  bool publish = 6;
+  bool online = 7;
+}
+
+message CommitSkillDraftResponse {
+  SkillVersion version = 1;
 }
 
 // --- Skill share ---

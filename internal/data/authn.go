@@ -177,9 +177,9 @@ func (r *authnRepo) fallbackCasdoorLogoutURL(req biz.AuthnLogoutURLRequest) (str
 	}
 	q := url.Values{}
 	q.Set("client_id", cfg.ClientID)
-	q.Set("logout_uri", cfg.Endpoint)
 	if req.PostLogoutRedirectURI != "" {
 		q.Set("post_logout_redirect_uri", req.PostLogoutRedirectURI)
+		q.Set("logout_uri", req.PostLogoutRedirectURI)
 	}
 	if req.IDTokenHint != "" {
 		q.Set("id_token_hint", req.IDTokenHint)
