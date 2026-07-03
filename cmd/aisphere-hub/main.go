@@ -14,6 +14,7 @@ import (
 
 	kernel "github.com/aisphereio/kernel"
 	"github.com/aisphereio/kernel/configx"
+	configenv "github.com/aisphereio/kernel/configx/env"
 	"github.com/aisphereio/kernel/configx/file"
 	"github.com/aisphereio/kernel/logx"
 	"github.com/aisphereio/kernel/metricsx"
@@ -32,7 +33,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	cfg := configx.New(configx.WithSource(file.NewSource(flagconf)))
+	cfg := configx.New(configx.WithSource(file.NewSource(flagconf), configenv.NewSource()))
 	defer cfg.Close()
 	if err := cfg.Load(); err != nil {
 		panic(err)

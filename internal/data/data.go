@@ -22,6 +22,7 @@ import (
 	"github.com/aisphereio/kernel/errorx"
 	"github.com/aisphereio/kernel/logx"
 	"github.com/aisphereio/kernel/metricsx"
+	"github.com/aisphereio/kernel/migrationx"
 	"github.com/aisphereio/kernel/objectstorex"
 	_ "github.com/aisphereio/kernel/objectstorex/minio"
 )
@@ -129,6 +130,26 @@ func NewResources(ctx context.Context, cfg conf.Bootstrap) (*Resources, func(), 
 		logger.Info("database initialized", logx.String("driver", db.DriverName()))
 		r.DB = db
 		r.closers = append(r.closers, db.Close)
+
+		migrationCfg := cfg.Data.Database.Migration.Normalize()
+		observability.ComponentConfigured(metrics, "db_migration", migrationCfg.Enabled)
+		if migrationCfg.Enabled {
+			start = time.Now()
+			err = migrationx.Apply(ctx, db, migrationCfg)
+			observability.ComponentInit(ctx, metrics, "db_migration", start, err)
+			if err != nil {
+				logger.Error("database migration failed", logx.Err(err))
+				r.Close()
+				return nil, nil, err
+			}
+			logger.Info(
+				"database migrations applied",
+				logx.String("engine", migrationCfg.Engine),
+				logx.String("mode", migrationCfg.Mode),
+				logx.String("dir", migrationCfg.Dir),
+				logx.String("table", migrationCfg.Table),
+			)
+		}
 	}
 
 	observability.ComponentConfigured(metrics, "cache", cfg.Data.Cache.Enabled)

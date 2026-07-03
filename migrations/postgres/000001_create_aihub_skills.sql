@@ -79,12 +79,14 @@ CREATE INDEX IF NOT EXISTS idx_aihub_skill_files_deleted_at ON aihub_skill_files
 
 -- updated_at auto-touch trigger function (shared across all aihub_ tables).
 -- We define it here so subsequent migrations can reuse it without redefining.
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION aihub_set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 DROP TRIGGER IF EXISTS trg_aihub_skills_updated_at ON aihub_skills;
 CREATE TRIGGER trg_aihub_skills_updated_at

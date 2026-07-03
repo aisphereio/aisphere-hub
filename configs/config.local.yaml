@@ -1,0 +1,136 @@
+service:
+  name: aisphere-hub
+  version: dev
+  env: local
+
+server:
+  http:
+    addr: 0.0.0.0:18001
+    timeout_ns: 5000000000
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://localhost:3000
+        - http://127.0.0.1:3000
+        - http://localhost:18000
+        - http://127.0.0.1:18000
+      allowed_methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+      allowed_headers: [Authorization, Content-Type, X-Request-ID, X-Trace-ID, Traceparent, Tracestate]
+      exposed_headers: [X-Request-ID]
+      allow_credentials: true
+      max_age_ns: 3600000000000
+  grpc:
+    addr: 0.0.0.0:19001
+    timeout_ns: 5000000000
+
+log:
+  service_name: aisphere-hub
+  env: local
+  version: dev
+  level: debug
+  format: console
+  output: stdout
+  add_source: true
+  redact:
+    enabled: true
+    keys: [password, secret, token, access_key, secret_key, client_secret]
+    value: "***"
+  access_log:
+    enabled: true
+    skip_paths: [/healthz, /readyz, /metrics]
+    slow_threshold: 1000000000
+    request_id_header: X-Request-ID
+    route_header: X-Route-Pattern
+    log_user_agent: true
+
+data:
+  database:
+    enabled: true
+    config:
+      auto_create_database: true
+      driver: postgres
+      dsn: "${POSTGRES_DSN}"
+      max_open_conns: 20
+      max_idle_conns: 10
+      conn_max_lifetime_ns: 1800000000000
+      conn_max_idle_time_ns: 300000000000
+      query_timeout_ns: 5000000000
+      slow_query_threshold_ns: 200000000
+      audit_enabled: true
+      metrics_enabled: true
+    migration:
+      enabled: true
+      engine: goose
+      dir: ./migrations/postgres
+      table: aihub_schema_migrations
+      mode: apply
+      fail_on_pending: true
+      allow_concurrent: true
+  cache:
+    enabled: true
+    config:
+      driver: redis
+      addrs: [36.137.200.194:30085]
+      username: ""
+      password: "${REDIS_PASSWORD}"
+      db: 0
+      key_prefix: aisphere-hub
+      dial_timeout_ns: 5000000000
+      read_timeout_ns: 3000000000
+      write_timeout_ns: 3000000000
+      metrics_enabled: true
+  object_store:
+    enabled: false
+
+security:
+  authn:
+    enabled: true
+    provider: casdoor
+    casdoor:
+      endpoint: http://36.137.200.194:30082
+      organization_name: aisphere
+      application_name: aisphere
+      client_id: bbdcfc272e2b990cb923
+      client_secret: "${CASDOOR_CLIENT_SECRET}"
+      jwt_certificate_file: ../aisphere-iam/configs/casdoor.pub
+      timeout: 10000000000
+      metrics_enabled: true
+      admin:
+        enabled: false
+  authz:
+    enabled: true
+    provider: spicedb
+    dev_allow_all: false
+    spicedb:
+      endpoint: 36.137.200.194:30084
+      token: "${SPICEDB_TOKEN}"
+      transport: grpc
+      insecure: true
+      timeout: 5000000000
+      fully_consistent: true
+      metrics_enabled: true
+
+gateway:
+  route_registry:
+    provider: etcd
+    prefix: /aisphere/kernel/routes/dev
+    endpoints: [36.137.200.194:30086]
+    dial_timeout_ns: 5000000000
+    request_timeout_ns: 5000000000
+
+audit:
+  enabled: true
+  store: memory
+
+metrics:
+  enabled: true
+  addr: 127.0.0.1:19090
+  path: /metrics
+  pprof: false
+
+dtm:
+  enabled: false
+
+skill:
+  storage:
+    max_versions: 5

@@ -9,6 +9,7 @@ import (
 	"github.com/aisphereio/kernel/dbx"
 	"github.com/aisphereio/kernel/dtmx"
 	"github.com/aisphereio/kernel/logx"
+	"github.com/aisphereio/kernel/migrationx"
 	"github.com/aisphereio/kernel/objectstorex"
 )
 
@@ -64,8 +65,9 @@ type DataConfig struct {
 }
 
 type DatabaseConfig struct {
-	Enabled bool       `json:"enabled" yaml:"enabled"`
-	Config  dbx.Config `json:"config" yaml:"config"`
+	Enabled   bool              `json:"enabled" yaml:"enabled"`
+	Config    dbx.Config        `json:"config" yaml:"config"`
+	Migration migrationx.Config `json:"migration" yaml:"migration"`
 }
 
 type CacheConfig struct {
