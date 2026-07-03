@@ -1,11 +1,12 @@
 syntax = "proto3";
 
-package aisphere.hub.authn.v1;
+package authn.v1;
 
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "aisphere/access/v1/access.proto";
 
 option go_package = "github.com/aisphereio/aisphere-hub/api/authn/v1;authnv1";
 
@@ -64,6 +65,11 @@ service AuthnService {
     option (google.api.http) = {
       get: "/v1/authn/login-url"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: PUBLIC
+      audit: { enabled: true event: "authn.login_url" risk: "low" }
+      rate_limit: { enabled: true key: "ip" qps: 5 burst: 10 backend: MEMORY }
+    };
   }
 
   // Exchange exchanges an OAuth authorization code for IdP tokens.
@@ -78,18 +84,28 @@ service AuthnService {
   // yet forward it to GetOAuthToken. The field is accepted on the wire for
   // forward compatibility; verify the kernel version before relying on PKCE
   // enforcement server-side.
-  rpc Exchange(ExchangeRequest) returns (TokenResponse) {
+  rpc Exchange(ExchangeRequest) returns (ExchangeResponse) {
     option (google.api.http) = {
       post: "/v1/authn/exchange"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: PUBLIC
+      audit: { enabled: true event: "authn.exchange" risk: "medium" }
+      rate_limit: { enabled: true key: "ip" qps: 3 burst: 5 backend: MEMORY }
+    };
   }
 
   // Refresh refreshes an IdP access token using a refresh token.
-  rpc Refresh(RefreshRequest) returns (TokenResponse) {
+  rpc Refresh(RefreshRequest) returns (RefreshResponse) {
     option (google.api.http) = {
       post: "/v1/authn/refresh"
       body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: PUBLIC
+      audit: { enabled: true event: "authn.refresh" risk: "medium" }
+      rate_limit: { enabled: true key: "ip" qps: 3 burst: 5 backend: MEMORY }
     };
   }
 
@@ -117,6 +133,11 @@ service AuthnService {
     option (google.api.http) = {
       get: "/v1/authn/logout-url"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: PUBLIC
+      audit: { enabled: true event: "authn.logout_url" risk: "low" }
+      rate_limit: { enabled: true key: "ip" qps: 5 burst: 10 backend: MEMORY }
+    };
   }
 
   // Revoke explicitly revokes an access or refresh token.
@@ -139,6 +160,10 @@ service AuthnService {
       post: "/v1/authn/revoke"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authn.revoke" risk: "high" }
+    };
   }
 
   // Introspect validates a token and returns the principal it represents.
@@ -153,6 +178,10 @@ service AuthnService {
       post: "/v1/authn/introspect"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authn.introspect" risk: "medium" }
+    };
   }
 
   // Me returns the current authenticated principal.
@@ -164,6 +193,10 @@ service AuthnService {
   rpc Me(MeRequest) returns (MeResponse) {
     option (google.api.http) = {
       get: "/v1/authn/me"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authn.me" risk: "low" }
     };
   }
 }
@@ -211,12 +244,22 @@ message RefreshRequest {
   string app_id = 4;
 }
 
-// TokenResponse is the OAuth2/OIDC token set returned by Exchange and Refresh.
+// ExchangeResponse is the OAuth2/OIDC token set returned by Exchange.
 //
 // `expires_in` is seconds from issue time to expiry (OAuth2 standard). For a
 // wall-clock expiry, callers can compute issued_at + expires_in, or use the
 // `expires_at` field on Principal returned by Me/Introspect.
-message TokenResponse {
+message ExchangeResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string id_token = 3;
+  string token_type = 4;
+  int64 expires_in = 5;
+  string scope = 6;
+}
+
+// RefreshResponse is the OAuth2/OIDC token set returned by Refresh.
+message RefreshResponse {
   string access_token = 1;
   string refresh_token = 2;
   string id_token = 3;

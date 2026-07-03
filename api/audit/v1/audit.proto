@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package aisphere.hub.audit.v1;
+package audit.v1;
 
 import "google/api/annotations.proto";
-import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "aisphere/access/v1/access.proto";
 
 option go_package = "github.com/aisphereio/aisphere-hub/api/audit/v1;auditv1";
 
@@ -30,6 +30,10 @@ service AuditService {
   rpc QueryAuditRecords(QueryAuditRecordsRequest) returns (QueryAuditRecordsResponse) {
     option (google.api.http) = {
       get: "/v1/audit/records"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "audit.records.query" risk: "medium" }
     };
   }
 }

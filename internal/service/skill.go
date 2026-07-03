@@ -59,7 +59,7 @@ func (s *SkillService) RegisterHTTPServer(srv *khttp.Server) {
 
 // --- Skill CRUD ---
 
-func (s *SkillService) CreateSkill(ctx context.Context, req *v1.CreateSkillRequest) (*v1.Skill, error) {
+func (s *SkillService) CreateSkill(ctx context.Context, req *v1.CreateSkillRequest) (*v1.CreateSkillResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.CreateSkill(ctx, principal, &biz.Skill{
 		Name:         req.GetName(),
@@ -79,10 +79,10 @@ func (s *SkillService) CreateSkill(ctx context.Context, req *v1.CreateSkillReque
 	if err != nil {
 		return nil, err
 	}
-	return skillDOToDTO(out), nil
+	return &v1.CreateSkillResponse{Skill: skillDOToDTO(out)}, nil
 }
 
-func (s *SkillService) UpdateSkill(ctx context.Context, req *v1.UpdateSkillRequest) (*v1.Skill, error) {
+func (s *SkillService) UpdateSkill(ctx context.Context, req *v1.UpdateSkillRequest) (*v1.UpdateSkillResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.UpdateSkill(ctx, principal, &biz.Skill{
 		Name:         req.GetName(),
@@ -97,7 +97,16 @@ func (s *SkillService) UpdateSkill(ctx context.Context, req *v1.UpdateSkillReque
 	if err != nil {
 		return nil, err
 	}
-	return skillDOToDTO(out), nil
+	return &v1.UpdateSkillResponse{Skill: skillDOToDTO(out)}, nil
+}
+
+func (s *SkillService) UpdateSkillVisibility(ctx context.Context, req *v1.UpdateSkillVisibilityRequest) (*v1.UpdateSkillVisibilityResponse, error) {
+	principal := principalFromContext(ctx)
+	out, err := s.uc.UpdateSkillVisibility(ctx, principal, req.GetName(), req.GetVisibility())
+	if err != nil {
+		return nil, err
+	}
+	return &v1.UpdateSkillVisibilityResponse{Skill: skillDOToDTO(out)}, nil
 }
 
 func (s *SkillService) ListSkills(ctx context.Context, req *v1.ListSkillsRequest) (*v1.ListSkillsResponse, error) {
@@ -123,26 +132,26 @@ func (s *SkillService) ListSkills(ctx context.Context, req *v1.ListSkillsRequest
 	return skillListResultToDTO(out), nil
 }
 
-func (s *SkillService) GetSkill(ctx context.Context, req *v1.GetSkillRequest) (*v1.Skill, error) {
+func (s *SkillService) GetSkill(ctx context.Context, req *v1.GetSkillRequest) (*v1.GetSkillResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.GetSkill(ctx, principal, req.GetName())
 	if err != nil {
 		return nil, err
 	}
-	return skillDOToDTO(out), nil
+	return &v1.GetSkillResponse{Skill: skillDOToDTO(out)}, nil
 }
 
-func (s *SkillService) DeleteSkill(ctx context.Context, req *v1.DeleteSkillRequest) (*emptypb.Empty, error) {
+func (s *SkillService) DeleteSkill(ctx context.Context, req *v1.DeleteSkillRequest) (*v1.DeleteSkillResponse, error) {
 	principal := principalFromContext(ctx)
 	if err := s.uc.DeleteSkill(ctx, principal, req.GetName()); err != nil {
 		return nil, err
 	}
-	return &emptypb.Empty{}, nil
+	return &v1.DeleteSkillResponse{}, nil
 }
 
 // --- SkillVersion ---
 
-func (s *SkillService) UploadSkillPackage(ctx context.Context, req *v1.UploadSkillPackageRequest) (*v1.SkillVersion, error) {
+func (s *SkillService) UploadSkillPackage(ctx context.Context, req *v1.UploadSkillPackageRequest) (*v1.UploadSkillPackageResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.UploadSkillPackage(ctx, principal, biz.SkillPackageUpload{
 		PackageBytes:  req.GetPackageBytes(),
@@ -153,7 +162,7 @@ func (s *SkillService) UploadSkillPackage(ctx context.Context, req *v1.UploadSki
 	if err != nil {
 		return nil, err
 	}
-	return skillVersionDOToDTO(out), nil
+	return &v1.UploadSkillPackageResponse{Version: skillVersionDOToDTO(out)}, nil
 }
 
 func (s *SkillService) ListSkillVersions(ctx context.Context, req *v1.ListSkillVersionsRequest) (*v1.ListSkillVersionsResponse, error) {
@@ -171,49 +180,49 @@ func (s *SkillService) ListSkillVersions(ctx context.Context, req *v1.ListSkillV
 	return out, nil
 }
 
-func (s *SkillService) GetSkillVersion(ctx context.Context, req *v1.GetSkillVersionRequest) (*v1.SkillVersion, error) {
+func (s *SkillService) GetSkillVersion(ctx context.Context, req *v1.GetSkillVersionRequest) (*v1.GetSkillVersionResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.GetSkillVersion(ctx, principal, req.GetName(), req.GetVersion())
 	if err != nil {
 		return nil, err
 	}
-	return skillVersionDOToDTO(out), nil
+	return &v1.GetSkillVersionResponse{Version: skillVersionDOToDTO(out)}, nil
 }
 
-func (s *SkillService) SubmitSkillVersion(ctx context.Context, req *v1.SkillVersionActionRequest) (*v1.SkillVersion, error) {
+func (s *SkillService) SubmitSkillVersion(ctx context.Context, req *v1.SubmitSkillVersionRequest) (*v1.SubmitSkillVersionResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.SubmitSkillVersion(ctx, principal, req.GetName(), req.GetVersion())
 	if err != nil {
 		return nil, err
 	}
-	return skillVersionDOToDTO(out), nil
+	return &v1.SubmitSkillVersionResponse{Version: skillVersionDOToDTO(out)}, nil
 }
 
-func (s *SkillService) PublishSkillVersion(ctx context.Context, req *v1.SkillVersionActionRequest) (*v1.SkillVersion, error) {
+func (s *SkillService) PublishSkillVersion(ctx context.Context, req *v1.PublishSkillVersionRequest) (*v1.PublishSkillVersionResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.PublishSkillVersion(ctx, principal, req.GetName(), req.GetVersion())
 	if err != nil {
 		return nil, err
 	}
-	return skillVersionDOToDTO(out), nil
+	return &v1.PublishSkillVersionResponse{Version: skillVersionDOToDTO(out)}, nil
 }
 
-func (s *SkillService) OnlineSkillVersion(ctx context.Context, req *v1.SkillVersionActionRequest) (*v1.SkillVersion, error) {
+func (s *SkillService) OnlineSkillVersion(ctx context.Context, req *v1.OnlineSkillVersionRequest) (*v1.OnlineSkillVersionResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.OnlineSkillVersion(ctx, principal, req.GetName(), req.GetVersion())
 	if err != nil {
 		return nil, err
 	}
-	return skillVersionDOToDTO(out), nil
+	return &v1.OnlineSkillVersionResponse{Version: skillVersionDOToDTO(out)}, nil
 }
 
-func (s *SkillService) OfflineSkillVersion(ctx context.Context, req *v1.SkillVersionActionRequest) (*v1.SkillVersion, error) {
+func (s *SkillService) OfflineSkillVersion(ctx context.Context, req *v1.OfflineSkillVersionRequest) (*v1.OfflineSkillVersionResponse, error) {
 	principal := principalFromContext(ctx)
 	out, err := s.uc.OfflineSkillVersion(ctx, principal, req.GetName(), req.GetVersion())
 	if err != nil {
 		return nil, err
 	}
-	return skillVersionDOToDTO(out), nil
+	return &v1.OfflineSkillVersionResponse{Version: skillVersionDOToDTO(out)}, nil
 }
 
 func (s *SkillService) DownloadSkillVersion(ctx context.Context, req *v1.DownloadSkillVersionRequest) (*v1.SkillPackageDownload, error) {
@@ -455,12 +464,12 @@ func (s *SkillService) CreateSkillShare(ctx context.Context, req *v1.CreateSkill
 	return skillShareDOToDTO(out), nil
 }
 
-func (s *SkillService) DeleteSkillShare(ctx context.Context, req *v1.DeleteSkillShareRequest) (*emptypb.Empty, error) {
+func (s *SkillService) DeleteSkillShare(ctx context.Context, req *v1.DeleteSkillShareRequest) (*v1.DeleteSkillShareResponse, error) {
 	principal := principalFromContext(ctx)
 	if err := s.uc.DeleteSkillShare(ctx, principal, req.GetName(), req.GetSubjectType(), req.GetSubjectId()); err != nil {
 		return nil, err
 	}
-	return &emptypb.Empty{}, nil
+	return &v1.DeleteSkillShareResponse{}, nil
 }
 
 func skillShareDOToDTO(sh *biz.SkillShare) *v1.SkillShare {

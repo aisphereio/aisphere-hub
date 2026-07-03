@@ -218,6 +218,24 @@ func (r *skillRepo) UpdateSkill(ctx context.Context, skill *biz.Skill) (*biz.Ski
 	return r.GetSkill(ctx, row.Name)
 }
 
+func (r *skillRepo) UpdateSkillVisibility(ctx context.Context, name, visibility string) (*biz.Skill, error) {
+	db := r.db(ctx)
+	if db == nil {
+		return nil, errDBNotConfigured()
+	}
+	res := db.Model(&skillModel{}).Where("name = ?", name).Updates(map[string]any{
+		"visibility": visibility,
+		"updated_at": time.Now(),
+	})
+	if res.Error != nil {
+		return nil, mapSkillDBError(res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return nil, biz.ErrSkillNotFound
+	}
+	return r.GetSkill(ctx, name)
+}
+
 func (r *skillRepo) ListSkills(ctx context.Context, opts biz.SkillListOptions) (*biz.SkillListResult, error) {
 	db := r.db(ctx)
 	if db == nil {

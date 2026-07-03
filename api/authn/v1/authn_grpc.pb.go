@@ -19,13 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthnService_LoginURL_FullMethodName   = "/aisphere.hub.authn.v1.AuthnService/LoginURL"
-	AuthnService_Exchange_FullMethodName   = "/aisphere.hub.authn.v1.AuthnService/Exchange"
-	AuthnService_Refresh_FullMethodName    = "/aisphere.hub.authn.v1.AuthnService/Refresh"
-	AuthnService_LogoutURL_FullMethodName  = "/aisphere.hub.authn.v1.AuthnService/LogoutURL"
-	AuthnService_Revoke_FullMethodName     = "/aisphere.hub.authn.v1.AuthnService/Revoke"
-	AuthnService_Introspect_FullMethodName = "/aisphere.hub.authn.v1.AuthnService/Introspect"
-	AuthnService_Me_FullMethodName         = "/aisphere.hub.authn.v1.AuthnService/Me"
+	AuthnService_LoginURL_FullMethodName   = "/authn.v1.AuthnService/LoginURL"
+	AuthnService_Exchange_FullMethodName   = "/authn.v1.AuthnService/Exchange"
+	AuthnService_Refresh_FullMethodName    = "/authn.v1.AuthnService/Refresh"
+	AuthnService_LogoutURL_FullMethodName  = "/authn.v1.AuthnService/LogoutURL"
+	AuthnService_Revoke_FullMethodName     = "/authn.v1.AuthnService/Revoke"
+	AuthnService_Introspect_FullMethodName = "/authn.v1.AuthnService/Introspect"
+	AuthnService_Me_FullMethodName         = "/authn.v1.AuthnService/Me"
 )
 
 // AuthnServiceClient is the client API for AuthnService service.
@@ -96,9 +96,9 @@ type AuthnServiceClient interface {
 	// yet forward it to GetOAuthToken. The field is accepted on the wire for
 	// forward compatibility; verify the kernel version before relying on PKCE
 	// enforcement server-side.
-	Exchange(ctx context.Context, in *ExchangeRequest, opts ...grpc.CallOption) (*TokenResponse, error)
+	Exchange(ctx context.Context, in *ExchangeRequest, opts ...grpc.CallOption) (*ExchangeResponse, error)
 	// Refresh refreshes an IdP access token using a refresh token.
-	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*TokenResponse, error)
+	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error)
 	// LogoutURL returns the IdP logout URL as JSON for SPA/debug usage.
 	//
 	// Browser users can also call GET /v1/authn/logout for a direct HTTP 302.
@@ -171,9 +171,9 @@ func (c *authnServiceClient) LoginURL(ctx context.Context, in *LoginURLRequest, 
 	return out, nil
 }
 
-func (c *authnServiceClient) Exchange(ctx context.Context, in *ExchangeRequest, opts ...grpc.CallOption) (*TokenResponse, error) {
+func (c *authnServiceClient) Exchange(ctx context.Context, in *ExchangeRequest, opts ...grpc.CallOption) (*ExchangeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TokenResponse)
+	out := new(ExchangeResponse)
 	err := c.cc.Invoke(ctx, AuthnService_Exchange_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -181,9 +181,9 @@ func (c *authnServiceClient) Exchange(ctx context.Context, in *ExchangeRequest, 
 	return out, nil
 }
 
-func (c *authnServiceClient) Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*TokenResponse, error) {
+func (c *authnServiceClient) Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TokenResponse)
+	out := new(RefreshResponse)
 	err := c.cc.Invoke(ctx, AuthnService_Refresh_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -299,9 +299,9 @@ type AuthnServiceServer interface {
 	// yet forward it to GetOAuthToken. The field is accepted on the wire for
 	// forward compatibility; verify the kernel version before relying on PKCE
 	// enforcement server-side.
-	Exchange(context.Context, *ExchangeRequest) (*TokenResponse, error)
+	Exchange(context.Context, *ExchangeRequest) (*ExchangeResponse, error)
 	// Refresh refreshes an IdP access token using a refresh token.
-	Refresh(context.Context, *RefreshRequest) (*TokenResponse, error)
+	Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error)
 	// LogoutURL returns the IdP logout URL as JSON for SPA/debug usage.
 	//
 	// Browser users can also call GET /v1/authn/logout for a direct HTTP 302.
@@ -367,10 +367,10 @@ type UnimplementedAuthnServiceServer struct{}
 func (UnimplementedAuthnServiceServer) LoginURL(context.Context, *LoginURLRequest) (*LoginURLResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginURL not implemented")
 }
-func (UnimplementedAuthnServiceServer) Exchange(context.Context, *ExchangeRequest) (*TokenResponse, error) {
+func (UnimplementedAuthnServiceServer) Exchange(context.Context, *ExchangeRequest) (*ExchangeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Exchange not implemented")
 }
-func (UnimplementedAuthnServiceServer) Refresh(context.Context, *RefreshRequest) (*TokenResponse, error) {
+func (UnimplementedAuthnServiceServer) Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Refresh not implemented")
 }
 func (UnimplementedAuthnServiceServer) LogoutURL(context.Context, *LogoutURLRequest) (*LogoutURLResponse, error) {
@@ -536,7 +536,7 @@ func _AuthnService_Me_Handler(srv interface{}, ctx context.Context, dec func(int
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AuthnService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "aisphere.hub.authn.v1.AuthnService",
+	ServiceName: "authn.v1.AuthnService",
 	HandlerType: (*AuthnServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

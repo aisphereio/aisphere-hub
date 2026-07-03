@@ -7,10 +7,10 @@
 package authzv1
 
 import (
+	_ "github.com/aisphereio/kernel/api/aisphere/access/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
@@ -1453,11 +1453,47 @@ func (x *WriteSchemaRequest) GetSchemaText() string {
 	return ""
 }
 
+type WriteSchemaResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriteSchemaResponse) Reset() {
+	*x = WriteSchemaResponse{}
+	mi := &file_authz_v1_authz_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteSchemaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteSchemaResponse) ProtoMessage() {}
+
+func (x *WriteSchemaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_authz_v1_authz_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteSchemaResponse.ProtoReflect.Descriptor instead.
+func (*WriteSchemaResponse) Descriptor() ([]byte, []int) {
+	return file_authz_v1_authz_proto_rawDescGZIP(), []int{21}
+}
+
 var File_authz_v1_authz_proto protoreflect.FileDescriptor
 
 const file_authz_v1_authz_proto_rawDesc = "" +
 	"\n" +
-	"\x14authz/v1/authz.proto\x12\x15aisphere.hub.authz.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"9\n" +
+	"\x14authz/v1/authz.proto\x12\bauthz.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1faisphere/access/v1/access.proto\"9\n" +
 	"\tObjectRef\x12\x17\n" +
 	"\x04type\x18\x01 \x01(\tB\x03\xe0A\x02R\x04type\x12\x13\n" +
 	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\"V\n" +
@@ -1465,11 +1501,11 @@ const file_authz_v1_authz_proto_rawDesc = "" +
 	"SubjectRef\x12\x17\n" +
 	"\x04type\x18\x01 \x01(\tB\x03\xe0A\x02R\x04type\x12\x13\n" +
 	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x12\x1a\n" +
-	"\brelation\x18\x03 \x01(\tR\brelation\"\xd0\x02\n" +
-	"\fRelationship\x12A\n" +
-	"\bresource\x18\x01 \x01(\v2 .aisphere.hub.authz.v1.ObjectRefB\x03\xe0A\x02R\bresource\x12\x1f\n" +
-	"\brelation\x18\x02 \x01(\tB\x03\xe0A\x02R\brelation\x12@\n" +
-	"\asubject\x18\x03 \x01(\v2!.aisphere.hub.authz.v1.SubjectRefB\x03\xe0A\x02R\asubject\x12\x1f\n" +
+	"\brelation\x18\x03 \x01(\tR\brelation\"\xb6\x02\n" +
+	"\fRelationship\x124\n" +
+	"\bresource\x18\x01 \x01(\v2\x13.authz.v1.ObjectRefB\x03\xe0A\x02R\bresource\x12\x1f\n" +
+	"\brelation\x18\x02 \x01(\tB\x03\xe0A\x02R\brelation\x123\n" +
+	"\asubject\x18\x03 \x01(\v2\x14.authz.v1.SubjectRefB\x03\xe0A\x02R\asubject\x12\x1f\n" +
 	"\vcaveat_name\x18\x04 \x01(\tR\n" +
 	"caveatName\x12>\n" +
 	"\x0ecaveat_context\x18\x05 \x01(\v2\x17.google.protobuf.StructR\rcaveatContext\x129\n" +
@@ -1483,10 +1519,10 @@ const file_authz_v1_authz_proto_rawDesc = "" +
 	"\fsubject_type\x18\x04 \x01(\tR\vsubjectType\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x05 \x01(\tR\tsubjectId\x12)\n" +
-	"\x10subject_relation\x18\x06 \x01(\tR\x0fsubjectRelation\"\xb1\x04\n" +
-	"\x16CheckPermissionRequest\x12@\n" +
-	"\asubject\x18\x01 \x01(\v2!.aisphere.hub.authz.v1.SubjectRefB\x03\xe0A\x02R\asubject\x12A\n" +
-	"\bresource\x18\x02 \x01(\v2 .aisphere.hub.authz.v1.ObjectRefB\x03\xe0A\x02R\bresource\x12#\n" +
+	"\x10subject_relation\x18\x06 \x01(\tR\x0fsubjectRelation\"\x97\x04\n" +
+	"\x16CheckPermissionRequest\x123\n" +
+	"\asubject\x18\x01 \x01(\v2\x14.authz.v1.SubjectRefB\x03\xe0A\x02R\asubject\x124\n" +
+	"\bresource\x18\x02 \x01(\v2\x13.authz.v1.ObjectRefB\x03\xe0A\x02R\bresource\x12#\n" +
 	"\n" +
 	"permission\x18\x03 \x01(\tB\x03\xe0A\x02R\n" +
 	"permission\x12\x1b\n" +
@@ -1505,35 +1541,35 @@ const file_authz_v1_authz_proto_rawDesc = "" +
 	"\aallowed\x18\x02 \x01(\bR\aallowed\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12+\n" +
 	"\x11consistency_token\x18\x04 \x01(\tR\x10consistencyToken\x12'\n" +
-	"\x0fmissing_context\x18\x05 \x03(\tR\x0emissingContext\"\xc2\x01\n" +
-	"\x1cBatchCheckPermissionsRequest\x12J\n" +
-	"\x06checks\x18\x01 \x03(\v2-.aisphere.hub.authz.v1.CheckPermissionRequestB\x03\xe0A\x02R\x06checks\x12)\n" +
+	"\x0fmissing_context\x18\x05 \x03(\tR\x0emissingContext\"\xb5\x01\n" +
+	"\x1cBatchCheckPermissionsRequest\x12=\n" +
+	"\x06checks\x18\x01 \x03(\v2 .authz.v1.CheckPermissionRequestB\x03\xe0A\x02R\x06checks\x12)\n" +
 	"\x10fully_consistent\x18\x02 \x01(\bR\x0ffullyConsistent\x12+\n" +
-	"\x11consistency_token\x18\x03 \x01(\tR\x10consistencyToken\"\x9a\x01\n" +
-	"\x1dBatchCheckPermissionsResponse\x12L\n" +
-	"\tdecisions\x18\x01 \x03(\v2..aisphere.hub.authz.v1.CheckPermissionResponseR\tdecisions\x12+\n" +
-	"\x11consistency_token\x18\x02 \x01(\tR\x10consistencyToken\"k\n" +
-	"\x19WriteRelationshipsRequest\x12N\n" +
-	"\rrelationships\x18\x01 \x03(\v2#.aisphere.hub.authz.v1.RelationshipB\x03\xe0A\x02R\rrelationships\"c\n" +
+	"\x11consistency_token\x18\x03 \x01(\tR\x10consistencyToken\"\x8d\x01\n" +
+	"\x1dBatchCheckPermissionsResponse\x12?\n" +
+	"\tdecisions\x18\x01 \x03(\v2!.authz.v1.CheckPermissionResponseR\tdecisions\x12+\n" +
+	"\x11consistency_token\x18\x02 \x01(\tR\x10consistencyToken\"^\n" +
+	"\x19WriteRelationshipsRequest\x12A\n" +
+	"\rrelationships\x18\x01 \x03(\v2\x16.authz.v1.RelationshipB\x03\xe0A\x02R\rrelationships\"c\n" +
 	"\x1aWriteRelationshipsResponse\x12+\n" +
 	"\x11consistency_token\x18\x01 \x01(\tR\x10consistencyToken\x12\x18\n" +
-	"\awritten\x18\x02 \x01(\x05R\awritten\"d\n" +
-	"\x1aDeleteRelationshipsRequest\x12F\n" +
-	"\x06filter\x18\x01 \x01(\v2).aisphere.hub.authz.v1.RelationshipFilterB\x03\xe0A\x02R\x06filter\"d\n" +
+	"\awritten\x18\x02 \x01(\x05R\awritten\"W\n" +
+	"\x1aDeleteRelationshipsRequest\x129\n" +
+	"\x06filter\x18\x01 \x01(\v2\x1c.authz.v1.RelationshipFilterB\x03\xe0A\x02R\x06filter\"d\n" +
 	"\x1bDeleteRelationshipsResponse\x12+\n" +
 	"\x11consistency_token\x18\x01 \x01(\tR\x10consistencyToken\x12\x18\n" +
-	"\adeleted\x18\x02 \x01(\x05R\adeleted\"\x90\x01\n" +
-	"\x18ReadRelationshipsRequest\x12F\n" +
-	"\x06filter\x18\x01 \x01(\v2).aisphere.hub.authz.v1.RelationshipFilterB\x03\xe0A\x02R\x06filter\x12\x14\n" +
+	"\adeleted\x18\x02 \x01(\x05R\adeleted\"\x83\x01\n" +
+	"\x18ReadRelationshipsRequest\x129\n" +
+	"\x06filter\x18\x01 \x01(\v2\x1c.authz.v1.RelationshipFilterB\x03\xe0A\x02R\x06filter\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"\xb4\x01\n" +
-	"\x19ReadRelationshipsResponse\x12I\n" +
-	"\rrelationships\x18\x01 \x03(\v2#.aisphere.hub.authz.v1.RelationshipR\rrelationships\x12\x1f\n" +
+	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"\xa7\x01\n" +
+	"\x19ReadRelationshipsResponse\x12<\n" +
+	"\rrelationships\x18\x01 \x03(\v2\x16.authz.v1.RelationshipR\rrelationships\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
 	"nextCursor\x12+\n" +
-	"\x11consistency_token\x18\x03 \x01(\tR\x10consistencyToken\"\x86\x04\n" +
-	"\x16LookupResourcesRequest\x12@\n" +
-	"\asubject\x18\x01 \x01(\v2!.aisphere.hub.authz.v1.SubjectRefB\x03\xe0A\x02R\asubject\x12(\n" +
+	"\x11consistency_token\x18\x03 \x01(\tR\x10consistencyToken\"\xf9\x03\n" +
+	"\x16LookupResourcesRequest\x123\n" +
+	"\asubject\x18\x01 \x01(\v2\x14.authz.v1.SubjectRefB\x03\xe0A\x02R\asubject\x12(\n" +
 	"\rresource_type\x18\x02 \x01(\tB\x03\xe0A\x02R\fresourceType\x12#\n" +
 	"\n" +
 	"permission\x18\x03 \x01(\tB\x03\xe0A\x02R\n" +
@@ -1548,14 +1584,14 @@ const file_authz_v1_authz_proto_rawDesc = "" +
 	"\x11consistency_token\x18\n" +
 	" \x01(\tR\x10consistencyToken\x12\x14\n" +
 	"\x05limit\x18\v \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\f \x01(\tR\x06cursor\"\xa7\x01\n" +
-	"\x17LookupResourcesResponse\x12>\n" +
-	"\tresources\x18\x01 \x03(\v2 .aisphere.hub.authz.v1.ObjectRefR\tresources\x12\x1f\n" +
+	"\x06cursor\x18\f \x01(\tR\x06cursor\"\x9a\x01\n" +
+	"\x17LookupResourcesResponse\x121\n" +
+	"\tresources\x18\x01 \x03(\v2\x13.authz.v1.ObjectRefR\tresources\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
 	"nextCursor\x12+\n" +
-	"\x11consistency_token\x18\x03 \x01(\tR\x10consistencyToken\"\x86\x04\n" +
-	"\x15LookupSubjectsRequest\x12A\n" +
-	"\bresource\x18\x01 \x01(\v2 .aisphere.hub.authz.v1.ObjectRefB\x03\xe0A\x02R\bresource\x12#\n" +
+	"\x11consistency_token\x18\x03 \x01(\tR\x10consistencyToken\"\xf9\x03\n" +
+	"\x15LookupSubjectsRequest\x124\n" +
+	"\bresource\x18\x01 \x01(\v2\x13.authz.v1.ObjectRefB\x03\xe0A\x02R\bresource\x12#\n" +
 	"\n" +
 	"permission\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
 	"permission\x12&\n" +
@@ -1570,9 +1606,9 @@ const file_authz_v1_authz_proto_rawDesc = "" +
 	"\x11consistency_token\x18\n" +
 	" \x01(\tR\x10consistencyToken\x12\x14\n" +
 	"\x05limit\x18\v \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\f \x01(\tR\x06cursor\"\xa5\x01\n" +
-	"\x16LookupSubjectsResponse\x12=\n" +
-	"\bsubjects\x18\x01 \x03(\v2!.aisphere.hub.authz.v1.SubjectRefR\bsubjects\x12\x1f\n" +
+	"\x06cursor\x18\f \x01(\tR\x06cursor\"\x98\x01\n" +
+	"\x16LookupSubjectsResponse\x120\n" +
+	"\bsubjects\x18\x01 \x03(\v2\x14.authz.v1.SubjectRefR\bsubjects\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
 	"nextCursor\x12+\n" +
 	"\x11consistency_token\x18\x03 \x01(\tR\x10consistencyToken\"\x13\n" +
@@ -1582,19 +1618,23 @@ const file_authz_v1_authz_proto_rawDesc = "" +
 	"schemaText\":\n" +
 	"\x12WriteSchemaRequest\x12$\n" +
 	"\vschema_text\x18\x01 \x01(\tB\x03\xe0A\x02R\n" +
-	"schemaText2\xb4\n" +
+	"schemaText\"\x15\n" +
+	"\x13WriteSchemaResponse2\x8f\r\n" +
+	"\fAuthzService\x12\x8e\x01\n" +
+	"\x0fCheckPermission\x12 .authz.v1.CheckPermissionRequest\x1a!.authz.v1.CheckPermissionResponse\"6\x92\xf4\x18\x18\b\x02\x1a\x14\b\x01\x12\vauthz.check\x1a\x03low\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/authz/check\x12\xac\x01\n" +
+	"\x15BatchCheckPermissions\x12&.authz.v1.BatchCheckPermissionsRequest\x1a'.authz.v1.BatchCheckPermissionsResponse\"B\x92\xf4\x18\x1e\b\x02\x1a\x1a\b\x01\x12\x11authz.check_batch\x1a\x03low\x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/authz/check:batch\x12\xe4\x01\n" +
+	"\x12WriteRelationships\x12#.authz.v1.WriteRelationshipsRequest\x1a$.authz.v1.WriteRelationshipsResponse\"\x82\x01\x92\xf4\x18\\\b\x03\x124\n" +
+	"\x05write\x12\x1aaihub:authz:relationship:*\x1a\raihub-service \x01\x1a\"\b\x01\x12\x18authz.relationship.write\x1a\x04high\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/authz/relationships\x12\xf0\x01\n" +
+	"\x13DeleteRelationships\x12$.authz.v1.DeleteRelationshipsRequest\x1a%.authz.v1.DeleteRelationshipsResponse\"\x8b\x01\x92\xf4\x18^\b\x03\x125\n" +
+	"\x06delete\x12\x1aaihub:authz:relationship:*\x1a\raihub-service \x01\x1a#\b\x01\x12\x19authz.relationship.delete\x1a\x04high\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/authz/relationships:delete\x12\xa8\x01\n" +
+	"\x11ReadRelationships\x12\".authz.v1.ReadRelationshipsRequest\x1a#.authz.v1.ReadRelationshipsResponse\"J\x92\xf4\x18'\b\x02\x1a#\b\x01\x12\x17authz.relationship.read\x1a\x06medium\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/authz/relationships\x12\xa1\x01\n" +
+	"\x0fLookupResources\x12 .authz.v1.LookupResourcesRequest\x1a!.authz.v1.LookupResourcesResponse\"I\x92\xf4\x18#\b\x02\x1a\x1f\b\x01\x12\x16authz.lookup_resources\x1a\x03low\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/authz/lookup-resources\x12\x9f\x01\n" +
+	"\x0eLookupSubjects\x12\x1f.authz.v1.LookupSubjectsRequest\x1a .authz.v1.LookupSubjectsResponse\"J\x92\xf4\x18%\b\x02\x1a!\b\x01\x12\x15authz.lookup_subjects\x1a\x06medium\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/authz/lookup-subjects\x12\xb3\x01\n" +
 	"\n" +
-	"\fAuthzService\x12\x8c\x01\n" +
-	"\x0fCheckPermission\x12-.aisphere.hub.authz.v1.CheckPermissionRequest\x1a..aisphere.hub.authz.v1.CheckPermissionResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/authz/check\x12\xa4\x01\n" +
-	"\x15BatchCheckPermissions\x123.aisphere.hub.authz.v1.BatchCheckPermissionsRequest\x1a4.aisphere.hub.authz.v1.BatchCheckPermissionsResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/authz/check:batch\x12\x9d\x01\n" +
-	"\x12WriteRelationships\x120.aisphere.hub.authz.v1.WriteRelationshipsRequest\x1a1.aisphere.hub.authz.v1.WriteRelationshipsResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/authz/relationships\x12\x9d\x01\n" +
-	"\x13DeleteRelationships\x121.aisphere.hub.authz.v1.DeleteRelationshipsRequest\x1a2.aisphere.hub.authz.v1.DeleteRelationshipsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19*\x17/v1/authz/relationships\x12\x97\x01\n" +
-	"\x11ReadRelationships\x12/.aisphere.hub.authz.v1.ReadRelationshipsRequest\x1a0.aisphere.hub.authz.v1.ReadRelationshipsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/authz/relationships\x12\x94\x01\n" +
-	"\x0fLookupResources\x12-.aisphere.hub.authz.v1.LookupResourcesRequest\x1a..aisphere.hub.authz.v1.LookupResourcesResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/authz/lookup-resources\x12\x90\x01\n" +
-	"\x0eLookupSubjects\x12,.aisphere.hub.authz.v1.LookupSubjectsRequest\x1a-.aisphere.hub.authz.v1.LookupSubjectsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/authz/lookup-subjects\x12{\n" +
-	"\n" +
-	"ReadSchema\x12(.aisphere.hub.authz.v1.ReadSchemaRequest\x1a).aisphere.hub.authz.v1.ReadSchemaResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/authz/schema\x12m\n" +
-	"\vWriteSchema\x12).aisphere.hub.authz.v1.WriteSchemaRequest\x1a\x16.google.protobuf.Empty\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\x1a\x10/v1/authz/schemaB9Z7github.com/aisphereio/aisphere-hub/api/authz/v1;authzv1b\x06proto3"
+	"ReadSchema\x12\x1b.authz.v1.ReadSchemaRequest\x1a\x1c.authz.v1.ReadSchemaResponse\"j\x92\xf4\x18N\b\x03\x12+\n" +
+	"\x04read\x12\x12aihub:authz:schema\x1a\raihub-service \x01\x1a\x1d\b\x01\x12\x11authz.schema.read\x1a\x06medium\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/authz/schema\x12\xbd\x01\n" +
+	"\vWriteSchema\x12\x1c.authz.v1.WriteSchemaRequest\x1a\x1d.authz.v1.WriteSchemaResponse\"q\x92\xf4\x18R\b\x03\x12,\n" +
+	"\x05write\x12\x12aihub:authz:schema\x1a\raihub-service \x01\x1a \b\x01\x12\x12authz.schema.write\x1a\bcritical\x82\xd3\xe4\x93\x02\x15:\x01*\x1a\x10/v1/authz/schemaB9Z7github.com/aisphereio/aisphere-hub/api/authz/v1;authzv1b\x06proto3"
 
 var (
 	file_authz_v1_authz_proto_rawDescOnce sync.Once
@@ -1608,75 +1648,75 @@ func file_authz_v1_authz_proto_rawDescGZIP() []byte {
 	return file_authz_v1_authz_proto_rawDescData
 }
 
-var file_authz_v1_authz_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_authz_v1_authz_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_authz_v1_authz_proto_goTypes = []any{
-	(*ObjectRef)(nil),                     // 0: aisphere.hub.authz.v1.ObjectRef
-	(*SubjectRef)(nil),                    // 1: aisphere.hub.authz.v1.SubjectRef
-	(*Relationship)(nil),                  // 2: aisphere.hub.authz.v1.Relationship
-	(*RelationshipFilter)(nil),            // 3: aisphere.hub.authz.v1.RelationshipFilter
-	(*CheckPermissionRequest)(nil),        // 4: aisphere.hub.authz.v1.CheckPermissionRequest
-	(*CheckPermissionResponse)(nil),       // 5: aisphere.hub.authz.v1.CheckPermissionResponse
-	(*BatchCheckPermissionsRequest)(nil),  // 6: aisphere.hub.authz.v1.BatchCheckPermissionsRequest
-	(*BatchCheckPermissionsResponse)(nil), // 7: aisphere.hub.authz.v1.BatchCheckPermissionsResponse
-	(*WriteRelationshipsRequest)(nil),     // 8: aisphere.hub.authz.v1.WriteRelationshipsRequest
-	(*WriteRelationshipsResponse)(nil),    // 9: aisphere.hub.authz.v1.WriteRelationshipsResponse
-	(*DeleteRelationshipsRequest)(nil),    // 10: aisphere.hub.authz.v1.DeleteRelationshipsRequest
-	(*DeleteRelationshipsResponse)(nil),   // 11: aisphere.hub.authz.v1.DeleteRelationshipsResponse
-	(*ReadRelationshipsRequest)(nil),      // 12: aisphere.hub.authz.v1.ReadRelationshipsRequest
-	(*ReadRelationshipsResponse)(nil),     // 13: aisphere.hub.authz.v1.ReadRelationshipsResponse
-	(*LookupResourcesRequest)(nil),        // 14: aisphere.hub.authz.v1.LookupResourcesRequest
-	(*LookupResourcesResponse)(nil),       // 15: aisphere.hub.authz.v1.LookupResourcesResponse
-	(*LookupSubjectsRequest)(nil),         // 16: aisphere.hub.authz.v1.LookupSubjectsRequest
-	(*LookupSubjectsResponse)(nil),        // 17: aisphere.hub.authz.v1.LookupSubjectsResponse
-	(*ReadSchemaRequest)(nil),             // 18: aisphere.hub.authz.v1.ReadSchemaRequest
-	(*ReadSchemaResponse)(nil),            // 19: aisphere.hub.authz.v1.ReadSchemaResponse
-	(*WriteSchemaRequest)(nil),            // 20: aisphere.hub.authz.v1.WriteSchemaRequest
-	(*structpb.Struct)(nil),               // 21: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),         // 22: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                 // 23: google.protobuf.Empty
+	(*ObjectRef)(nil),                     // 0: authz.v1.ObjectRef
+	(*SubjectRef)(nil),                    // 1: authz.v1.SubjectRef
+	(*Relationship)(nil),                  // 2: authz.v1.Relationship
+	(*RelationshipFilter)(nil),            // 3: authz.v1.RelationshipFilter
+	(*CheckPermissionRequest)(nil),        // 4: authz.v1.CheckPermissionRequest
+	(*CheckPermissionResponse)(nil),       // 5: authz.v1.CheckPermissionResponse
+	(*BatchCheckPermissionsRequest)(nil),  // 6: authz.v1.BatchCheckPermissionsRequest
+	(*BatchCheckPermissionsResponse)(nil), // 7: authz.v1.BatchCheckPermissionsResponse
+	(*WriteRelationshipsRequest)(nil),     // 8: authz.v1.WriteRelationshipsRequest
+	(*WriteRelationshipsResponse)(nil),    // 9: authz.v1.WriteRelationshipsResponse
+	(*DeleteRelationshipsRequest)(nil),    // 10: authz.v1.DeleteRelationshipsRequest
+	(*DeleteRelationshipsResponse)(nil),   // 11: authz.v1.DeleteRelationshipsResponse
+	(*ReadRelationshipsRequest)(nil),      // 12: authz.v1.ReadRelationshipsRequest
+	(*ReadRelationshipsResponse)(nil),     // 13: authz.v1.ReadRelationshipsResponse
+	(*LookupResourcesRequest)(nil),        // 14: authz.v1.LookupResourcesRequest
+	(*LookupResourcesResponse)(nil),       // 15: authz.v1.LookupResourcesResponse
+	(*LookupSubjectsRequest)(nil),         // 16: authz.v1.LookupSubjectsRequest
+	(*LookupSubjectsResponse)(nil),        // 17: authz.v1.LookupSubjectsResponse
+	(*ReadSchemaRequest)(nil),             // 18: authz.v1.ReadSchemaRequest
+	(*ReadSchemaResponse)(nil),            // 19: authz.v1.ReadSchemaResponse
+	(*WriteSchemaRequest)(nil),            // 20: authz.v1.WriteSchemaRequest
+	(*WriteSchemaResponse)(nil),           // 21: authz.v1.WriteSchemaResponse
+	(*structpb.Struct)(nil),               // 22: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),         // 23: google.protobuf.Timestamp
 }
 var file_authz_v1_authz_proto_depIdxs = []int32{
-	0,  // 0: aisphere.hub.authz.v1.Relationship.resource:type_name -> aisphere.hub.authz.v1.ObjectRef
-	1,  // 1: aisphere.hub.authz.v1.Relationship.subject:type_name -> aisphere.hub.authz.v1.SubjectRef
-	21, // 2: aisphere.hub.authz.v1.Relationship.caveat_context:type_name -> google.protobuf.Struct
-	22, // 3: aisphere.hub.authz.v1.Relationship.expires_at:type_name -> google.protobuf.Timestamp
-	1,  // 4: aisphere.hub.authz.v1.CheckPermissionRequest.subject:type_name -> aisphere.hub.authz.v1.SubjectRef
-	0,  // 5: aisphere.hub.authz.v1.CheckPermissionRequest.resource:type_name -> aisphere.hub.authz.v1.ObjectRef
-	21, // 6: aisphere.hub.authz.v1.CheckPermissionRequest.subject_attrs:type_name -> google.protobuf.Struct
-	21, // 7: aisphere.hub.authz.v1.CheckPermissionRequest.resource_attrs:type_name -> google.protobuf.Struct
-	21, // 8: aisphere.hub.authz.v1.CheckPermissionRequest.environment_attrs:type_name -> google.protobuf.Struct
-	4,  // 9: aisphere.hub.authz.v1.BatchCheckPermissionsRequest.checks:type_name -> aisphere.hub.authz.v1.CheckPermissionRequest
-	5,  // 10: aisphere.hub.authz.v1.BatchCheckPermissionsResponse.decisions:type_name -> aisphere.hub.authz.v1.CheckPermissionResponse
-	2,  // 11: aisphere.hub.authz.v1.WriteRelationshipsRequest.relationships:type_name -> aisphere.hub.authz.v1.Relationship
-	3,  // 12: aisphere.hub.authz.v1.DeleteRelationshipsRequest.filter:type_name -> aisphere.hub.authz.v1.RelationshipFilter
-	3,  // 13: aisphere.hub.authz.v1.ReadRelationshipsRequest.filter:type_name -> aisphere.hub.authz.v1.RelationshipFilter
-	2,  // 14: aisphere.hub.authz.v1.ReadRelationshipsResponse.relationships:type_name -> aisphere.hub.authz.v1.Relationship
-	1,  // 15: aisphere.hub.authz.v1.LookupResourcesRequest.subject:type_name -> aisphere.hub.authz.v1.SubjectRef
-	21, // 16: aisphere.hub.authz.v1.LookupResourcesRequest.subject_attrs:type_name -> google.protobuf.Struct
-	21, // 17: aisphere.hub.authz.v1.LookupResourcesRequest.environment_attrs:type_name -> google.protobuf.Struct
-	0,  // 18: aisphere.hub.authz.v1.LookupResourcesResponse.resources:type_name -> aisphere.hub.authz.v1.ObjectRef
-	0,  // 19: aisphere.hub.authz.v1.LookupSubjectsRequest.resource:type_name -> aisphere.hub.authz.v1.ObjectRef
-	21, // 20: aisphere.hub.authz.v1.LookupSubjectsRequest.resource_attrs:type_name -> google.protobuf.Struct
-	21, // 21: aisphere.hub.authz.v1.LookupSubjectsRequest.environment_attrs:type_name -> google.protobuf.Struct
-	1,  // 22: aisphere.hub.authz.v1.LookupSubjectsResponse.subjects:type_name -> aisphere.hub.authz.v1.SubjectRef
-	4,  // 23: aisphere.hub.authz.v1.AuthzService.CheckPermission:input_type -> aisphere.hub.authz.v1.CheckPermissionRequest
-	6,  // 24: aisphere.hub.authz.v1.AuthzService.BatchCheckPermissions:input_type -> aisphere.hub.authz.v1.BatchCheckPermissionsRequest
-	8,  // 25: aisphere.hub.authz.v1.AuthzService.WriteRelationships:input_type -> aisphere.hub.authz.v1.WriteRelationshipsRequest
-	10, // 26: aisphere.hub.authz.v1.AuthzService.DeleteRelationships:input_type -> aisphere.hub.authz.v1.DeleteRelationshipsRequest
-	12, // 27: aisphere.hub.authz.v1.AuthzService.ReadRelationships:input_type -> aisphere.hub.authz.v1.ReadRelationshipsRequest
-	14, // 28: aisphere.hub.authz.v1.AuthzService.LookupResources:input_type -> aisphere.hub.authz.v1.LookupResourcesRequest
-	16, // 29: aisphere.hub.authz.v1.AuthzService.LookupSubjects:input_type -> aisphere.hub.authz.v1.LookupSubjectsRequest
-	18, // 30: aisphere.hub.authz.v1.AuthzService.ReadSchema:input_type -> aisphere.hub.authz.v1.ReadSchemaRequest
-	20, // 31: aisphere.hub.authz.v1.AuthzService.WriteSchema:input_type -> aisphere.hub.authz.v1.WriteSchemaRequest
-	5,  // 32: aisphere.hub.authz.v1.AuthzService.CheckPermission:output_type -> aisphere.hub.authz.v1.CheckPermissionResponse
-	7,  // 33: aisphere.hub.authz.v1.AuthzService.BatchCheckPermissions:output_type -> aisphere.hub.authz.v1.BatchCheckPermissionsResponse
-	9,  // 34: aisphere.hub.authz.v1.AuthzService.WriteRelationships:output_type -> aisphere.hub.authz.v1.WriteRelationshipsResponse
-	11, // 35: aisphere.hub.authz.v1.AuthzService.DeleteRelationships:output_type -> aisphere.hub.authz.v1.DeleteRelationshipsResponse
-	13, // 36: aisphere.hub.authz.v1.AuthzService.ReadRelationships:output_type -> aisphere.hub.authz.v1.ReadRelationshipsResponse
-	15, // 37: aisphere.hub.authz.v1.AuthzService.LookupResources:output_type -> aisphere.hub.authz.v1.LookupResourcesResponse
-	17, // 38: aisphere.hub.authz.v1.AuthzService.LookupSubjects:output_type -> aisphere.hub.authz.v1.LookupSubjectsResponse
-	19, // 39: aisphere.hub.authz.v1.AuthzService.ReadSchema:output_type -> aisphere.hub.authz.v1.ReadSchemaResponse
-	23, // 40: aisphere.hub.authz.v1.AuthzService.WriteSchema:output_type -> google.protobuf.Empty
+	0,  // 0: authz.v1.Relationship.resource:type_name -> authz.v1.ObjectRef
+	1,  // 1: authz.v1.Relationship.subject:type_name -> authz.v1.SubjectRef
+	22, // 2: authz.v1.Relationship.caveat_context:type_name -> google.protobuf.Struct
+	23, // 3: authz.v1.Relationship.expires_at:type_name -> google.protobuf.Timestamp
+	1,  // 4: authz.v1.CheckPermissionRequest.subject:type_name -> authz.v1.SubjectRef
+	0,  // 5: authz.v1.CheckPermissionRequest.resource:type_name -> authz.v1.ObjectRef
+	22, // 6: authz.v1.CheckPermissionRequest.subject_attrs:type_name -> google.protobuf.Struct
+	22, // 7: authz.v1.CheckPermissionRequest.resource_attrs:type_name -> google.protobuf.Struct
+	22, // 8: authz.v1.CheckPermissionRequest.environment_attrs:type_name -> google.protobuf.Struct
+	4,  // 9: authz.v1.BatchCheckPermissionsRequest.checks:type_name -> authz.v1.CheckPermissionRequest
+	5,  // 10: authz.v1.BatchCheckPermissionsResponse.decisions:type_name -> authz.v1.CheckPermissionResponse
+	2,  // 11: authz.v1.WriteRelationshipsRequest.relationships:type_name -> authz.v1.Relationship
+	3,  // 12: authz.v1.DeleteRelationshipsRequest.filter:type_name -> authz.v1.RelationshipFilter
+	3,  // 13: authz.v1.ReadRelationshipsRequest.filter:type_name -> authz.v1.RelationshipFilter
+	2,  // 14: authz.v1.ReadRelationshipsResponse.relationships:type_name -> authz.v1.Relationship
+	1,  // 15: authz.v1.LookupResourcesRequest.subject:type_name -> authz.v1.SubjectRef
+	22, // 16: authz.v1.LookupResourcesRequest.subject_attrs:type_name -> google.protobuf.Struct
+	22, // 17: authz.v1.LookupResourcesRequest.environment_attrs:type_name -> google.protobuf.Struct
+	0,  // 18: authz.v1.LookupResourcesResponse.resources:type_name -> authz.v1.ObjectRef
+	0,  // 19: authz.v1.LookupSubjectsRequest.resource:type_name -> authz.v1.ObjectRef
+	22, // 20: authz.v1.LookupSubjectsRequest.resource_attrs:type_name -> google.protobuf.Struct
+	22, // 21: authz.v1.LookupSubjectsRequest.environment_attrs:type_name -> google.protobuf.Struct
+	1,  // 22: authz.v1.LookupSubjectsResponse.subjects:type_name -> authz.v1.SubjectRef
+	4,  // 23: authz.v1.AuthzService.CheckPermission:input_type -> authz.v1.CheckPermissionRequest
+	6,  // 24: authz.v1.AuthzService.BatchCheckPermissions:input_type -> authz.v1.BatchCheckPermissionsRequest
+	8,  // 25: authz.v1.AuthzService.WriteRelationships:input_type -> authz.v1.WriteRelationshipsRequest
+	10, // 26: authz.v1.AuthzService.DeleteRelationships:input_type -> authz.v1.DeleteRelationshipsRequest
+	12, // 27: authz.v1.AuthzService.ReadRelationships:input_type -> authz.v1.ReadRelationshipsRequest
+	14, // 28: authz.v1.AuthzService.LookupResources:input_type -> authz.v1.LookupResourcesRequest
+	16, // 29: authz.v1.AuthzService.LookupSubjects:input_type -> authz.v1.LookupSubjectsRequest
+	18, // 30: authz.v1.AuthzService.ReadSchema:input_type -> authz.v1.ReadSchemaRequest
+	20, // 31: authz.v1.AuthzService.WriteSchema:input_type -> authz.v1.WriteSchemaRequest
+	5,  // 32: authz.v1.AuthzService.CheckPermission:output_type -> authz.v1.CheckPermissionResponse
+	7,  // 33: authz.v1.AuthzService.BatchCheckPermissions:output_type -> authz.v1.BatchCheckPermissionsResponse
+	9,  // 34: authz.v1.AuthzService.WriteRelationships:output_type -> authz.v1.WriteRelationshipsResponse
+	11, // 35: authz.v1.AuthzService.DeleteRelationships:output_type -> authz.v1.DeleteRelationshipsResponse
+	13, // 36: authz.v1.AuthzService.ReadRelationships:output_type -> authz.v1.ReadRelationshipsResponse
+	15, // 37: authz.v1.AuthzService.LookupResources:output_type -> authz.v1.LookupResourcesResponse
+	17, // 38: authz.v1.AuthzService.LookupSubjects:output_type -> authz.v1.LookupSubjectsResponse
+	19, // 39: authz.v1.AuthzService.ReadSchema:output_type -> authz.v1.ReadSchemaResponse
+	21, // 40: authz.v1.AuthzService.WriteSchema:output_type -> authz.v1.WriteSchemaResponse
 	32, // [32:41] is the sub-list for method output_type
 	23, // [23:32] is the sub-list for method input_type
 	23, // [23:23] is the sub-list for extension type_name
@@ -1695,7 +1735,7 @@ func file_authz_v1_authz_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_authz_v1_authz_proto_rawDesc), len(file_authz_v1_authz_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

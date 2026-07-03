@@ -102,6 +102,18 @@ func (r *fakeSkillRepo) UpdateSkill(ctx context.Context, skill *Skill) (*Skill, 
 	return existing, nil
 }
 
+func (r *fakeSkillRepo) UpdateSkillVisibility(ctx context.Context, name, visibility string) (*Skill, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	existing, ok := r.skills[name]
+	if !ok {
+		return nil, ErrSkillNotFound
+	}
+	existing.Visibility = visibility
+	existing.UpdateTime = time.Now()
+	return existing, nil
+}
+
 func (r *fakeSkillRepo) ListSkills(ctx context.Context, opts SkillListOptions) (*SkillListResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -838,5 +850,43 @@ func TestListSkills_AuthzDisabled_ReturnsAll(t *testing.T) {
 	}
 	if len(out.Items) != 3 {
 		t.Errorf("got %d items, want 3", len(out.Items))
+	}
+}
+
+func TestUpdateSkillVisibility(t *testing.T) {
+	repo := newFakeSkillRepo()
+	uc := newTestUsecase(repo, nil, nil)
+	principal := testPrincipal("u_1")
+
+	created, err := uc.CreateSkill(context.Background(), principal, &Skill{
+		Name:       "skill-visibility",
+		Visibility: SkillVisibilityPrivate,
+	})
+	if err != nil {
+		t.Fatalf("CreateSkill failed: %v", err)
+	}
+	if created.Visibility != SkillVisibilityPrivate {
+		t.Fatalf("created visibility = %q, want private", created.Visibility)
+	}
+
+	updated, err := uc.UpdateSkillVisibility(context.Background(), principal, "skill-visibility", "PUBLIC")
+	if err != nil {
+		t.Fatalf("UpdateSkillVisibility failed: %v", err)
+	}
+	if updated.Visibility != SkillVisibilityPublic {
+		t.Fatalf("updated visibility = %q, want public", updated.Visibility)
+	}
+}
+
+func TestUpdateSkillVisibilityRejectsUnsupportedValue(t *testing.T) {
+	repo := newFakeSkillRepo()
+	uc := newTestUsecase(repo, nil, nil)
+	principal := testPrincipal("u_1")
+
+	if _, err := uc.CreateSkill(context.Background(), principal, &Skill{Name: "skill-visibility"}); err != nil {
+		t.Fatalf("CreateSkill failed: %v", err)
+	}
+	if _, err := uc.UpdateSkillVisibility(context.Background(), principal, "skill-visibility", "org"); err == nil {
+		t.Fatal("expected invalid visibility error, got nil")
 	}
 }

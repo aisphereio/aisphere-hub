@@ -218,6 +218,7 @@ type SkillListResult struct {
 type SkillRepo interface {
 	CreateSkill(ctx context.Context, skill *Skill) (*Skill, error)
 	UpdateSkill(ctx context.Context, skill *Skill) (*Skill, error)
+	UpdateSkillVisibility(ctx context.Context, name, visibility string) (*Skill, error)
 	ListSkills(ctx context.Context, opts SkillListOptions) (*SkillListResult, error)
 	GetSkill(ctx context.Context, name string) (*Skill, error)
 	DeleteSkill(ctx context.Context, name string) error
@@ -428,6 +429,46 @@ func (uc *SkillUsecase) UpdateSkill(ctx context.Context, principal authn.Princip
 	}
 	uc.log.WithContext(ctx).Info("skill updated",
 		logx.String("name", out.Name),
+	)
+	return out, nil
+}
+
+// UpdateSkillVisibility changes a skill between private and public. Requires
+// skill.edit because it changes who can read the resource.
+func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, principal authn.Principal, name, visibility string) (out *Skill, err error) {
+	ctx, logger, started := uc.begin(ctx, principal, "update_visibility", logx.String("name", name), logx.String("visibility", visibility))
+	defer func() {
+		uc.end(ctx, logger, "update_visibility", started, err, logx.String("name", name), logx.String("visibility", visibility))
+	}()
+	if err := ValidateSkillName(name); err != nil {
+		return nil, err
+	}
+	visibility = normalizeSkillVisibility(visibility)
+	if visibility != SkillVisibilityPrivate && visibility != SkillVisibilityPublic {
+		return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("visibility must be 'private' or 'public'"))
+	}
+	if err := uc.requireSkillPermission(ctx, principal, name, "edit"); err != nil {
+		return nil, err
+	}
+	out, err = uc.repo.UpdateSkillVisibility(ctx, name, visibility)
+	if err != nil {
+		uc.recordAudit(ctx, principal, "skill.visibility.update", auditx.ResultFailure, err.Error(), "skill", name, map[string]any{
+			"visibility": visibility,
+		})
+		uc.log.WithContext(ctx).Warn("skill visibility update failed",
+			logx.String("name", name),
+			logx.String("visibility", visibility),
+			logx.Err(err),
+		)
+		return nil, err
+	}
+	uc.recordAudit(ctx, principal, "skill.visibility.update", auditx.ResultSuccess, "", "skill", name, map[string]any{
+		"visibility": visibility,
+	})
+	uc.log.WithContext(ctx).Info("skill visibility updated",
+		logx.String("name", out.Name),
+		logx.String("visibility", out.Visibility),
+		logx.String("updated_by", principal.SubjectID),
 	)
 	return out, nil
 }
@@ -1264,12 +1305,17 @@ func normalizeSkillVersion(v string) string {
 	return strings.TrimSpace(v)
 }
 
+func normalizeSkillVisibility(v string) string {
+	return strings.ToLower(strings.TrimSpace(v))
+}
+
 func normalizeSkillForCreate(in *Skill) *Skill {
 	out := *in
 	out.Name = normalizeSkillName(out.Name)
 	if out.Status == "" {
 		out.Status = SkillStatusActive
 	}
+	out.Visibility = normalizeSkillVisibility(out.Visibility)
 	if out.Visibility == "" {
 		out.Visibility = SkillVisibilityPrivate
 	}

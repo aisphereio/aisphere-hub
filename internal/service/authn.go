@@ -103,7 +103,7 @@ func (s *AuthnService) LoginURL(ctx context.Context, req *v1.LoginURLRequest) (*
 }
 
 // Exchange implements v1.AuthnServiceHTTPServer.Exchange.
-func (s *AuthnService) Exchange(ctx context.Context, req *v1.ExchangeRequest) (*v1.TokenResponse, error) {
+func (s *AuthnService) Exchange(ctx context.Context, req *v1.ExchangeRequest) (*v1.ExchangeResponse, error) {
 	out, err := s.uc.Exchange(ctx, biz.AuthnExchangeURLRequest{
 		Code:         req.GetCode(),
 		RedirectURI:  req.GetRedirectUri(),
@@ -115,11 +115,11 @@ func (s *AuthnService) Exchange(ctx context.Context, req *v1.ExchangeRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	return tokenDOToDTO(out), nil
+	return tokenDOToExchangeResponse(out), nil
 }
 
 // Refresh implements v1.AuthnServiceHTTPServer.Refresh.
-func (s *AuthnService) Refresh(ctx context.Context, req *v1.RefreshRequest) (*v1.TokenResponse, error) {
+func (s *AuthnService) Refresh(ctx context.Context, req *v1.RefreshRequest) (*v1.RefreshResponse, error) {
 	out, err := s.uc.Refresh(ctx, biz.AuthnRefreshRequest{
 		RefreshToken: req.GetRefreshToken(),
 		Scope:        req.GetScope(),
@@ -129,7 +129,7 @@ func (s *AuthnService) Refresh(ctx context.Context, req *v1.RefreshRequest) (*v1
 	if err != nil {
 		return nil, err
 	}
-	return tokenDOToDTO(out), nil
+	return tokenDOToRefreshResponse(out), nil
 }
 
 // LogoutURL implements v1.AuthnServiceHTTPServer.LogoutURL.
@@ -286,9 +286,9 @@ func (s *AuthnService) recoverHandler(h http.HandlerFunc) http.HandlerFunc {
 
 // --- DTO conversion helpers ---
 
-func tokenDOToDTO(t *biz.AuthnToken) *v1.TokenResponse {
+func tokenDOToExchangeResponse(t *biz.AuthnToken) *v1.ExchangeResponse {
 	if t == nil {
-		return &v1.TokenResponse{}
+		return &v1.ExchangeResponse{}
 	}
 	expiresIn := int64(0)
 	if !t.ExpiresAt.IsZero() {
@@ -297,7 +297,28 @@ func tokenDOToDTO(t *biz.AuthnToken) *v1.TokenResponse {
 			expiresIn = 0
 		}
 	}
-	return &v1.TokenResponse{
+	return &v1.ExchangeResponse{
+		AccessToken:  t.AccessToken,
+		RefreshToken: t.RefreshToken,
+		IdToken:      t.IDToken,
+		TokenType:    t.TokenType,
+		ExpiresIn:    expiresIn,
+		Scope:        t.Scope,
+	}
+}
+
+func tokenDOToRefreshResponse(t *biz.AuthnToken) *v1.RefreshResponse {
+	if t == nil {
+		return &v1.RefreshResponse{}
+	}
+	expiresIn := int64(0)
+	if !t.ExpiresAt.IsZero() {
+		expiresIn = int64(t.ExpiresAt.Sub(timeNow()).Seconds())
+		if expiresIn < 0 {
+			expiresIn = 0
+		}
+	}
+	return &v1.RefreshResponse{
 		AccessToken:  t.AccessToken,
 		RefreshToken: t.RefreshToken,
 		IdToken:      t.IDToken,

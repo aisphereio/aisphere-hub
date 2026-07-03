@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuditService_QueryAuditRecords_FullMethodName = "/aisphere.hub.audit.v1.AuditService/QueryAuditRecords"
+	AuditService_QueryAuditRecords_FullMethodName = "/audit.v1.AuditService/QueryAuditRecords"
 )
 
 // AuditServiceClient is the client API for AuditService service.
@@ -144,7 +144,7 @@ func _AuditService_QueryAuditRecords_Handler(srv interface{}, ctx context.Contex
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AuditService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "aisphere.hub.audit.v1.AuditService",
+	ServiceName: "audit.v1.AuditService",
 	HandlerType: (*AuditServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

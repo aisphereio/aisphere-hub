@@ -1,0 +1,2882 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "aisphere/options/v1/authz.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AuditService"
+    },
+    {
+      "name": "AuthnService"
+    },
+    {
+      "name": "AuthzService"
+    },
+    {
+      "name": "SkillService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/audit/records": {
+      "get": {
+        "summary": "QueryAuditRecords returns audit records matching the filter.\nResults are sorted by time descending (newest first).",
+        "operationId": "AuditService_QueryAuditRecords",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1QueryAuditRecordsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "actorId",
+            "description": "Filter fields. Empty fields are wildcards.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actorType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "resourceType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "resourceId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "result",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "limit",
+            "description": "default 100, max 1000",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AuditService"
+        ]
+      }
+    },
+    "/v1/authn/exchange": {
+      "post": {
+        "summary": "Exchange exchanges an OAuth authorization code for IdP tokens.\r\n\r\nSupports PKCE via the optional `code_verifier` field for public clients\r\n(SPAs, mobile apps) that cannot safely store a client secret. When the\r\nauthorization request was made with a `code_challenge`, the same\r\n`code_verifier` MUST be supplied here.\r\n\r\nNOTE: kernel authn exposes CodeVerifier on AuthCodeExchangeRequest, but\r\nthe current Casdoor SDK adapter (kernel/authn/casdoor/token.go) does not\r\nyet forward it to GetOAuthToken. The field is accepted on the wire for\r\nforward compatibility; verify the kernel version before relying on PKCE\r\nenforcement server-side.",
+        "operationId": "AuthnService_Exchange",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/authn/introspect": {
+      "post": {
+        "summary": "Introspect validates a token and returns the principal it represents.\r\n\r\nUseful for debug tools, third-party integrations, and service-to-service\r\ncalls that need to verify a token's validity and identity without going\r\nthrough the full request middleware chain. Mirrors RFC 7662 token\r\nintrospection semantics (active=false when the token is invalid,\r\nexpired, or revoked).",
+        "operationId": "AuthnService_Introspect",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IntrospectResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1IntrospectRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/authn/login-url": {
+      "get": {
+        "summary": "LoginURL returns the IdP authorization URL as JSON for SPA/debug usage.\r\n\r\nBrowser users should prefer GET /v1/authn/login, which is registered as a\r\ndirect HTTP 302 route by the service implementation. See the service\r\ncomment above.",
+        "operationId": "AuthnService_LoginURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "redirectUri",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "prompt",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "description": "org_id optionally overrides the globally configured Casdoor organization\r\nfor this login URL. When unset, the global config organization is used.\r\nMaps to kernel authn.LoginURLRequest.OrgID.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "appId",
+            "description": "app_id optionally overrides the globally configured Casdoor application.\r\nMaps to kernel authn.LoginURLRequest.AppID.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/authn/logout-url": {
+      "get": {
+        "summary": "LogoutURL returns the IdP logout URL as JSON for SPA/debug usage.\r\n\r\nBrowser users can also call GET /v1/authn/logout for a direct HTTP 302.\r\n\r\nSide effect: token revocation. When the request carries an\r\n`Authorization: Bearer \u003caccess_token\u003e` header, OR an explicit\r\n`access_token` field is supplied in the request body, the implementation\r\ncalls Revoke on that access token before returning the IdP logout URL.\r\nThis adds the token to the local session blacklist so subsequent API\r\ncalls with the same token are rejected even before the IdP session\r\nexpires. The `access_token` field makes this previously-implicit side\r\neffect visible in the API contract.\r\n\r\nNOTE: kernel authn does not currently expose a LogoutURLBuilder\r\ninterface. The hub data layer must construct the Casdoor logout URL\r\nitself using the configured Casdoor endpoint, client_id and\r\npost_logout_redirect_uri. See legacy backend internal/data/auth.go for\r\nthe pattern (it built the URL via the old aisphere-kit authn adapter;\r\nthe new hub will need to call casdoor SDK directly or compose the URL\r\nfrom config).",
+        "operationId": "AuthnService_LogoutURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LogoutURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "postLogoutRedirectUri",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "idTokenHint",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "accessToken",
+            "description": "access_token explicitly identifies the token to revoke locally before\r\nreturning the IdP logout URL. When unset, the implementation falls back\r\nto the `Authorization: Bearer \u003caccess_token\u003e` request header.\r\n\r\nThis field makes the implicit revocation side effect of LogoutURL\r\nvisible in the API contract instead of being hidden in service code\r\n(legacy backend internal/biz/auth.go:LogoutURL).\r\n\r\nRevoke is best-effort. If the local session manager is unavailable the\r\nimplementation MUST still return the logout URL and log a warning.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "appId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/authn/me": {
+      "get": {
+        "summary": "Me returns the current authenticated principal.\r\n\r\nRequires `Authorization: Bearer \u003caccess_token\u003e`. The returned Principal\r\nincludes `expires_at` so frontends can schedule proactive token refreshes\r\nbefore the token expires, rather than waiting for a 401 to trigger a\r\nreactive refresh.",
+        "operationId": "AuthnService_Me",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/authn/refresh": {
+      "post": {
+        "summary": "Refresh refreshes an IdP access token using a refresh token.",
+        "operationId": "AuthnService_Refresh",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RefreshResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RefreshRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/authn/revoke": {
+      "post": {
+        "summary": "Revoke explicitly revokes an access or refresh token.\r\n\r\nUse this for multi-device session management (e.g. \"sign out everywhere\"\r\nflows) where the caller wants to invalidate a token without navigating\r\nthe IdP logout page.\r\n\r\nIdP-side revocation is best-effort; the local session blacklist is\r\nalways updated so the token is rejected at the next API call regardless\r\nof whether the IdP actually revokes it.\r\n\r\nNOTE: the current Casdoor SDK adapter (kernel/authn/casdoor/token.go)\r\nreturns ErrIdentityBackendFailed(\"casdoor sdk does not expose token\r\nrevocation\"). Until the kernel adapter is updated, this RPC will only\r\nupdate the local blacklist and return a warning. Callers that need\r\nfull IdP-side revocation should use LogoutURL with id_token_hint.",
+        "operationId": "AuthnService_Revoke",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RevokeRequest asks the implementation to revoke a single token.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RevokeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/authz/check": {
+      "post": {
+        "summary": "CheckPermission evaluates whether subject has permission on resource.",
+        "operationId": "AuthzService_CheckPermission",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CheckPermissionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CheckPermissionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      }
+    },
+    "/v1/authz/check:batch": {
+      "post": {
+        "summary": "BatchCheckPermissions evaluates multiple checks in one round-trip.\nUseful for list views where each row needs its own permission check.",
+        "operationId": "AuthzService_BatchCheckPermissions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BatchCheckPermissionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BatchCheckPermissionsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      }
+    },
+    "/v1/authz/lookup-resources": {
+      "get": {
+        "summary": "LookupResources returns resource IDs that the subject can access\nwith the given permission. Used by \"list my skills\" views.",
+        "operationId": "AuthzService_LookupResources",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LookupResourcesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "subject.type",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subject.id",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subject.relation",
+            "description": "relation is optional. Use it to express \"member of group X\" as\nsubject = {type:\"group\", id:\"g_1\", relation:\"member\"}.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "resourceType",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subjectAttrs",
+            "in": "query",
+            "required": false,
+            "type": "object"
+          },
+          {
+            "name": "environmentAttrs",
+            "in": "query",
+            "required": false,
+            "type": "object"
+          },
+          {
+            "name": "fullyConsistent",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "consistencyToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      }
+    },
+    "/v1/authz/lookup-subjects": {
+      "get": {
+        "summary": "LookupSubjects returns subjects that can access the given resource\nwith the given permission. Used by \"who can access this skill?\" views.",
+        "operationId": "AuthzService_LookupSubjects",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LookupSubjectsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "resource.type",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resource.id",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subjectType",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "resourceAttrs",
+            "in": "query",
+            "required": false,
+            "type": "object"
+          },
+          {
+            "name": "environmentAttrs",
+            "in": "query",
+            "required": false,
+            "type": "object"
+          },
+          {
+            "name": "fullyConsistent",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "consistencyToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      }
+    },
+    "/v1/authz/relationships": {
+      "get": {
+        "summary": "ReadRelationships lists relationship tuples matching the filter.\nUsed by share-management UIs (e.g. \"who has access to skill X?\").",
+        "operationId": "AuthzService_ReadRelationships",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReadRelationshipsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "filter.resourceType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter.resourceId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter.relation",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter.subjectType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter.subjectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter.subjectRelation",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      },
+      "post": {
+        "summary": "WriteRelationships creates or updates relationship tuples. Idempotent\n(TOUCH semantics): writing an existing tuple is a no-op.",
+        "operationId": "AuthzService_WriteRelationships",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WriteRelationshipsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1WriteRelationshipsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      }
+    },
+    "/v1/authz/relationships:delete": {
+      "post": {
+        "summary": "DeleteRelationships removes relationship tuples matching the filter.\nAt least one of resource / subject filter field must be set.",
+        "operationId": "AuthzService_DeleteRelationships",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRelationshipsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRelationshipsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      }
+    },
+    "/v1/authz/schema": {
+      "get": {
+        "summary": "ReadSchema returns the current SpiceDB schema text.",
+        "operationId": "AuthzService_ReadSchema",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReadSchemaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthzService"
+        ]
+      },
+      "put": {
+        "summary": "WriteSchema replaces the SpiceDB schema. Use with care — schema\nchanges are global and may break existing tuples.",
+        "operationId": "AuthzService_WriteSchema",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WriteSchemaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1WriteSchemaRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ]
+      }
+    },
+    "/v1/skills": {
+      "get": {
+        "summary": "ListSkills lists canonical skills visible to the caller. Visibility\nrules: caller sees (a) skills they own, (b) skills shared with them\nvia accessx grants, (c) skills with visibility=public.",
+        "operationId": "SkillService_ListSkills",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "visibility",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      },
+      "post": {
+        "summary": "CreateSkill creates one canonical skill. The caller becomes the owner.",
+        "operationId": "SkillService_CreateSkill",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSkillRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}": {
+      "get": {
+        "summary": "GetSkill returns one canonical skill by name.",
+        "operationId": "SkillService_GetSkill",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteSkill soft-deletes one canonical skill by name. Cascades to\nversions and files. S3 objects are purged best-effort after the DB\ntransaction commits.",
+        "operationId": "SkillService_DeleteSkill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSkillResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateSkill updates mutable fields of one canonical skill. owner_id /\nvisibility / status are NOT updated by this RPC — they require\nseparate lifecycle endpoints.",
+        "operationId": "SkillService_UpdateSkill",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceUpdateSkillBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/shares": {
+      "get": {
+        "summary": "ListSkillShares lists subjects that have any relation on the named\nskill. Requires skill.read (with ownership + public fallback).",
+        "operationId": "SkillService_ListSkillShares",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillSharesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      },
+      "post": {
+        "summary": "CreateSkillShare grants a viewer or editor relation on the named\nskill to a subject. Requires skill.edit. The relation field accepts\n\"viewer\" or \"editor\"; passing \"owner\" returns INVALID_ARGUMENT.",
+        "operationId": "SkillService_CreateSkillShare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SkillShare"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceCreateSkillShareBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/shares/{subjectType}/{subjectId}": {
+      "delete": {
+        "summary": "DeleteSkillShare revokes ALL relations between the named skill and\nthe named subject. Requires skill.edit.",
+        "operationId": "SkillService_DeleteSkillShare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSkillShareResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subjectType",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions": {
+      "get": {
+        "summary": "ListSkillVersions lists versions of one canonical skill, oldest first.",
+        "operationId": "SkillService_ListSkillVersions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillVersionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}": {
+      "get": {
+        "summary": "GetSkillVersion returns one version metadata record.",
+        "operationId": "SkillService_GetSkillVersion",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}/download": {
+      "get": {
+        "summary": "DownloadSkillVersion returns the version package bytes. Use\nif_none_match to leverage ETag-based 304 Not Modified.",
+        "operationId": "SkillService_DownloadSkillVersion",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SkillPackageDownload"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ifNoneMatch",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}/file": {
+      "get": {
+        "summary": "GetSkillVersionFile returns one text or base64-encoded file content.",
+        "operationId": "SkillService_GetSkillVersionFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SkillFile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}/files": {
+      "get": {
+        "summary": "ListSkillVersionFiles lists files stored for one skill version.",
+        "operationId": "SkillService_ListSkillVersionFiles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillVersionFilesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}:offline": {
+      "post": {
+        "summary": "OfflineSkillVersion removes one online version from catalog/runtime use.",
+        "operationId": "SkillService_OfflineSkillVersion",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceOfflineSkillVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}:online": {
+      "post": {
+        "summary": "OnlineSkillVersion makes one published version consumable by\ncatalog/runtime. Any previously-online version of the same skill is\nautomatically demoted to published.",
+        "operationId": "SkillService_OnlineSkillVersion",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceOnlineSkillVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}:publish": {
+      "post": {
+        "summary": "PublishSkillVersion marks a submitted version as published.",
+        "operationId": "SkillService_PublishSkillVersion",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServicePublishSkillVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/versions/{version}:submit": {
+      "post": {
+        "summary": "SubmitSkillVersion marks a draft version ready for publish.",
+        "operationId": "SkillService_SubmitSkillVersion",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceSubmitSkillVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}:visibility": {
+      "post": {
+        "summary": "UpdateSkillVisibility changes the access visibility of one canonical\nskill. This endpoint is the contract-backed path for public/private\ntoggles; subject-specific sharing remains under Skill share RPCs.",
+        "operationId": "SkillService_UpdateSkillVisibility",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceUpdateSkillVisibilityBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills:upload": {
+      "post": {
+        "summary": "UploadSkillPackage imports a zipped Skill package into a new or\nexisting version. The zip must contain SKILL.md with YAML front-matter\ndeclaring name, description, version. Other files become version\nfiles; binary files are base64-encoded in the DB content column.",
+        "operationId": "SkillService_UploadSkillPackage",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UploadSkillPackageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "SkillServiceCreateSkillShareBody": {
+      "type": "object",
+      "properties": {
+        "relation": {
+          "type": "string",
+          "title": "\"viewer\" | \"editor\""
+        },
+        "subjectType": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "subjectRelation": {
+          "type": "string",
+          "title": "optional, for group#member subjects"
+        }
+      },
+      "required": [
+        "relation",
+        "subjectType",
+        "subjectId"
+      ]
+    },
+    "SkillServiceOfflineSkillVersionBody": {
+      "type": "object"
+    },
+    "SkillServiceOnlineSkillVersionBody": {
+      "type": "object"
+    },
+    "SkillServicePublishSkillVersionBody": {
+      "type": "object"
+    },
+    "SkillServiceSubmitSkillVersionBody": {
+      "type": "object"
+    },
+    "SkillServiceUpdateSkillBody": {
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "sourceUri": {
+          "type": "string"
+        },
+        "manifestJson": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SkillServiceUpdateSkillVisibilityBody": {
+      "type": "object",
+      "properties": {
+        "visibility": {
+          "type": "string",
+          "title": "\"private\" | \"public\""
+        }
+      },
+      "required": [
+        "visibility"
+      ]
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditActor": {
+      "type": "object",
+      "properties": {
+        "subjectId": {
+          "type": "string"
+        },
+        "subjectType": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AuditRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "action": {
+          "type": "string",
+          "title": "e.g. \"skill.create\", \"skill.share.delete\""
+        },
+        "result": {
+          "type": "string",
+          "title": "\"success\" | \"denied\" | \"failure\""
+        },
+        "severity": {
+          "type": "string",
+          "title": "\"info\" | \"warning\" | \"critical\""
+        },
+        "reason": {
+          "type": "string",
+          "title": "error message on failure / denial"
+        },
+        "actor": {
+          "$ref": "#/definitions/v1AuditActor"
+        },
+        "resource": {
+          "$ref": "#/definitions/v1AuditResource"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "clientIp": {
+          "type": "string"
+        },
+        "userAgent": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "description": "AuditRecord is one security audit event. Mirrors kernel auditx.Record."
+    },
+    "v1AuditResource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1BatchCheckPermissionsRequest": {
+      "type": "object",
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CheckPermissionRequest"
+          }
+        },
+        "fullyConsistent": {
+          "type": "boolean"
+        },
+        "consistencyToken": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "checks"
+      ]
+    },
+    "v1BatchCheckPermissionsResponse": {
+      "type": "object",
+      "properties": {
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CheckPermissionResponse"
+          }
+        },
+        "consistencyToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CheckPermissionRequest": {
+      "type": "object",
+      "properties": {
+        "subject": {
+          "$ref": "#/definitions/v1SubjectRef"
+        },
+        "resource": {
+          "$ref": "#/definitions/v1ObjectRef"
+        },
+        "permission": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "subjectAttrs": {
+          "type": "object",
+          "description": "Subject / resource / environment attrs are passed to SpiceDB as\ncaveat context (ABAC). Optional; omit for pure ReBAC checks."
+        },
+        "resourceAttrs": {
+          "type": "object"
+        },
+        "environmentAttrs": {
+          "type": "object"
+        },
+        "fullyConsistent": {
+          "type": "boolean",
+          "description": "fully_consistent=true forces SpiceDB to use the latest writes\n(slowest). When false, uses at-least-as-fresh with the optional\nconsistency_token. Default false."
+        },
+        "consistencyToken": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject",
+        "resource",
+        "permission"
+      ]
+    },
+    "v1CheckPermissionResponse": {
+      "type": "object",
+      "properties": {
+        "effect": {
+          "type": "string",
+          "description": "effect is the canonical decision: \"allow\", \"deny\", \"no_match\".\n\"no_match\" means SpiceDB had no matching relationship / permission\ndefinition; callers usually treat it the same as \"deny\" but may\nsurface a different message."
+        },
+        "allowed": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "consistencyToken": {
+          "type": "string"
+        },
+        "missingContext": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1CreateSkillRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "sourceUri": {
+          "type": "string"
+        },
+        "manifestJson": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "v1CreateSkillResponse": {
+      "type": "object",
+      "properties": {
+        "skill": {
+          "$ref": "#/definitions/v1Skill"
+        }
+      }
+    },
+    "v1DeleteRelationshipsRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1RelationshipFilter"
+        }
+      },
+      "required": [
+        "filter"
+      ]
+    },
+    "v1DeleteRelationshipsResponse": {
+      "type": "object",
+      "properties": {
+        "consistencyToken": {
+          "type": "string"
+        },
+        "deleted": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1DeleteSkillResponse": {
+      "type": "object"
+    },
+    "v1DeleteSkillShareResponse": {
+      "type": "object"
+    },
+    "v1ExchangeRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "redirectUri": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "codeVerifier": {
+          "type": "string",
+          "description": "code_verifier is the PKCE code verifier. Required when the authorization\r\nrequest was made with a code_challenge; recommended for all public\r\nclients (SPAs, mobile apps) that cannot store a client secret.\r\nMaps to kernel authn.AuthCodeExchangeRequest.CodeVerifier.\r\n\r\nNOTE: see Exchange RPC comment — the current Casdoor adapter does not\r\nyet forward this to the SDK. The field is accepted on the wire for\r\nforward compatibility."
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "appId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "redirectUri"
+      ]
+    },
+    "v1ExchangeResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string"
+        },
+        "idToken": {
+          "type": "string"
+        },
+        "tokenType": {
+          "type": "string"
+        },
+        "expiresIn": {
+          "type": "string",
+          "format": "int64"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "description": "ExchangeResponse is the OAuth2/OIDC token set returned by Exchange.\n\n`expires_in` is seconds from issue time to expiry (OAuth2 standard). For a\nwall-clock expiry, callers can compute issued_at + expires_in, or use the\n`expires_at` field on Principal returned by Me/Introspect."
+    },
+    "v1GetSkillResponse": {
+      "type": "object",
+      "properties": {
+        "skill": {
+          "$ref": "#/definitions/v1Skill"
+        }
+      }
+    },
+    "v1GetSkillVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
+    "v1IntrospectRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "token is the token to validate and inspect."
+        },
+        "tokenType": {
+          "type": "string",
+          "description": "token_type hints which kind of token is being introspected. Accepted\r\nvalues: \"access_token\" (default), \"refresh_token\", \"id_token\".\r\nMaps to kernel authn.VerifyTokenRequest.TokenType."
+        },
+        "issuer": {
+          "type": "string",
+          "description": "issuer optionally restricts the accepted token issuer. When unset, the\r\nglobally configured IdP issuer is used."
+        },
+        "audience": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "audience optionally restricts the accepted token audience. When unset,\r\nthe audience check is skipped."
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "appId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "token"
+      ]
+    },
+    "v1IntrospectResponse": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean",
+          "description": "active indicates whether the token is currently valid (not expired, not\r\nrevoked, signature OK, issuer/audience match if specified)."
+        },
+        "principal": {
+          "$ref": "#/definitions/v1Principal"
+        },
+        "scope": {
+          "type": "string",
+          "description": "scope is the space-delimited scope list attached to the token."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "expires_at is the token's expiration time. Zero value means unknown."
+        },
+        "issuedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "issued_at is the token's issue time. Zero value means unknown."
+        }
+      },
+      "description": "IntrospectResponse mirrors RFC 7662 token introspection."
+    },
+    "v1ListSkillSharesResponse": {
+      "type": "object",
+      "properties": {
+        "shares": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkillShare"
+          }
+        }
+      }
+    },
+    "v1ListSkillVersionFilesResponse": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkillFile"
+          }
+        }
+      }
+    },
+    "v1ListSkillVersionsResponse": {
+      "type": "object",
+      "properties": {
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkillVersion"
+          }
+        }
+      }
+    },
+    "v1ListSkillsResponse": {
+      "type": "object",
+      "properties": {
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Skill"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LoginURLResponse": {
+      "type": "object",
+      "properties": {
+        "loginUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LogoutURLResponse": {
+      "type": "object",
+      "properties": {
+        "logoutUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LookupResourcesResponse": {
+      "type": "object",
+      "properties": {
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ObjectRef"
+          }
+        },
+        "nextCursor": {
+          "type": "string"
+        },
+        "consistencyToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LookupSubjectsResponse": {
+      "type": "object",
+      "properties": {
+        "subjects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SubjectRef"
+          }
+        },
+        "nextCursor": {
+          "type": "string"
+        },
+        "consistencyToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1MeResponse": {
+      "type": "object",
+      "properties": {
+        "principal": {
+          "$ref": "#/definitions/v1Principal"
+        }
+      }
+    },
+    "v1ObjectRef": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ]
+    },
+    "v1OfflineSkillVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
+    "v1OnlineSkillVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
+    "v1Principal": {
+      "type": "object",
+      "properties": {
+        "subjectType": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isAuthenticated": {
+          "type": "boolean"
+        },
+        "phone": {
+          "type": "string",
+          "description": "phone is the user's phone number when available from the IdP.\r\nMaps to kernel authn.Principal.Phone."
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "scopes are the OAuth/OIDC scopes attached to the current access token.\r\nFrontends can use this to gate UI affordances (e.g. hide \"write\"\r\nbuttons when the token lacks the write scope).\r\nMaps to kernel authn.Principal.Scopes."
+        },
+        "authMethod": {
+          "type": "string",
+          "description": "auth_method records how the subject authenticated. Common values match\r\nthe kernel authn.AuthMethod* constants: \"oauth\", \"oidc\", \"jwt\",\r\n\"api_key\", \"mtls\", \"session\", \"dev_token\", \"none\".\r\nMaps to kernel authn.Principal.AuthMethod."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "expires_at is when the current access token expires. Frontends should\r\nuse this to schedule proactive token refreshes before the token\r\nexpires, rather than waiting for a 401 to trigger a reactive refresh.\r\nZero value means the expiry is unknown (e.g. the IdP did not return\r\nan exp claim).\r\nMaps to kernel authn.Principal.ExpiresAt."
+        },
+        "attributes": {
+          "type": "object",
+          "description": "attributes carries provider-specific claims (e.g. Casdoor owner/name,\r\nexternal ID, signin method, custom fields) that are not part of the\r\ncanonical Principal schema. Values must be JSON-serializable.\r\nMaps to kernel authn.Principal.Attributes.\r\n\r\nNOTE: some attributes (such as `access_token`) are sensitive and\r\nSHOULD be filtered out by the service layer before returning to\r\nfrontend clients. See kernel/authn/casdoor/token.go:principalFromClaims\r\nfor the list of attributes currently set by the Casdoor adapter."
+        }
+      },
+      "description": "Principal is the normalized identity of the current caller.\r\n\r\nField set is aligned with kernel authn.Principal (github.com/aisphereio/\r\nkernel/authn.Principal). The kernel type has additional internal fields\r\n(Provider, ExternalID, Issuer, Audience, TenantID, AppID, IssuedAt) that\r\nare not exposed here because they are not useful to typical frontend\r\nconsumers; if a future use case needs them, add fields rather than\r\nexposing the kernel struct verbatim."
+    },
+    "v1PublishSkillVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
+    "v1QueryAuditRecordsResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuditRecord"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "number of records returned (not total in store)"
+        }
+      }
+    },
+    "v1ReadRelationshipsResponse": {
+      "type": "object",
+      "properties": {
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Relationship"
+          }
+        },
+        "nextCursor": {
+          "type": "string"
+        },
+        "consistencyToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ReadSchemaResponse": {
+      "type": "object",
+      "properties": {
+        "schemaText": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RefreshRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "appId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "refreshToken"
+      ]
+    },
+    "v1RefreshResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string"
+        },
+        "idToken": {
+          "type": "string"
+        },
+        "tokenType": {
+          "type": "string"
+        },
+        "expiresIn": {
+          "type": "string",
+          "format": "int64"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "description": "RefreshResponse is the OAuth2/OIDC token set returned by Refresh."
+    },
+    "v1Relationship": {
+      "type": "object",
+      "properties": {
+        "resource": {
+          "$ref": "#/definitions/v1ObjectRef"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/definitions/v1SubjectRef"
+        },
+        "caveatName": {
+          "type": "string"
+        },
+        "caveatContext": {
+          "type": "object"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Relationship is one ReBAC tuple. resource#relation@subject.\n\nFor ABAC, optionally set caveat_name + caveat_context. The caveat must\nbe defined in the SpiceDB schema; caveat_context is a JSON object\nwhose keys match the caveat's required parameters.",
+      "required": [
+        "resource",
+        "relation",
+        "subject"
+      ]
+    },
+    "v1RelationshipFilter": {
+      "type": "object",
+      "properties": {
+        "resourceType": {
+          "type": "string"
+        },
+        "resourceId": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "subjectType": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "subjectRelation": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RevokeRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "token is the access, refresh, or id token to revoke."
+        },
+        "tokenType": {
+          "type": "string",
+          "description": "token_type hints which kind of token is being revoked. Accepted values:\r\n  \"access_token\"  (default)\r\n  \"refresh_token\"\r\n  \"id_token\"\r\nMaps to kernel authn.RevokeTokenRequest.TokenType."
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "appId": {
+          "type": "string"
+        }
+      },
+      "description": "RevokeRequest asks the implementation to revoke a single token.",
+      "required": [
+        "token"
+      ]
+    },
+    "v1RevokeResponse": {
+      "type": "object",
+      "properties": {
+        "revoked": {
+          "type": "boolean",
+          "description": "revoked is true when the token was successfully revoked (either IdP-side\r\nor local blacklist)."
+        },
+        "idpRevoked": {
+          "type": "boolean",
+          "description": "idp_revoked is true when the IdP itself confirmed revocation. False\r\nmeans only the local session blacklist was updated; the token may still\r\nbe valid against other Resource Servers until it expires."
+        },
+        "message": {
+          "type": "string",
+          "description": "message carries a human-readable note, e.g. \"casdoor sdk does not expose\r\ntoken revocation; only local blacklist updated\"."
+        }
+      },
+      "description": "RevokeResponse returns the outcome of a Revoke call.\r\n\r\nWe do not use google.protobuf.Empty so callers can distinguish\r\n\"IdP-side revoked\" from \"only local blacklist updated\" — important for\r\nsecurity-sensitive flows where the caller needs to know whether the token\r\nmay still be valid against other Resource Servers."
+    },
+    "v1Skill": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "sourceUri": {
+          "type": "string"
+        },
+        "manifestJson": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1SkillFile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "skillName": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "content": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1SkillPackageDownload": {
+      "type": "object",
+      "properties": {
+        "skillName": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "etag": {
+          "type": "string"
+        },
+        "md5": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "notModified": {
+          "type": "boolean"
+        },
+        "packageBytes": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1SkillShare": {
+      "type": "object",
+      "properties": {
+        "resourceType": {
+          "type": "string",
+          "description": "resource is always \"skill:{name}\" — echoed for client convenience."
+        },
+        "resourceId": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string",
+          "title": "\"viewer\" | \"editor\" | \"owner\""
+        },
+        "subjectType": {
+          "type": "string",
+          "title": "\"user\" | \"service\" | \"group\""
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "subjectRelation": {
+          "type": "string",
+          "title": "optional, e.g. \"member\" for group subjects"
+        }
+      }
+    },
+    "v1SkillVersion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "skillName": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "commitMsg": {
+          "type": "string"
+        },
+        "publishPipelineInfo": {
+          "type": "string"
+        },
+        "downloadCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "md5": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "manifestJson": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1SubjectRef": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string",
+          "description": "relation is optional. Use it to express \"member of group X\" as\nsubject = {type:\"group\", id:\"g_1\", relation:\"member\"}."
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ]
+    },
+    "v1SubmitSkillVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
+    "v1UpdateSkillResponse": {
+      "type": "object",
+      "properties": {
+        "skill": {
+          "$ref": "#/definitions/v1Skill"
+        }
+      }
+    },
+    "v1UpdateSkillVisibilityResponse": {
+      "type": "object",
+      "properties": {
+        "skill": {
+          "$ref": "#/definitions/v1Skill"
+        }
+      }
+    },
+    "v1UploadSkillPackageRequest": {
+      "type": "object",
+      "properties": {
+        "packageBytes": {
+          "type": "string",
+          "format": "byte"
+        },
+        "overwrite": {
+          "type": "boolean"
+        },
+        "targetVersion": {
+          "type": "string"
+        },
+        "commitMsg": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "packageBytes"
+      ]
+    },
+    "v1UploadSkillPackageResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1SkillVersion"
+        }
+      }
+    },
+    "v1WriteRelationshipsRequest": {
+      "type": "object",
+      "properties": {
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Relationship"
+          }
+        }
+      },
+      "required": [
+        "relationships"
+      ]
+    },
+    "v1WriteRelationshipsResponse": {
+      "type": "object",
+      "properties": {
+        "consistencyToken": {
+          "type": "string"
+        },
+        "written": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1WriteSchemaRequest": {
+      "type": "object",
+      "properties": {
+        "schemaText": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaText"
+      ]
+    },
+    "v1WriteSchemaResponse": {
+      "type": "object"
+    }
+  }
+}

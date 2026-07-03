@@ -1,11 +1,10 @@
 syntax = "proto3";
 
-package aisphere.hub.skill.v1;
+package skill.v1;
 
 import "aisphere/access/v1/access.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
@@ -42,10 +41,11 @@ option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 // succeed.
 service SkillService {
   // CreateSkill creates one canonical skill. The caller becomes the owner.
-  rpc CreateSkill(CreateSkillRequest) returns (Skill) {
+  rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse) {
     option (google.api.http) = {
       post: "/v1/skills"
       body: "*"
+      response_body: "skill"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -56,17 +56,33 @@ service SkillService {
 
   // UpdateSkill updates mutable fields of one canonical skill. owner_id /
   // visibility / status are NOT updated by this RPC — they require
-  // separate lifecycle endpoints (TODO: ownership transfer, visibility
-  // change).
-  rpc UpdateSkill(UpdateSkillRequest) returns (Skill) {
+  // separate lifecycle endpoints.
+  rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse) {
     option (google.api.http) = {
       put: "/v1/skills/{name}"
       body: "*"
+      response_body: "skill"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
       authz: { action: "update" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill.update" risk: "medium" }
+    };
+  }
+
+  // UpdateSkillVisibility changes the access visibility of one canonical
+  // skill. This endpoint is the contract-backed path for public/private
+  // toggles; subject-specific sharing remains under Skill share RPCs.
+  rpc UpdateSkillVisibility(UpdateSkillVisibilityRequest) returns (UpdateSkillVisibilityResponse) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}:visibility"
+      body: "*"
+      response_body: "skill"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "visibility:update" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "aihub.skill.visibility.update" risk: "high" }
     };
   }
 
@@ -84,9 +100,10 @@ service SkillService {
   }
 
   // GetSkill returns one canonical skill by name.
-  rpc GetSkill(GetSkillRequest) returns (Skill) {
+  rpc GetSkill(GetSkillRequest) returns (GetSkillResponse) {
     option (google.api.http) = {
       get: "/v1/skills/{name}"
+      response_body: "skill"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHENTICATED
@@ -97,7 +114,7 @@ service SkillService {
   // DeleteSkill soft-deletes one canonical skill by name. Cascades to
   // versions and files. S3 objects are purged best-effort after the DB
   // transaction commits.
-  rpc DeleteSkill(DeleteSkillRequest) returns (google.protobuf.Empty) {
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse) {
     option (google.api.http) = {
       delete: "/v1/skills/{name}"
     };
@@ -112,10 +129,11 @@ service SkillService {
   // existing version. The zip must contain SKILL.md with YAML front-matter
   // declaring name, description, version. Other files become version
   // files; binary files are base64-encoded in the DB content column.
-  rpc UploadSkillPackage(UploadSkillPackageRequest) returns (SkillVersion) {
+  rpc UploadSkillPackage(UploadSkillPackageRequest) returns (UploadSkillPackageResponse) {
     option (google.api.http) = {
       post: "/v1/skills:upload"
       body: "*"
+      response_body: "version"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -136,9 +154,10 @@ service SkillService {
   }
 
   // GetSkillVersion returns one version metadata record.
-  rpc GetSkillVersion(GetSkillVersionRequest) returns (SkillVersion) {
+  rpc GetSkillVersion(GetSkillVersionRequest) returns (GetSkillVersionResponse) {
     option (google.api.http) = {
       get: "/v1/skills/{name}/versions/{version}"
+      response_body: "version"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHENTICATED
@@ -147,10 +166,11 @@ service SkillService {
   }
 
   // SubmitSkillVersion marks a draft version ready for publish.
-  rpc SubmitSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+  rpc SubmitSkillVersion(SubmitSkillVersionRequest) returns (SubmitSkillVersionResponse) {
     option (google.api.http) = {
       post: "/v1/skills/{name}/versions/{version}:submit"
       body: "*"
+      response_body: "version"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -160,10 +180,11 @@ service SkillService {
   }
 
   // PublishSkillVersion marks a submitted version as published.
-  rpc PublishSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+  rpc PublishSkillVersion(PublishSkillVersionRequest) returns (PublishSkillVersionResponse) {
     option (google.api.http) = {
       post: "/v1/skills/{name}/versions/{version}:publish"
       body: "*"
+      response_body: "version"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -175,10 +196,11 @@ service SkillService {
   // OnlineSkillVersion makes one published version consumable by
   // catalog/runtime. Any previously-online version of the same skill is
   // automatically demoted to published.
-  rpc OnlineSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+  rpc OnlineSkillVersion(OnlineSkillVersionRequest) returns (OnlineSkillVersionResponse) {
     option (google.api.http) = {
       post: "/v1/skills/{name}/versions/{version}:online"
       body: "*"
+      response_body: "version"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -188,10 +210,11 @@ service SkillService {
   }
 
   // OfflineSkillVersion removes one online version from catalog/runtime use.
-  rpc OfflineSkillVersion(SkillVersionActionRequest) returns (SkillVersion) {
+  rpc OfflineSkillVersion(OfflineSkillVersionRequest) returns (OfflineSkillVersionResponse) {
     option (google.api.http) = {
       post: "/v1/skills/{name}/versions/{version}:offline"
       body: "*"
+      response_body: "version"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -272,7 +295,7 @@ service SkillService {
 
   // DeleteSkillShare revokes ALL relations between the named skill and
   // the named subject. Requires skill.edit.
-  rpc DeleteSkillShare(DeleteSkillShareRequest) returns (google.protobuf.Empty) {
+  rpc DeleteSkillShare(DeleteSkillShareRequest) returns (DeleteSkillShareResponse) {
     option (google.api.http) = {
       delete: "/v1/skills/{name}/shares/{subject_type}/{subject_id}"
     };
@@ -321,6 +344,10 @@ message CreateSkillRequest {
   repeated string tags = 13;
 }
 
+message CreateSkillResponse {
+  Skill skill = 1;
+}
+
 message UpdateSkillRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
   string display_name = 2;
@@ -330,6 +357,19 @@ message UpdateSkillRequest {
   string source_uri = 6;
   string manifest_json = 7;
   repeated string tags = 8;
+}
+
+message UpdateSkillResponse {
+  Skill skill = 1;
+}
+
+message UpdateSkillVisibilityRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string visibility = 2 [(google.api.field_behavior) = REQUIRED]; // "private" | "public"
+}
+
+message UpdateSkillVisibilityResponse {
+  Skill skill = 1;
 }
 
 message ListSkillsRequest {
@@ -349,9 +389,15 @@ message GetSkillRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+message GetSkillResponse {
+  Skill skill = 1;
+}
+
 message DeleteSkillRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
 }
+
+message DeleteSkillResponse {}
 
 // --- SkillVersion ---
 
@@ -380,6 +426,10 @@ message UploadSkillPackageRequest {
   string commit_msg = 4;
 }
 
+message UploadSkillPackageResponse {
+  SkillVersion version = 1;
+}
+
 message ListSkillVersionsRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
 }
@@ -393,9 +443,44 @@ message GetSkillVersionRequest {
   string version = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-message SkillVersionActionRequest {
+message GetSkillVersionResponse {
+  SkillVersion version = 1;
+}
+
+message SubmitSkillVersionRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
   string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SubmitSkillVersionResponse {
+  SkillVersion version = 1;
+}
+
+message PublishSkillVersionRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message PublishSkillVersionResponse {
+  SkillVersion version = 1;
+}
+
+message OnlineSkillVersionRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message OnlineSkillVersionResponse {
+  SkillVersion version = 1;
+}
+
+message OfflineSkillVersionRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message OfflineSkillVersionResponse {
+  SkillVersion version = 1;
 }
 
 message DownloadSkillVersionRequest {
@@ -478,3 +563,5 @@ message DeleteSkillShareRequest {
   string subject_type = 2 [(google.api.field_behavior) = REQUIRED];
   string subject_id = 3 [(google.api.field_behavior) = REQUIRED];
 }
+
+message DeleteSkillShareResponse {}

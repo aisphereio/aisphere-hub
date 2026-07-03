@@ -23,7 +23,6 @@ import (
 
 	"github.com/aisphereio/kernel/authn"
 	khttp "github.com/aisphereio/kernel/transportx/http"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -227,11 +226,11 @@ func (s *AuthzService) ReadSchema(ctx context.Context, req *authzv1.ReadSchemaRe
 	return &authzv1.ReadSchemaResponse{SchemaText: schema.Text}, nil
 }
 
-func (s *AuthzService) WriteSchema(ctx context.Context, req *authzv1.WriteSchemaRequest) (*emptypb.Empty, error) {
+func (s *AuthzService) WriteSchema(ctx context.Context, req *authzv1.WriteSchemaRequest) (*authzv1.WriteSchemaResponse, error) {
 	if err := s.uc.WriteSchema(ctx, biz.AuthzSchema{Text: req.GetSchemaText()}); err != nil {
 		return nil, err
 	}
-	return &emptypb.Empty{}, nil
+	return &authzv1.WriteSchemaResponse{}, nil
 }
 
 // --- DTO conversion helpers ---

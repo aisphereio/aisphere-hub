@@ -7,10 +7,10 @@
 package skillv1
 
 import (
+	_ "github.com/aisphereio/kernel/api/aisphere/access/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -328,6 +328,50 @@ func (x *CreateSkillRequest) GetTags() []string {
 	return nil
 }
 
+type CreateSkillResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Skill         *Skill                 `protobuf:"bytes,1,opt,name=skill,proto3" json:"skill,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSkillResponse) Reset() {
+	*x = CreateSkillResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSkillResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSkillResponse) ProtoMessage() {}
+
+func (x *CreateSkillResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSkillResponse.ProtoReflect.Descriptor instead.
+func (*CreateSkillResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreateSkillResponse) GetSkill() *Skill {
+	if x != nil {
+		return x.Skill
+	}
+	return nil
+}
+
 type UpdateSkillRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -344,7 +388,7 @@ type UpdateSkillRequest struct {
 
 func (x *UpdateSkillRequest) Reset() {
 	*x = UpdateSkillRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[2]
+	mi := &file_skill_v1_skill_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -356,7 +400,7 @@ func (x *UpdateSkillRequest) String() string {
 func (*UpdateSkillRequest) ProtoMessage() {}
 
 func (x *UpdateSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[2]
+	mi := &file_skill_v1_skill_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -369,7 +413,7 @@ func (x *UpdateSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSkillRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSkillRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{2}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UpdateSkillRequest) GetName() string {
@@ -428,6 +472,146 @@ func (x *UpdateSkillRequest) GetTags() []string {
 	return nil
 }
 
+type UpdateSkillResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Skill         *Skill                 `protobuf:"bytes,1,opt,name=skill,proto3" json:"skill,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSkillResponse) Reset() {
+	*x = UpdateSkillResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSkillResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSkillResponse) ProtoMessage() {}
+
+func (x *UpdateSkillResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSkillResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSkillResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdateSkillResponse) GetSkill() *Skill {
+	if x != nil {
+		return x.Skill
+	}
+	return nil
+}
+
+type UpdateSkillVisibilityRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Visibility    string                 `protobuf:"bytes,2,opt,name=visibility,proto3" json:"visibility,omitempty"` // "private" | "public"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSkillVisibilityRequest) Reset() {
+	*x = UpdateSkillVisibilityRequest{}
+	mi := &file_skill_v1_skill_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSkillVisibilityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSkillVisibilityRequest) ProtoMessage() {}
+
+func (x *UpdateSkillVisibilityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSkillVisibilityRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSkillVisibilityRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *UpdateSkillVisibilityRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateSkillVisibilityRequest) GetVisibility() string {
+	if x != nil {
+		return x.Visibility
+	}
+	return ""
+}
+
+type UpdateSkillVisibilityResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Skill         *Skill                 `protobuf:"bytes,1,opt,name=skill,proto3" json:"skill,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSkillVisibilityResponse) Reset() {
+	*x = UpdateSkillVisibilityResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSkillVisibilityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSkillVisibilityResponse) ProtoMessage() {}
+
+func (x *UpdateSkillVisibilityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSkillVisibilityResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSkillVisibilityResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateSkillVisibilityResponse) GetSkill() *Skill {
+	if x != nil {
+		return x.Skill
+	}
+	return nil
+}
+
 type ListSkillsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PageSize      int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
@@ -441,7 +625,7 @@ type ListSkillsRequest struct {
 
 func (x *ListSkillsRequest) Reset() {
 	*x = ListSkillsRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[3]
+	mi := &file_skill_v1_skill_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -453,7 +637,7 @@ func (x *ListSkillsRequest) String() string {
 func (*ListSkillsRequest) ProtoMessage() {}
 
 func (x *ListSkillsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[3]
+	mi := &file_skill_v1_skill_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -466,7 +650,7 @@ func (x *ListSkillsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillsRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillsRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{3}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListSkillsRequest) GetPageSize() int32 {
@@ -514,7 +698,7 @@ type ListSkillsResponse struct {
 
 func (x *ListSkillsResponse) Reset() {
 	*x = ListSkillsResponse{}
-	mi := &file_skill_v1_skill_proto_msgTypes[4]
+	mi := &file_skill_v1_skill_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -526,7 +710,7 @@ func (x *ListSkillsResponse) String() string {
 func (*ListSkillsResponse) ProtoMessage() {}
 
 func (x *ListSkillsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[4]
+	mi := &file_skill_v1_skill_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +723,7 @@ func (x *ListSkillsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillsResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillsResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{4}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListSkillsResponse) GetSkills() []*Skill {
@@ -565,7 +749,7 @@ type GetSkillRequest struct {
 
 func (x *GetSkillRequest) Reset() {
 	*x = GetSkillRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[5]
+	mi := &file_skill_v1_skill_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -577,7 +761,7 @@ func (x *GetSkillRequest) String() string {
 func (*GetSkillRequest) ProtoMessage() {}
 
 func (x *GetSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[5]
+	mi := &file_skill_v1_skill_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -590,7 +774,7 @@ func (x *GetSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{5}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetSkillRequest) GetName() string {
@@ -598,6 +782,50 @@ func (x *GetSkillRequest) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+type GetSkillResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Skill         *Skill                 `protobuf:"bytes,1,opt,name=skill,proto3" json:"skill,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSkillResponse) Reset() {
+	*x = GetSkillResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSkillResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSkillResponse) ProtoMessage() {}
+
+func (x *GetSkillResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSkillResponse.ProtoReflect.Descriptor instead.
+func (*GetSkillResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetSkillResponse) GetSkill() *Skill {
+	if x != nil {
+		return x.Skill
+	}
+	return nil
 }
 
 type DeleteSkillRequest struct {
@@ -609,7 +837,7 @@ type DeleteSkillRequest struct {
 
 func (x *DeleteSkillRequest) Reset() {
 	*x = DeleteSkillRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[6]
+	mi := &file_skill_v1_skill_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -621,7 +849,7 @@ func (x *DeleteSkillRequest) String() string {
 func (*DeleteSkillRequest) ProtoMessage() {}
 
 func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[6]
+	mi := &file_skill_v1_skill_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -634,7 +862,7 @@ func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSkillRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSkillRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{6}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteSkillRequest) GetName() string {
@@ -642,6 +870,42 @@ func (x *DeleteSkillRequest) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+type DeleteSkillResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteSkillResponse) Reset() {
+	*x = DeleteSkillResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteSkillResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteSkillResponse) ProtoMessage() {}
+
+func (x *DeleteSkillResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteSkillResponse.ProtoReflect.Descriptor instead.
+func (*DeleteSkillResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{12}
 }
 
 type SkillVersion struct {
@@ -667,7 +931,7 @@ type SkillVersion struct {
 
 func (x *SkillVersion) Reset() {
 	*x = SkillVersion{}
-	mi := &file_skill_v1_skill_proto_msgTypes[7]
+	mi := &file_skill_v1_skill_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +943,7 @@ func (x *SkillVersion) String() string {
 func (*SkillVersion) ProtoMessage() {}
 
 func (x *SkillVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[7]
+	mi := &file_skill_v1_skill_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +956,7 @@ func (x *SkillVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillVersion.ProtoReflect.Descriptor instead.
 func (*SkillVersion) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{7}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SkillVersion) GetId() int64 {
@@ -812,7 +1076,7 @@ type UploadSkillPackageRequest struct {
 
 func (x *UploadSkillPackageRequest) Reset() {
 	*x = UploadSkillPackageRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[8]
+	mi := &file_skill_v1_skill_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -824,7 +1088,7 @@ func (x *UploadSkillPackageRequest) String() string {
 func (*UploadSkillPackageRequest) ProtoMessage() {}
 
 func (x *UploadSkillPackageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[8]
+	mi := &file_skill_v1_skill_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -837,7 +1101,7 @@ func (x *UploadSkillPackageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadSkillPackageRequest.ProtoReflect.Descriptor instead.
 func (*UploadSkillPackageRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{8}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *UploadSkillPackageRequest) GetPackageBytes() []byte {
@@ -868,6 +1132,50 @@ func (x *UploadSkillPackageRequest) GetCommitMsg() string {
 	return ""
 }
 
+type UploadSkillPackageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       *SkillVersion          `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadSkillPackageResponse) Reset() {
+	*x = UploadSkillPackageResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadSkillPackageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadSkillPackageResponse) ProtoMessage() {}
+
+func (x *UploadSkillPackageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadSkillPackageResponse.ProtoReflect.Descriptor instead.
+func (*UploadSkillPackageResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *UploadSkillPackageResponse) GetVersion() *SkillVersion {
+	if x != nil {
+		return x.Version
+	}
+	return nil
+}
+
 type ListSkillVersionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -877,7 +1185,7 @@ type ListSkillVersionsRequest struct {
 
 func (x *ListSkillVersionsRequest) Reset() {
 	*x = ListSkillVersionsRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[9]
+	mi := &file_skill_v1_skill_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -889,7 +1197,7 @@ func (x *ListSkillVersionsRequest) String() string {
 func (*ListSkillVersionsRequest) ProtoMessage() {}
 
 func (x *ListSkillVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[9]
+	mi := &file_skill_v1_skill_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -902,7 +1210,7 @@ func (x *ListSkillVersionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillVersionsRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{9}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListSkillVersionsRequest) GetName() string {
@@ -921,7 +1229,7 @@ type ListSkillVersionsResponse struct {
 
 func (x *ListSkillVersionsResponse) Reset() {
 	*x = ListSkillVersionsResponse{}
-	mi := &file_skill_v1_skill_proto_msgTypes[10]
+	mi := &file_skill_v1_skill_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -933,7 +1241,7 @@ func (x *ListSkillVersionsResponse) String() string {
 func (*ListSkillVersionsResponse) ProtoMessage() {}
 
 func (x *ListSkillVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[10]
+	mi := &file_skill_v1_skill_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -946,7 +1254,7 @@ func (x *ListSkillVersionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillVersionsResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{10}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListSkillVersionsResponse) GetVersions() []*SkillVersion {
@@ -966,7 +1274,7 @@ type GetSkillVersionRequest struct {
 
 func (x *GetSkillVersionRequest) Reset() {
 	*x = GetSkillVersionRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[11]
+	mi := &file_skill_v1_skill_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -978,7 +1286,7 @@ func (x *GetSkillVersionRequest) String() string {
 func (*GetSkillVersionRequest) ProtoMessage() {}
 
 func (x *GetSkillVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[11]
+	mi := &file_skill_v1_skill_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -991,7 +1299,7 @@ func (x *GetSkillVersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillVersionRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillVersionRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{11}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetSkillVersionRequest) GetName() string {
@@ -1008,29 +1316,28 @@ func (x *GetSkillVersionRequest) GetVersion() string {
 	return ""
 }
 
-type SkillVersionActionRequest struct {
+type GetSkillVersionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Version       *SkillVersion          `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SkillVersionActionRequest) Reset() {
-	*x = SkillVersionActionRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[12]
+func (x *GetSkillVersionResponse) Reset() {
+	*x = GetSkillVersionResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SkillVersionActionRequest) String() string {
+func (x *GetSkillVersionResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SkillVersionActionRequest) ProtoMessage() {}
+func (*GetSkillVersionResponse) ProtoMessage() {}
 
-func (x *SkillVersionActionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[12]
+func (x *GetSkillVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1041,23 +1348,400 @@ func (x *SkillVersionActionRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SkillVersionActionRequest.ProtoReflect.Descriptor instead.
-func (*SkillVersionActionRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{12}
+// Deprecated: Use GetSkillVersionResponse.ProtoReflect.Descriptor instead.
+func (*GetSkillVersionResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{19}
 }
 
-func (x *SkillVersionActionRequest) GetName() string {
+func (x *GetSkillVersionResponse) GetVersion() *SkillVersion {
+	if x != nil {
+		return x.Version
+	}
+	return nil
+}
+
+type SubmitSkillVersionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitSkillVersionRequest) Reset() {
+	*x = SubmitSkillVersionRequest{}
+	mi := &file_skill_v1_skill_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitSkillVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitSkillVersionRequest) ProtoMessage() {}
+
+func (x *SubmitSkillVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitSkillVersionRequest.ProtoReflect.Descriptor instead.
+func (*SubmitSkillVersionRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *SubmitSkillVersionRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *SkillVersionActionRequest) GetVersion() string {
+func (x *SubmitSkillVersionRequest) GetVersion() string {
 	if x != nil {
 		return x.Version
 	}
 	return ""
+}
+
+type SubmitSkillVersionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       *SkillVersion          `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitSkillVersionResponse) Reset() {
+	*x = SubmitSkillVersionResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitSkillVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitSkillVersionResponse) ProtoMessage() {}
+
+func (x *SubmitSkillVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitSkillVersionResponse.ProtoReflect.Descriptor instead.
+func (*SubmitSkillVersionResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SubmitSkillVersionResponse) GetVersion() *SkillVersion {
+	if x != nil {
+		return x.Version
+	}
+	return nil
+}
+
+type PublishSkillVersionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishSkillVersionRequest) Reset() {
+	*x = PublishSkillVersionRequest{}
+	mi := &file_skill_v1_skill_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishSkillVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishSkillVersionRequest) ProtoMessage() {}
+
+func (x *PublishSkillVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishSkillVersionRequest.ProtoReflect.Descriptor instead.
+func (*PublishSkillVersionRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *PublishSkillVersionRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PublishSkillVersionRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+type PublishSkillVersionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       *SkillVersion          `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishSkillVersionResponse) Reset() {
+	*x = PublishSkillVersionResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishSkillVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishSkillVersionResponse) ProtoMessage() {}
+
+func (x *PublishSkillVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishSkillVersionResponse.ProtoReflect.Descriptor instead.
+func (*PublishSkillVersionResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *PublishSkillVersionResponse) GetVersion() *SkillVersion {
+	if x != nil {
+		return x.Version
+	}
+	return nil
+}
+
+type OnlineSkillVersionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OnlineSkillVersionRequest) Reset() {
+	*x = OnlineSkillVersionRequest{}
+	mi := &file_skill_v1_skill_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OnlineSkillVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OnlineSkillVersionRequest) ProtoMessage() {}
+
+func (x *OnlineSkillVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OnlineSkillVersionRequest.ProtoReflect.Descriptor instead.
+func (*OnlineSkillVersionRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *OnlineSkillVersionRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *OnlineSkillVersionRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+type OnlineSkillVersionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       *SkillVersion          `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OnlineSkillVersionResponse) Reset() {
+	*x = OnlineSkillVersionResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OnlineSkillVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OnlineSkillVersionResponse) ProtoMessage() {}
+
+func (x *OnlineSkillVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OnlineSkillVersionResponse.ProtoReflect.Descriptor instead.
+func (*OnlineSkillVersionResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *OnlineSkillVersionResponse) GetVersion() *SkillVersion {
+	if x != nil {
+		return x.Version
+	}
+	return nil
+}
+
+type OfflineSkillVersionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OfflineSkillVersionRequest) Reset() {
+	*x = OfflineSkillVersionRequest{}
+	mi := &file_skill_v1_skill_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OfflineSkillVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OfflineSkillVersionRequest) ProtoMessage() {}
+
+func (x *OfflineSkillVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OfflineSkillVersionRequest.ProtoReflect.Descriptor instead.
+func (*OfflineSkillVersionRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *OfflineSkillVersionRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *OfflineSkillVersionRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+type OfflineSkillVersionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       *SkillVersion          `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OfflineSkillVersionResponse) Reset() {
+	*x = OfflineSkillVersionResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OfflineSkillVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OfflineSkillVersionResponse) ProtoMessage() {}
+
+func (x *OfflineSkillVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OfflineSkillVersionResponse.ProtoReflect.Descriptor instead.
+func (*OfflineSkillVersionResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *OfflineSkillVersionResponse) GetVersion() *SkillVersion {
+	if x != nil {
+		return x.Version
+	}
+	return nil
 }
 
 type DownloadSkillVersionRequest struct {
@@ -1071,7 +1755,7 @@ type DownloadSkillVersionRequest struct {
 
 func (x *DownloadSkillVersionRequest) Reset() {
 	*x = DownloadSkillVersionRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[13]
+	mi := &file_skill_v1_skill_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1083,7 +1767,7 @@ func (x *DownloadSkillVersionRequest) String() string {
 func (*DownloadSkillVersionRequest) ProtoMessage() {}
 
 func (x *DownloadSkillVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[13]
+	mi := &file_skill_v1_skill_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1096,7 +1780,7 @@ func (x *DownloadSkillVersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadSkillVersionRequest.ProtoReflect.Descriptor instead.
 func (*DownloadSkillVersionRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{13}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *DownloadSkillVersionRequest) GetName() string {
@@ -1135,7 +1819,7 @@ type SkillPackageDownload struct {
 
 func (x *SkillPackageDownload) Reset() {
 	*x = SkillPackageDownload{}
-	mi := &file_skill_v1_skill_proto_msgTypes[14]
+	mi := &file_skill_v1_skill_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1147,7 +1831,7 @@ func (x *SkillPackageDownload) String() string {
 func (*SkillPackageDownload) ProtoMessage() {}
 
 func (x *SkillPackageDownload) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[14]
+	mi := &file_skill_v1_skill_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1160,7 +1844,7 @@ func (x *SkillPackageDownload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillPackageDownload.ProtoReflect.Descriptor instead.
 func (*SkillPackageDownload) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{14}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SkillPackageDownload) GetSkillName() string {
@@ -1231,7 +1915,7 @@ type SkillFile struct {
 
 func (x *SkillFile) Reset() {
 	*x = SkillFile{}
-	mi := &file_skill_v1_skill_proto_msgTypes[15]
+	mi := &file_skill_v1_skill_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1243,7 +1927,7 @@ func (x *SkillFile) String() string {
 func (*SkillFile) ProtoMessage() {}
 
 func (x *SkillFile) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[15]
+	mi := &file_skill_v1_skill_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1256,7 +1940,7 @@ func (x *SkillFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillFile.ProtoReflect.Descriptor instead.
 func (*SkillFile) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{15}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SkillFile) GetId() int64 {
@@ -1346,7 +2030,7 @@ type ListSkillVersionFilesRequest struct {
 
 func (x *ListSkillVersionFilesRequest) Reset() {
 	*x = ListSkillVersionFilesRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[16]
+	mi := &file_skill_v1_skill_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1358,7 +2042,7 @@ func (x *ListSkillVersionFilesRequest) String() string {
 func (*ListSkillVersionFilesRequest) ProtoMessage() {}
 
 func (x *ListSkillVersionFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[16]
+	mi := &file_skill_v1_skill_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1371,7 +2055,7 @@ func (x *ListSkillVersionFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillVersionFilesRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillVersionFilesRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{16}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListSkillVersionFilesRequest) GetName() string {
@@ -1397,7 +2081,7 @@ type ListSkillVersionFilesResponse struct {
 
 func (x *ListSkillVersionFilesResponse) Reset() {
 	*x = ListSkillVersionFilesResponse{}
-	mi := &file_skill_v1_skill_proto_msgTypes[17]
+	mi := &file_skill_v1_skill_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1409,7 +2093,7 @@ func (x *ListSkillVersionFilesResponse) String() string {
 func (*ListSkillVersionFilesResponse) ProtoMessage() {}
 
 func (x *ListSkillVersionFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[17]
+	mi := &file_skill_v1_skill_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1422,7 +2106,7 @@ func (x *ListSkillVersionFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillVersionFilesResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillVersionFilesResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{17}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListSkillVersionFilesResponse) GetFiles() []*SkillFile {
@@ -1443,7 +2127,7 @@ type GetSkillVersionFileRequest struct {
 
 func (x *GetSkillVersionFileRequest) Reset() {
 	*x = GetSkillVersionFileRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[18]
+	mi := &file_skill_v1_skill_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1455,7 +2139,7 @@ func (x *GetSkillVersionFileRequest) String() string {
 func (*GetSkillVersionFileRequest) ProtoMessage() {}
 
 func (x *GetSkillVersionFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[18]
+	mi := &file_skill_v1_skill_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1468,7 +2152,7 @@ func (x *GetSkillVersionFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillVersionFileRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillVersionFileRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{18}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetSkillVersionFileRequest) GetName() string {
@@ -1507,7 +2191,7 @@ type SkillShare struct {
 
 func (x *SkillShare) Reset() {
 	*x = SkillShare{}
-	mi := &file_skill_v1_skill_proto_msgTypes[19]
+	mi := &file_skill_v1_skill_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1519,7 +2203,7 @@ func (x *SkillShare) String() string {
 func (*SkillShare) ProtoMessage() {}
 
 func (x *SkillShare) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[19]
+	mi := &file_skill_v1_skill_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1532,7 +2216,7 @@ func (x *SkillShare) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillShare.ProtoReflect.Descriptor instead.
 func (*SkillShare) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{19}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *SkillShare) GetResourceType() string {
@@ -1586,7 +2270,7 @@ type ListSkillSharesRequest struct {
 
 func (x *ListSkillSharesRequest) Reset() {
 	*x = ListSkillSharesRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[20]
+	mi := &file_skill_v1_skill_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1598,7 +2282,7 @@ func (x *ListSkillSharesRequest) String() string {
 func (*ListSkillSharesRequest) ProtoMessage() {}
 
 func (x *ListSkillSharesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[20]
+	mi := &file_skill_v1_skill_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1611,7 +2295,7 @@ func (x *ListSkillSharesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillSharesRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillSharesRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{20}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListSkillSharesRequest) GetName() string {
@@ -1630,7 +2314,7 @@ type ListSkillSharesResponse struct {
 
 func (x *ListSkillSharesResponse) Reset() {
 	*x = ListSkillSharesResponse{}
-	mi := &file_skill_v1_skill_proto_msgTypes[21]
+	mi := &file_skill_v1_skill_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1642,7 +2326,7 @@ func (x *ListSkillSharesResponse) String() string {
 func (*ListSkillSharesResponse) ProtoMessage() {}
 
 func (x *ListSkillSharesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[21]
+	mi := &file_skill_v1_skill_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1655,7 +2339,7 @@ func (x *ListSkillSharesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillSharesResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillSharesResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{21}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListSkillSharesResponse) GetShares() []*SkillShare {
@@ -1678,7 +2362,7 @@ type CreateSkillShareRequest struct {
 
 func (x *CreateSkillShareRequest) Reset() {
 	*x = CreateSkillShareRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[22]
+	mi := &file_skill_v1_skill_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1690,7 +2374,7 @@ func (x *CreateSkillShareRequest) String() string {
 func (*CreateSkillShareRequest) ProtoMessage() {}
 
 func (x *CreateSkillShareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[22]
+	mi := &file_skill_v1_skill_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1703,7 +2387,7 @@ func (x *CreateSkillShareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSkillShareRequest.ProtoReflect.Descriptor instead.
 func (*CreateSkillShareRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{22}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *CreateSkillShareRequest) GetName() string {
@@ -1752,7 +2436,7 @@ type DeleteSkillShareRequest struct {
 
 func (x *DeleteSkillShareRequest) Reset() {
 	*x = DeleteSkillShareRequest{}
-	mi := &file_skill_v1_skill_proto_msgTypes[23]
+	mi := &file_skill_v1_skill_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1764,7 +2448,7 @@ func (x *DeleteSkillShareRequest) String() string {
 func (*DeleteSkillShareRequest) ProtoMessage() {}
 
 func (x *DeleteSkillShareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_skill_proto_msgTypes[23]
+	mi := &file_skill_v1_skill_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1777,7 +2461,7 @@ func (x *DeleteSkillShareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSkillShareRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSkillShareRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_skill_proto_rawDescGZIP(), []int{23}
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *DeleteSkillShareRequest) GetName() string {
@@ -1801,11 +2485,47 @@ func (x *DeleteSkillShareRequest) GetSubjectId() string {
 	return ""
 }
 
+type DeleteSkillShareResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteSkillShareResponse) Reset() {
+	*x = DeleteSkillShareResponse{}
+	mi := &file_skill_v1_skill_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteSkillShareResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteSkillShareResponse) ProtoMessage() {}
+
+func (x *DeleteSkillShareResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_skill_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteSkillShareResponse.ProtoReflect.Descriptor instead.
+func (*DeleteSkillShareResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_skill_proto_rawDescGZIP(), []int{39}
+}
+
 var File_skill_v1_skill_proto protoreflect.FileDescriptor
 
 const file_skill_v1_skill_proto_rawDesc = "" +
 	"\n" +
-	"\x14skill/v1/skill.proto\x12\x15aisphere.hub.skill.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x86\x04\n" +
+	"\x14skill/v1/skill.proto\x12\bskill.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x86\x04\n" +
 	"\x05Skill\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -1850,7 +2570,9 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\n" +
 	"source_uri\x18\v \x01(\tR\tsourceUri\x12#\n" +
 	"\rmanifest_json\x18\f \x01(\tR\fmanifestJson\x12\x12\n" +
-	"\x04tags\x18\r \x03(\tR\x04tags\"\x85\x02\n" +
+	"\x04tags\x18\r \x03(\tR\x04tags\"<\n" +
+	"\x13CreateSkillResponse\x12%\n" +
+	"\x05skill\x18\x01 \x01(\v2\x0f.skill.v1.SkillR\x05skill\"\x85\x02\n" +
 	"\x12UpdateSkillRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
@@ -1861,7 +2583,16 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\n" +
 	"source_uri\x18\x06 \x01(\tR\tsourceUri\x12#\n" +
 	"\rmanifest_json\x18\a \x01(\tR\fmanifestJson\x12\x12\n" +
-	"\x04tags\x18\b \x03(\tR\x04tags\"\x95\x01\n" +
+	"\x04tags\x18\b \x03(\tR\x04tags\"<\n" +
+	"\x13UpdateSkillResponse\x12%\n" +
+	"\x05skill\x18\x01 \x01(\v2\x0f.skill.v1.SkillR\x05skill\"\\\n" +
+	"\x1cUpdateSkillVisibilityRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12#\n" +
+	"\n" +
+	"visibility\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
+	"visibility\"F\n" +
+	"\x1dUpdateSkillVisibilityResponse\x12%\n" +
+	"\x05skill\x18\x01 \x01(\v2\x0f.skill.v1.SkillR\x05skill\"\x95\x01\n" +
 	"\x11ListSkillsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
@@ -1870,14 +2601,17 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12\x1e\n" +
 	"\n" +
 	"visibility\x18\x05 \x01(\tR\n" +
-	"visibility\"r\n" +
-	"\x12ListSkillsResponse\x124\n" +
-	"\x06skills\x18\x01 \x03(\v2\x1c.aisphere.hub.skill.v1.SkillR\x06skills\x12&\n" +
+	"visibility\"e\n" +
+	"\x12ListSkillsResponse\x12'\n" +
+	"\x06skills\x18\x01 \x03(\v2\x0f.skill.v1.SkillR\x06skills\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"*\n" +
 	"\x0fGetSkillRequest\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"-\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"9\n" +
+	"\x10GetSkillResponse\x12%\n" +
+	"\x05skill\x18\x01 \x01(\v2\x0f.skill.v1.SkillR\x05skill\"-\n" +
 	"\x12DeleteSkillRequest\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"\x85\x04\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"\x15\n" +
+	"\x13DeleteSkillResponse\"\x85\x04\n" +
 	"\fSkillVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
 	"\n" +
@@ -1905,17 +2639,38 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\toverwrite\x18\x02 \x01(\bR\toverwrite\x12%\n" +
 	"\x0etarget_version\x18\x03 \x01(\tR\rtargetVersion\x12\x1d\n" +
 	"\n" +
-	"commit_msg\x18\x04 \x01(\tR\tcommitMsg\"3\n" +
+	"commit_msg\x18\x04 \x01(\tR\tcommitMsg\"N\n" +
+	"\x1aUploadSkillPackageResponse\x120\n" +
+	"\aversion\x18\x01 \x01(\v2\x16.skill.v1.SkillVersionR\aversion\"3\n" +
 	"\x18ListSkillVersionsRequest\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"\\\n" +
-	"\x19ListSkillVersionsResponse\x12?\n" +
-	"\bversions\x18\x01 \x03(\v2#.aisphere.hub.skill.v1.SkillVersionR\bversions\"P\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"O\n" +
+	"\x19ListSkillVersionsResponse\x122\n" +
+	"\bversions\x18\x01 \x03(\v2\x16.skill.v1.SkillVersionR\bversions\"P\n" +
 	"\x16GetSkillVersionRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
-	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"S\n" +
-	"\x19SkillVersionActionRequest\x12\x17\n" +
+	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"K\n" +
+	"\x17GetSkillVersionResponse\x120\n" +
+	"\aversion\x18\x01 \x01(\v2\x16.skill.v1.SkillVersionR\aversion\"S\n" +
+	"\x19SubmitSkillVersionRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
-	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"y\n" +
+	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"N\n" +
+	"\x1aSubmitSkillVersionResponse\x120\n" +
+	"\aversion\x18\x01 \x01(\v2\x16.skill.v1.SkillVersionR\aversion\"T\n" +
+	"\x1aPublishSkillVersionRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
+	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"O\n" +
+	"\x1bPublishSkillVersionResponse\x120\n" +
+	"\aversion\x18\x01 \x01(\v2\x16.skill.v1.SkillVersionR\aversion\"S\n" +
+	"\x19OnlineSkillVersionRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
+	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"N\n" +
+	"\x1aOnlineSkillVersionResponse\x120\n" +
+	"\aversion\x18\x01 \x01(\v2\x16.skill.v1.SkillVersionR\aversion\"T\n" +
+	"\x1aOfflineSkillVersionRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
+	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"O\n" +
+	"\x1bOfflineSkillVersionResponse\x120\n" +
+	"\aversion\x18\x01 \x01(\v2\x16.skill.v1.SkillVersionR\aversion\"y\n" +
 	"\x1bDownloadSkillVersionRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
 	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\x12\"\n" +
@@ -1947,9 +2702,9 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"updateTime\"V\n" +
 	"\x1cListSkillVersionFilesRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
-	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"W\n" +
-	"\x1dListSkillVersionFilesResponse\x126\n" +
-	"\x05files\x18\x01 \x03(\v2 .aisphere.hub.skill.v1.SkillFileR\x05files\"m\n" +
+	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"J\n" +
+	"\x1dListSkillVersionFilesResponse\x12)\n" +
+	"\x05files\x18\x01 \x03(\v2\x13.skill.v1.SkillFileR\x05files\"m\n" +
 	"\x1aGetSkillVersionFileRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
 	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\x12\x17\n" +
@@ -1965,9 +2720,9 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"subject_id\x18\x05 \x01(\tR\tsubjectId\x12)\n" +
 	"\x10subject_relation\x18\x06 \x01(\tR\x0fsubjectRelation\"1\n" +
 	"\x16ListSkillSharesRequest\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"T\n" +
-	"\x17ListSkillSharesResponse\x129\n" +
-	"\x06shares\x18\x01 \x03(\v2!.aisphere.hub.skill.v1.SkillShareR\x06shares\"\xca\x01\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"G\n" +
+	"\x17ListSkillSharesResponse\x12,\n" +
+	"\x06shares\x18\x01 \x03(\v2\x14.skill.v1.SkillShareR\x06shares\"\xca\x01\n" +
 	"\x17CreateSkillShareRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1f\n" +
 	"\brelation\x18\x02 \x01(\tB\x03\xe0A\x02R\brelation\x12&\n" +
@@ -1979,29 +2734,44 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12&\n" +
 	"\fsubject_type\x18\x02 \x01(\tB\x03\xe0A\x02R\vsubjectType\x12\"\n" +
 	"\n" +
-	"subject_id\x18\x03 \x01(\tB\x03\xe0A\x02R\tsubjectId2\xe6\x14\n" +
-	"\fSkillService\x12m\n" +
-	"\vCreateSkill\x12).aisphere.hub.skill.v1.CreateSkillRequest\x1a\x1c.aisphere.hub.skill.v1.Skill\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
-	"/v1/skills\x12t\n" +
-	"\vUpdateSkill\x12).aisphere.hub.skill.v1.UpdateSkillRequest\x1a\x1c.aisphere.hub.skill.v1.Skill\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\x1a\x11/v1/skills/{name}\x12u\n" +
+	"subject_id\x18\x03 \x01(\tB\x03\xe0A\x02R\tsubjectId\"\x1a\n" +
+	"\x18DeleteSkillShareResponse2\xbc\x1f\n" +
+	"\fSkillService\x12\xb8\x01\n" +
+	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"l\x92\xf4\x18L\b\x03\x12(\n" +
+	"\x06create\x12\raihub:skill:*\x1a\raihub-service \x01\x1a\x1e\b\x01\x12\x12aihub.skill.create\x1a\x06medium\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
+	"/v1/skills\x12\xc4\x01\n" +
+	"\vUpdateSkill\x12\x1c.skill.v1.UpdateSkillRequest\x1a\x1d.skill.v1.UpdateSkillResponse\"x\x92\xf4\x18Q\b\x03\x12-\n" +
+	"\x06update\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\x1e\b\x01\x12\x12aihub.skill.update\x1a\x06medium\x82\xd3\xe4\x93\x02\x1d:\x01*b\x05skill\x1a\x11/v1/skills/{name}\x12\x82\x02\n" +
+	"\x15UpdateSkillVisibility\x12&.skill.v1.UpdateSkillVisibilityRequest\x1a'.skill.v1.UpdateSkillVisibilityResponse\"\x97\x01\x92\xf4\x18e\b\x03\x128\n" +
+	"\x11visibility:update\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a'\b\x01\x12\x1daihub.skill.visibility.update\x1a\x04high\x82\xd3\xe4\x93\x02(:\x01*b\x05skill\"\x1c/v1/skills/{name}:visibility\x12|\n" +
 	"\n" +
-	"ListSkills\x12(.aisphere.hub.skill.v1.ListSkillsRequest\x1a).aisphere.hub.skill.v1.ListSkillsResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
-	"/v1/skills\x12k\n" +
-	"\bGetSkill\x12&.aisphere.hub.skill.v1.GetSkillRequest\x1a\x1c.aisphere.hub.skill.v1.Skill\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/skills/{name}\x12k\n" +
-	"\vDeleteSkill\x12).aisphere.hub.skill.v1.DeleteSkillRequest\x1a\x16.google.protobuf.Empty\"\x19\x82\xd3\xe4\x93\x02\x13*\x11/v1/skills/{name}\x12\x89\x01\n" +
-	"\x12UploadSkillPackage\x120.aisphere.hub.skill.v1.UploadSkillPackageRequest\x1a#.aisphere.hub.skill.v1.SkillVersion\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/skills:upload\x12\x9a\x01\n" +
-	"\x11ListSkillVersions\x12/.aisphere.hub.skill.v1.ListSkillVersionsRequest\x1a0.aisphere.hub.skill.v1.ListSkillVersionsResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/skills/{name}/versions\x12\x93\x01\n" +
-	"\x0fGetSkillVersion\x12-.aisphere.hub.skill.v1.GetSkillVersionRequest\x1a#.aisphere.hub.skill.v1.SkillVersion\",\x82\xd3\xe4\x93\x02&\x12$/v1/skills/{name}/versions/{version}\x12\xa3\x01\n" +
-	"\x12SubmitSkillVersion\x120.aisphere.hub.skill.v1.SkillVersionActionRequest\x1a#.aisphere.hub.skill.v1.SkillVersion\"6\x82\xd3\xe4\x93\x020:\x01*\"+/v1/skills/{name}/versions/{version}:submit\x12\xa5\x01\n" +
-	"\x13PublishSkillVersion\x120.aisphere.hub.skill.v1.SkillVersionActionRequest\x1a#.aisphere.hub.skill.v1.SkillVersion\"7\x82\xd3\xe4\x93\x021:\x01*\",/v1/skills/{name}/versions/{version}:publish\x12\xa3\x01\n" +
-	"\x12OnlineSkillVersion\x120.aisphere.hub.skill.v1.SkillVersionActionRequest\x1a#.aisphere.hub.skill.v1.SkillVersion\"6\x82\xd3\xe4\x93\x020:\x01*\"+/v1/skills/{name}/versions/{version}:online\x12\xa5\x01\n" +
-	"\x13OfflineSkillVersion\x120.aisphere.hub.skill.v1.SkillVersionActionRequest\x1a#.aisphere.hub.skill.v1.SkillVersion\"7\x82\xd3\xe4\x93\x021:\x01*\",/v1/skills/{name}/versions/{version}:offline\x12\xae\x01\n" +
-	"\x14DownloadSkillVersion\x122.aisphere.hub.skill.v1.DownloadSkillVersionRequest\x1a+.aisphere.hub.skill.v1.SkillPackageDownload\"5\x82\xd3\xe4\x93\x02/\x12-/v1/skills/{name}/versions/{version}/download\x12\xb6\x01\n" +
-	"\x15ListSkillVersionFiles\x123.aisphere.hub.skill.v1.ListSkillVersionFilesRequest\x1a4.aisphere.hub.skill.v1.ListSkillVersionFilesResponse\"2\x82\xd3\xe4\x93\x02,\x12*/v1/skills/{name}/versions/{version}/files\x12\x9d\x01\n" +
-	"\x13GetSkillVersionFile\x121.aisphere.hub.skill.v1.GetSkillVersionFileRequest\x1a .aisphere.hub.skill.v1.SkillFile\"1\x82\xd3\xe4\x93\x02+\x12)/v1/skills/{name}/versions/{version}/file\x12\x92\x01\n" +
-	"\x0fListSkillShares\x12-.aisphere.hub.skill.v1.ListSkillSharesRequest\x1a..aisphere.hub.skill.v1.ListSkillSharesResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/skills/{name}/shares\x12\x8a\x01\n" +
-	"\x10CreateSkillShare\x12..aisphere.hub.skill.v1.CreateSkillShareRequest\x1a!.aisphere.hub.skill.v1.SkillShare\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/skills/{name}/shares\x12\x98\x01\n" +
-	"\x10DeleteSkillShare\x12..aisphere.hub.skill.v1.DeleteSkillShareRequest\x1a\x16.google.protobuf.Empty\"<\x82\xd3\xe4\x93\x026*4/v1/skills/{name}/shares/{subject_type}/{subject_id}B9Z7github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1b\x06proto3"
+	"ListSkills\x12\x1b.skill.v1.ListSkillsRequest\x1a\x1c.skill.v1.ListSkillsResponse\"3\x92\xf4\x18\x1d\b\x02\x1a\x19\b\x01\x12\x10aihub.skill.list\x1a\x03low\x82\xd3\xe4\x93\x02\f\x12\n" +
+	"/v1/skills\x12\x83\x01\n" +
+	"\bGetSkill\x12\x19.skill.v1.GetSkillRequest\x1a\x1a.skill.v1.GetSkillResponse\"@\x92\xf4\x18\x1c\b\x02\x1a\x18\b\x01\x12\x0faihub.skill.get\x1a\x03low\x82\xd3\xe4\x93\x02\x1ab\x05skill\x12\x11/v1/skills/{name}\x12\xb8\x01\n" +
+	"\vDeleteSkill\x12\x1c.skill.v1.DeleteSkillRequest\x1a\x1d.skill.v1.DeleteSkillResponse\"l\x92\xf4\x18O\b\x03\x12-\n" +
+	"\x06delete\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\x1c\b\x01\x12\x12aihub.skill.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x13*\x11/v1/skills/{name}\x12\xd6\x01\n" +
+	"\x12UploadSkillPackage\x12#.skill.v1.UploadSkillPackageRequest\x1a$.skill.v1.UploadSkillPackageResponse\"u\x92\xf4\x18L\b\x03\x12(\n" +
+	"\x06upload\x12\raihub:skill:*\x1a\raihub-service \x01\x1a\x1e\b\x01\x12\x12aihub.skill.upload\x1a\x06medium\x82\xd3\xe4\x93\x02\x1f:\x01*b\aversion\"\x11/v1/skills:upload\x12\xa9\x01\n" +
+	"\x11ListSkillVersions\x12\".skill.v1.ListSkillVersionsRequest\x1a#.skill.v1.ListSkillVersionsResponse\"K\x92\xf4\x18%\b\x02\x1a!\b\x01\x12\x18aihub.skill_version.list\x1a\x03low\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/skills/{name}/versions\x12\xb5\x01\n" +
+	"\x0fGetSkillVersion\x12 .skill.v1.GetSkillVersionRequest\x1a!.skill.v1.GetSkillVersionResponse\"]\x92\xf4\x18$\b\x02\x1a \b\x01\x12\x17aihub.skill_version.get\x1a\x03low\x82\xd3\xe4\x93\x02/b\aversion\x12$/v1/skills/{name}/versions/{version}\x12\x90\x02\n" +
+	"\x12SubmitSkillVersion\x12#.skill.v1.SubmitSkillVersionRequest\x1a$.skill.v1.SubmitSkillVersionResponse\"\xae\x01\x92\xf4\x18k\b\x03\x12?\n" +
+	"\x06submit\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a&\b\x01\x12\x1aaihub.skill_version.submit\x1a\x06medium\x82\xd3\xe4\x93\x029:\x01*b\aversion\"+/v1/skills/{name}/versions/{version}:submit\x12\x94\x02\n" +
+	"\x13PublishSkillVersion\x12$.skill.v1.PublishSkillVersionRequest\x1a%.skill.v1.PublishSkillVersionResponse\"\xaf\x01\x92\xf4\x18k\b\x03\x12@\n" +
+	"\apublish\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a%\b\x01\x12\x1baihub.skill_version.publish\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\aversion\",/v1/skills/{name}/versions/{version}:publish\x12\x8e\x02\n" +
+	"\x12OnlineSkillVersion\x12#.skill.v1.OnlineSkillVersionRequest\x1a$.skill.v1.OnlineSkillVersionResponse\"\xac\x01\x92\xf4\x18i\b\x03\x12?\n" +
+	"\x06online\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a$\b\x01\x12\x1aaihub.skill_version.online\x1a\x04high\x82\xd3\xe4\x93\x029:\x01*b\aversion\"+/v1/skills/{name}/versions/{version}:online\x12\x94\x02\n" +
+	"\x13OfflineSkillVersion\x12$.skill.v1.OfflineSkillVersionRequest\x1a%.skill.v1.OfflineSkillVersionResponse\"\xaf\x01\x92\xf4\x18k\b\x03\x12@\n" +
+	"\aoffline\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a%\b\x01\x12\x1baihub.skill_version.offline\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\aversion\",/v1/skills/{name}/versions/{version}:offline\x12\xc1\x01\n" +
+	"\x14DownloadSkillVersion\x12%.skill.v1.DownloadSkillVersionRequest\x1a\x1e.skill.v1.SkillPackageDownload\"b\x92\xf4\x18)\b\x02\x1a%\b\x01\x12\x1caihub.skill_version.download\x1a\x03low\x82\xd3\xe4\x93\x02/\x12-/v1/skills/{name}/versions/{version}/download\x12\xc2\x01\n" +
+	"\x15ListSkillVersionFiles\x12&.skill.v1.ListSkillVersionFilesRequest\x1a'.skill.v1.ListSkillVersionFilesResponse\"X\x92\xf4\x18\"\b\x02\x1a\x1e\b\x01\x12\x15aihub.skill_file.list\x1a\x03low\x82\xd3\xe4\x93\x02,\x12*/v1/skills/{name}/versions/{version}/files\x12\xa8\x01\n" +
+	"\x13GetSkillVersionFile\x12$.skill.v1.GetSkillVersionFileRequest\x1a\x13.skill.v1.SkillFile\"V\x92\xf4\x18!\b\x02\x1a\x1d\b\x01\x12\x14aihub.skill_file.get\x1a\x03low\x82\xd3\xe4\x93\x02+\x12)/v1/skills/{name}/versions/{version}/file\x12\xd5\x01\n" +
+	"\x0fListSkillShares\x12 .skill.v1.ListSkillSharesRequest\x1a!.skill.v1.ListSkillSharesResponse\"}\x92\xf4\x18Y\b\x03\x121\n" +
+	"\n" +
+	"share:list\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\"\b\x01\x12\x16aihub.skill_share.list\x1a\x06medium\x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/skills/{name}/shares\x12\xd0\x01\n" +
+	"\x10CreateSkillShare\x12!.skill.v1.CreateSkillShareRequest\x1a\x14.skill.v1.SkillShare\"\x82\x01\x92\xf4\x18[\b\x03\x123\n" +
+	"\fshare:create\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\"\b\x01\x12\x18aihub.skill_share.create\x1a\x04high\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/skills/{name}/shares\x12\xf7\x01\n" +
+	"\x10DeleteSkillShare\x12!.skill.v1.DeleteSkillShareRequest\x1a\".skill.v1.DeleteSkillShareResponse\"\x9b\x01\x92\xf4\x18[\b\x03\x123\n" +
+	"\fshare:delete\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\"\b\x01\x12\x18aihub.skill_share.delete\x1a\x04high\x82\xd3\xe4\x93\x026*4/v1/skills/{name}/shares/{subject_type}/{subject_id}B9Z7github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1b\x06proto3"
 
 var (
 	file_skill_v1_skill_proto_rawDescOnce sync.Once
@@ -2015,87 +2785,114 @@ func file_skill_v1_skill_proto_rawDescGZIP() []byte {
 	return file_skill_v1_skill_proto_rawDescData
 }
 
-var file_skill_v1_skill_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_skill_v1_skill_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_skill_v1_skill_proto_goTypes = []any{
-	(*Skill)(nil),                         // 0: aisphere.hub.skill.v1.Skill
-	(*CreateSkillRequest)(nil),            // 1: aisphere.hub.skill.v1.CreateSkillRequest
-	(*UpdateSkillRequest)(nil),            // 2: aisphere.hub.skill.v1.UpdateSkillRequest
-	(*ListSkillsRequest)(nil),             // 3: aisphere.hub.skill.v1.ListSkillsRequest
-	(*ListSkillsResponse)(nil),            // 4: aisphere.hub.skill.v1.ListSkillsResponse
-	(*GetSkillRequest)(nil),               // 5: aisphere.hub.skill.v1.GetSkillRequest
-	(*DeleteSkillRequest)(nil),            // 6: aisphere.hub.skill.v1.DeleteSkillRequest
-	(*SkillVersion)(nil),                  // 7: aisphere.hub.skill.v1.SkillVersion
-	(*UploadSkillPackageRequest)(nil),     // 8: aisphere.hub.skill.v1.UploadSkillPackageRequest
-	(*ListSkillVersionsRequest)(nil),      // 9: aisphere.hub.skill.v1.ListSkillVersionsRequest
-	(*ListSkillVersionsResponse)(nil),     // 10: aisphere.hub.skill.v1.ListSkillVersionsResponse
-	(*GetSkillVersionRequest)(nil),        // 11: aisphere.hub.skill.v1.GetSkillVersionRequest
-	(*SkillVersionActionRequest)(nil),     // 12: aisphere.hub.skill.v1.SkillVersionActionRequest
-	(*DownloadSkillVersionRequest)(nil),   // 13: aisphere.hub.skill.v1.DownloadSkillVersionRequest
-	(*SkillPackageDownload)(nil),          // 14: aisphere.hub.skill.v1.SkillPackageDownload
-	(*SkillFile)(nil),                     // 15: aisphere.hub.skill.v1.SkillFile
-	(*ListSkillVersionFilesRequest)(nil),  // 16: aisphere.hub.skill.v1.ListSkillVersionFilesRequest
-	(*ListSkillVersionFilesResponse)(nil), // 17: aisphere.hub.skill.v1.ListSkillVersionFilesResponse
-	(*GetSkillVersionFileRequest)(nil),    // 18: aisphere.hub.skill.v1.GetSkillVersionFileRequest
-	(*SkillShare)(nil),                    // 19: aisphere.hub.skill.v1.SkillShare
-	(*ListSkillSharesRequest)(nil),        // 20: aisphere.hub.skill.v1.ListSkillSharesRequest
-	(*ListSkillSharesResponse)(nil),       // 21: aisphere.hub.skill.v1.ListSkillSharesResponse
-	(*CreateSkillShareRequest)(nil),       // 22: aisphere.hub.skill.v1.CreateSkillShareRequest
-	(*DeleteSkillShareRequest)(nil),       // 23: aisphere.hub.skill.v1.DeleteSkillShareRequest
-	(*timestamppb.Timestamp)(nil),         // 24: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                 // 25: google.protobuf.Empty
+	(*Skill)(nil),                         // 0: skill.v1.Skill
+	(*CreateSkillRequest)(nil),            // 1: skill.v1.CreateSkillRequest
+	(*CreateSkillResponse)(nil),           // 2: skill.v1.CreateSkillResponse
+	(*UpdateSkillRequest)(nil),            // 3: skill.v1.UpdateSkillRequest
+	(*UpdateSkillResponse)(nil),           // 4: skill.v1.UpdateSkillResponse
+	(*UpdateSkillVisibilityRequest)(nil),  // 5: skill.v1.UpdateSkillVisibilityRequest
+	(*UpdateSkillVisibilityResponse)(nil), // 6: skill.v1.UpdateSkillVisibilityResponse
+	(*ListSkillsRequest)(nil),             // 7: skill.v1.ListSkillsRequest
+	(*ListSkillsResponse)(nil),            // 8: skill.v1.ListSkillsResponse
+	(*GetSkillRequest)(nil),               // 9: skill.v1.GetSkillRequest
+	(*GetSkillResponse)(nil),              // 10: skill.v1.GetSkillResponse
+	(*DeleteSkillRequest)(nil),            // 11: skill.v1.DeleteSkillRequest
+	(*DeleteSkillResponse)(nil),           // 12: skill.v1.DeleteSkillResponse
+	(*SkillVersion)(nil),                  // 13: skill.v1.SkillVersion
+	(*UploadSkillPackageRequest)(nil),     // 14: skill.v1.UploadSkillPackageRequest
+	(*UploadSkillPackageResponse)(nil),    // 15: skill.v1.UploadSkillPackageResponse
+	(*ListSkillVersionsRequest)(nil),      // 16: skill.v1.ListSkillVersionsRequest
+	(*ListSkillVersionsResponse)(nil),     // 17: skill.v1.ListSkillVersionsResponse
+	(*GetSkillVersionRequest)(nil),        // 18: skill.v1.GetSkillVersionRequest
+	(*GetSkillVersionResponse)(nil),       // 19: skill.v1.GetSkillVersionResponse
+	(*SubmitSkillVersionRequest)(nil),     // 20: skill.v1.SubmitSkillVersionRequest
+	(*SubmitSkillVersionResponse)(nil),    // 21: skill.v1.SubmitSkillVersionResponse
+	(*PublishSkillVersionRequest)(nil),    // 22: skill.v1.PublishSkillVersionRequest
+	(*PublishSkillVersionResponse)(nil),   // 23: skill.v1.PublishSkillVersionResponse
+	(*OnlineSkillVersionRequest)(nil),     // 24: skill.v1.OnlineSkillVersionRequest
+	(*OnlineSkillVersionResponse)(nil),    // 25: skill.v1.OnlineSkillVersionResponse
+	(*OfflineSkillVersionRequest)(nil),    // 26: skill.v1.OfflineSkillVersionRequest
+	(*OfflineSkillVersionResponse)(nil),   // 27: skill.v1.OfflineSkillVersionResponse
+	(*DownloadSkillVersionRequest)(nil),   // 28: skill.v1.DownloadSkillVersionRequest
+	(*SkillPackageDownload)(nil),          // 29: skill.v1.SkillPackageDownload
+	(*SkillFile)(nil),                     // 30: skill.v1.SkillFile
+	(*ListSkillVersionFilesRequest)(nil),  // 31: skill.v1.ListSkillVersionFilesRequest
+	(*ListSkillVersionFilesResponse)(nil), // 32: skill.v1.ListSkillVersionFilesResponse
+	(*GetSkillVersionFileRequest)(nil),    // 33: skill.v1.GetSkillVersionFileRequest
+	(*SkillShare)(nil),                    // 34: skill.v1.SkillShare
+	(*ListSkillSharesRequest)(nil),        // 35: skill.v1.ListSkillSharesRequest
+	(*ListSkillSharesResponse)(nil),       // 36: skill.v1.ListSkillSharesResponse
+	(*CreateSkillShareRequest)(nil),       // 37: skill.v1.CreateSkillShareRequest
+	(*DeleteSkillShareRequest)(nil),       // 38: skill.v1.DeleteSkillShareRequest
+	(*DeleteSkillShareResponse)(nil),      // 39: skill.v1.DeleteSkillShareResponse
+	(*timestamppb.Timestamp)(nil),         // 40: google.protobuf.Timestamp
 }
 var file_skill_v1_skill_proto_depIdxs = []int32{
-	24, // 0: aisphere.hub.skill.v1.Skill.create_time:type_name -> google.protobuf.Timestamp
-	24, // 1: aisphere.hub.skill.v1.Skill.update_time:type_name -> google.protobuf.Timestamp
-	0,  // 2: aisphere.hub.skill.v1.ListSkillsResponse.skills:type_name -> aisphere.hub.skill.v1.Skill
-	24, // 3: aisphere.hub.skill.v1.SkillVersion.create_time:type_name -> google.protobuf.Timestamp
-	24, // 4: aisphere.hub.skill.v1.SkillVersion.update_time:type_name -> google.protobuf.Timestamp
-	7,  // 5: aisphere.hub.skill.v1.ListSkillVersionsResponse.versions:type_name -> aisphere.hub.skill.v1.SkillVersion
-	24, // 6: aisphere.hub.skill.v1.SkillFile.create_time:type_name -> google.protobuf.Timestamp
-	24, // 7: aisphere.hub.skill.v1.SkillFile.update_time:type_name -> google.protobuf.Timestamp
-	15, // 8: aisphere.hub.skill.v1.ListSkillVersionFilesResponse.files:type_name -> aisphere.hub.skill.v1.SkillFile
-	19, // 9: aisphere.hub.skill.v1.ListSkillSharesResponse.shares:type_name -> aisphere.hub.skill.v1.SkillShare
-	1,  // 10: aisphere.hub.skill.v1.SkillService.CreateSkill:input_type -> aisphere.hub.skill.v1.CreateSkillRequest
-	2,  // 11: aisphere.hub.skill.v1.SkillService.UpdateSkill:input_type -> aisphere.hub.skill.v1.UpdateSkillRequest
-	3,  // 12: aisphere.hub.skill.v1.SkillService.ListSkills:input_type -> aisphere.hub.skill.v1.ListSkillsRequest
-	5,  // 13: aisphere.hub.skill.v1.SkillService.GetSkill:input_type -> aisphere.hub.skill.v1.GetSkillRequest
-	6,  // 14: aisphere.hub.skill.v1.SkillService.DeleteSkill:input_type -> aisphere.hub.skill.v1.DeleteSkillRequest
-	8,  // 15: aisphere.hub.skill.v1.SkillService.UploadSkillPackage:input_type -> aisphere.hub.skill.v1.UploadSkillPackageRequest
-	9,  // 16: aisphere.hub.skill.v1.SkillService.ListSkillVersions:input_type -> aisphere.hub.skill.v1.ListSkillVersionsRequest
-	11, // 17: aisphere.hub.skill.v1.SkillService.GetSkillVersion:input_type -> aisphere.hub.skill.v1.GetSkillVersionRequest
-	12, // 18: aisphere.hub.skill.v1.SkillService.SubmitSkillVersion:input_type -> aisphere.hub.skill.v1.SkillVersionActionRequest
-	12, // 19: aisphere.hub.skill.v1.SkillService.PublishSkillVersion:input_type -> aisphere.hub.skill.v1.SkillVersionActionRequest
-	12, // 20: aisphere.hub.skill.v1.SkillService.OnlineSkillVersion:input_type -> aisphere.hub.skill.v1.SkillVersionActionRequest
-	12, // 21: aisphere.hub.skill.v1.SkillService.OfflineSkillVersion:input_type -> aisphere.hub.skill.v1.SkillVersionActionRequest
-	13, // 22: aisphere.hub.skill.v1.SkillService.DownloadSkillVersion:input_type -> aisphere.hub.skill.v1.DownloadSkillVersionRequest
-	16, // 23: aisphere.hub.skill.v1.SkillService.ListSkillVersionFiles:input_type -> aisphere.hub.skill.v1.ListSkillVersionFilesRequest
-	18, // 24: aisphere.hub.skill.v1.SkillService.GetSkillVersionFile:input_type -> aisphere.hub.skill.v1.GetSkillVersionFileRequest
-	20, // 25: aisphere.hub.skill.v1.SkillService.ListSkillShares:input_type -> aisphere.hub.skill.v1.ListSkillSharesRequest
-	22, // 26: aisphere.hub.skill.v1.SkillService.CreateSkillShare:input_type -> aisphere.hub.skill.v1.CreateSkillShareRequest
-	23, // 27: aisphere.hub.skill.v1.SkillService.DeleteSkillShare:input_type -> aisphere.hub.skill.v1.DeleteSkillShareRequest
-	0,  // 28: aisphere.hub.skill.v1.SkillService.CreateSkill:output_type -> aisphere.hub.skill.v1.Skill
-	0,  // 29: aisphere.hub.skill.v1.SkillService.UpdateSkill:output_type -> aisphere.hub.skill.v1.Skill
-	4,  // 30: aisphere.hub.skill.v1.SkillService.ListSkills:output_type -> aisphere.hub.skill.v1.ListSkillsResponse
-	0,  // 31: aisphere.hub.skill.v1.SkillService.GetSkill:output_type -> aisphere.hub.skill.v1.Skill
-	25, // 32: aisphere.hub.skill.v1.SkillService.DeleteSkill:output_type -> google.protobuf.Empty
-	7,  // 33: aisphere.hub.skill.v1.SkillService.UploadSkillPackage:output_type -> aisphere.hub.skill.v1.SkillVersion
-	10, // 34: aisphere.hub.skill.v1.SkillService.ListSkillVersions:output_type -> aisphere.hub.skill.v1.ListSkillVersionsResponse
-	7,  // 35: aisphere.hub.skill.v1.SkillService.GetSkillVersion:output_type -> aisphere.hub.skill.v1.SkillVersion
-	7,  // 36: aisphere.hub.skill.v1.SkillService.SubmitSkillVersion:output_type -> aisphere.hub.skill.v1.SkillVersion
-	7,  // 37: aisphere.hub.skill.v1.SkillService.PublishSkillVersion:output_type -> aisphere.hub.skill.v1.SkillVersion
-	7,  // 38: aisphere.hub.skill.v1.SkillService.OnlineSkillVersion:output_type -> aisphere.hub.skill.v1.SkillVersion
-	7,  // 39: aisphere.hub.skill.v1.SkillService.OfflineSkillVersion:output_type -> aisphere.hub.skill.v1.SkillVersion
-	14, // 40: aisphere.hub.skill.v1.SkillService.DownloadSkillVersion:output_type -> aisphere.hub.skill.v1.SkillPackageDownload
-	17, // 41: aisphere.hub.skill.v1.SkillService.ListSkillVersionFiles:output_type -> aisphere.hub.skill.v1.ListSkillVersionFilesResponse
-	15, // 42: aisphere.hub.skill.v1.SkillService.GetSkillVersionFile:output_type -> aisphere.hub.skill.v1.SkillFile
-	21, // 43: aisphere.hub.skill.v1.SkillService.ListSkillShares:output_type -> aisphere.hub.skill.v1.ListSkillSharesResponse
-	19, // 44: aisphere.hub.skill.v1.SkillService.CreateSkillShare:output_type -> aisphere.hub.skill.v1.SkillShare
-	25, // 45: aisphere.hub.skill.v1.SkillService.DeleteSkillShare:output_type -> google.protobuf.Empty
-	28, // [28:46] is the sub-list for method output_type
-	10, // [10:28] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	40, // 0: skill.v1.Skill.create_time:type_name -> google.protobuf.Timestamp
+	40, // 1: skill.v1.Skill.update_time:type_name -> google.protobuf.Timestamp
+	0,  // 2: skill.v1.CreateSkillResponse.skill:type_name -> skill.v1.Skill
+	0,  // 3: skill.v1.UpdateSkillResponse.skill:type_name -> skill.v1.Skill
+	0,  // 4: skill.v1.UpdateSkillVisibilityResponse.skill:type_name -> skill.v1.Skill
+	0,  // 5: skill.v1.ListSkillsResponse.skills:type_name -> skill.v1.Skill
+	0,  // 6: skill.v1.GetSkillResponse.skill:type_name -> skill.v1.Skill
+	40, // 7: skill.v1.SkillVersion.create_time:type_name -> google.protobuf.Timestamp
+	40, // 8: skill.v1.SkillVersion.update_time:type_name -> google.protobuf.Timestamp
+	13, // 9: skill.v1.UploadSkillPackageResponse.version:type_name -> skill.v1.SkillVersion
+	13, // 10: skill.v1.ListSkillVersionsResponse.versions:type_name -> skill.v1.SkillVersion
+	13, // 11: skill.v1.GetSkillVersionResponse.version:type_name -> skill.v1.SkillVersion
+	13, // 12: skill.v1.SubmitSkillVersionResponse.version:type_name -> skill.v1.SkillVersion
+	13, // 13: skill.v1.PublishSkillVersionResponse.version:type_name -> skill.v1.SkillVersion
+	13, // 14: skill.v1.OnlineSkillVersionResponse.version:type_name -> skill.v1.SkillVersion
+	13, // 15: skill.v1.OfflineSkillVersionResponse.version:type_name -> skill.v1.SkillVersion
+	40, // 16: skill.v1.SkillFile.create_time:type_name -> google.protobuf.Timestamp
+	40, // 17: skill.v1.SkillFile.update_time:type_name -> google.protobuf.Timestamp
+	30, // 18: skill.v1.ListSkillVersionFilesResponse.files:type_name -> skill.v1.SkillFile
+	34, // 19: skill.v1.ListSkillSharesResponse.shares:type_name -> skill.v1.SkillShare
+	1,  // 20: skill.v1.SkillService.CreateSkill:input_type -> skill.v1.CreateSkillRequest
+	3,  // 21: skill.v1.SkillService.UpdateSkill:input_type -> skill.v1.UpdateSkillRequest
+	5,  // 22: skill.v1.SkillService.UpdateSkillVisibility:input_type -> skill.v1.UpdateSkillVisibilityRequest
+	7,  // 23: skill.v1.SkillService.ListSkills:input_type -> skill.v1.ListSkillsRequest
+	9,  // 24: skill.v1.SkillService.GetSkill:input_type -> skill.v1.GetSkillRequest
+	11, // 25: skill.v1.SkillService.DeleteSkill:input_type -> skill.v1.DeleteSkillRequest
+	14, // 26: skill.v1.SkillService.UploadSkillPackage:input_type -> skill.v1.UploadSkillPackageRequest
+	16, // 27: skill.v1.SkillService.ListSkillVersions:input_type -> skill.v1.ListSkillVersionsRequest
+	18, // 28: skill.v1.SkillService.GetSkillVersion:input_type -> skill.v1.GetSkillVersionRequest
+	20, // 29: skill.v1.SkillService.SubmitSkillVersion:input_type -> skill.v1.SubmitSkillVersionRequest
+	22, // 30: skill.v1.SkillService.PublishSkillVersion:input_type -> skill.v1.PublishSkillVersionRequest
+	24, // 31: skill.v1.SkillService.OnlineSkillVersion:input_type -> skill.v1.OnlineSkillVersionRequest
+	26, // 32: skill.v1.SkillService.OfflineSkillVersion:input_type -> skill.v1.OfflineSkillVersionRequest
+	28, // 33: skill.v1.SkillService.DownloadSkillVersion:input_type -> skill.v1.DownloadSkillVersionRequest
+	31, // 34: skill.v1.SkillService.ListSkillVersionFiles:input_type -> skill.v1.ListSkillVersionFilesRequest
+	33, // 35: skill.v1.SkillService.GetSkillVersionFile:input_type -> skill.v1.GetSkillVersionFileRequest
+	35, // 36: skill.v1.SkillService.ListSkillShares:input_type -> skill.v1.ListSkillSharesRequest
+	37, // 37: skill.v1.SkillService.CreateSkillShare:input_type -> skill.v1.CreateSkillShareRequest
+	38, // 38: skill.v1.SkillService.DeleteSkillShare:input_type -> skill.v1.DeleteSkillShareRequest
+	2,  // 39: skill.v1.SkillService.CreateSkill:output_type -> skill.v1.CreateSkillResponse
+	4,  // 40: skill.v1.SkillService.UpdateSkill:output_type -> skill.v1.UpdateSkillResponse
+	6,  // 41: skill.v1.SkillService.UpdateSkillVisibility:output_type -> skill.v1.UpdateSkillVisibilityResponse
+	8,  // 42: skill.v1.SkillService.ListSkills:output_type -> skill.v1.ListSkillsResponse
+	10, // 43: skill.v1.SkillService.GetSkill:output_type -> skill.v1.GetSkillResponse
+	12, // 44: skill.v1.SkillService.DeleteSkill:output_type -> skill.v1.DeleteSkillResponse
+	15, // 45: skill.v1.SkillService.UploadSkillPackage:output_type -> skill.v1.UploadSkillPackageResponse
+	17, // 46: skill.v1.SkillService.ListSkillVersions:output_type -> skill.v1.ListSkillVersionsResponse
+	19, // 47: skill.v1.SkillService.GetSkillVersion:output_type -> skill.v1.GetSkillVersionResponse
+	21, // 48: skill.v1.SkillService.SubmitSkillVersion:output_type -> skill.v1.SubmitSkillVersionResponse
+	23, // 49: skill.v1.SkillService.PublishSkillVersion:output_type -> skill.v1.PublishSkillVersionResponse
+	25, // 50: skill.v1.SkillService.OnlineSkillVersion:output_type -> skill.v1.OnlineSkillVersionResponse
+	27, // 51: skill.v1.SkillService.OfflineSkillVersion:output_type -> skill.v1.OfflineSkillVersionResponse
+	29, // 52: skill.v1.SkillService.DownloadSkillVersion:output_type -> skill.v1.SkillPackageDownload
+	32, // 53: skill.v1.SkillService.ListSkillVersionFiles:output_type -> skill.v1.ListSkillVersionFilesResponse
+	30, // 54: skill.v1.SkillService.GetSkillVersionFile:output_type -> skill.v1.SkillFile
+	36, // 55: skill.v1.SkillService.ListSkillShares:output_type -> skill.v1.ListSkillSharesResponse
+	34, // 56: skill.v1.SkillService.CreateSkillShare:output_type -> skill.v1.SkillShare
+	39, // 57: skill.v1.SkillService.DeleteSkillShare:output_type -> skill.v1.DeleteSkillShareResponse
+	39, // [39:58] is the sub-list for method output_type
+	20, // [20:39] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_skill_v1_skill_proto_init() }
@@ -2109,7 +2906,7 @@ func file_skill_v1_skill_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_skill_v1_skill_proto_rawDesc), len(file_skill_v1_skill_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

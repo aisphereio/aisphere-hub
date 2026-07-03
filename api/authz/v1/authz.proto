@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package aisphere.hub.authz.v1;
+package authz.v1;
 
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "aisphere/access/v1/access.proto";
 
 option go_package = "github.com/aisphereio/aisphere-hub/api/authz/v1;authzv1";
 
@@ -79,6 +79,10 @@ service AuthzService {
       post: "/v1/authz/check"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authz.check" risk: "low" }
+    };
   }
 
   // BatchCheckPermissions evaluates multiple checks in one round-trip.
@@ -87,6 +91,10 @@ service AuthzService {
     option (google.api.http) = {
       post: "/v1/authz/check:batch"
       body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authz.check_batch" risk: "low" }
     };
   }
 
@@ -97,13 +105,24 @@ service AuthzService {
       post: "/v1/authz/relationships"
       body: "*"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "write" resource: "aihub:authz:relationship:*" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "authz.relationship.write" risk: "high" }
+    };
   }
 
   // DeleteRelationships removes relationship tuples matching the filter.
   // At least one of resource / subject filter field must be set.
   rpc DeleteRelationships(DeleteRelationshipsRequest) returns (DeleteRelationshipsResponse) {
     option (google.api.http) = {
-      delete: "/v1/authz/relationships"
+      post: "/v1/authz/relationships:delete"
+      body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "delete" resource: "aihub:authz:relationship:*" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "authz.relationship.delete" risk: "high" }
     };
   }
 
@@ -113,6 +132,10 @@ service AuthzService {
     option (google.api.http) = {
       get: "/v1/authz/relationships"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authz.relationship.read" risk: "medium" }
+    };
   }
 
   // LookupResources returns resource IDs that the subject can access
@@ -120,6 +143,10 @@ service AuthzService {
   rpc LookupResources(LookupResourcesRequest) returns (LookupResourcesResponse) {
     option (google.api.http) = {
       get: "/v1/authz/lookup-resources"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authz.lookup_resources" risk: "low" }
     };
   }
 
@@ -129,6 +156,10 @@ service AuthzService {
     option (google.api.http) = {
       get: "/v1/authz/lookup-subjects"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      audit: { enabled: true event: "authz.lookup_subjects" risk: "medium" }
+    };
   }
 
   // ReadSchema returns the current SpiceDB schema text.
@@ -136,14 +167,24 @@ service AuthzService {
     option (google.api.http) = {
       get: "/v1/authz/schema"
     };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "read" resource: "aihub:authz:schema" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "authz.schema.read" risk: "medium" }
+    };
   }
 
   // WriteSchema replaces the SpiceDB schema. Use with care — schema
   // changes are global and may break existing tuples.
-  rpc WriteSchema(WriteSchemaRequest) returns (google.protobuf.Empty) {
+  rpc WriteSchema(WriteSchemaRequest) returns (WriteSchemaResponse) {
     option (google.api.http) = {
       put: "/v1/authz/schema"
       body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "write" resource: "aihub:authz:schema" audience: "aihub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "authz.schema.write" risk: "critical" }
     };
   }
 }
@@ -330,3 +371,5 @@ message ReadSchemaResponse {
 message WriteSchemaRequest {
   string schema_text = 1 [(google.api.field_behavior) = REQUIRED];
 }
+
+message WriteSchemaResponse {}

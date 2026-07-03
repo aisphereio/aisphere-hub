@@ -7,6 +7,7 @@
 package authnv1
 
 import (
+	_ "github.com/aisphereio/kernel/api/aisphere/access/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -318,12 +319,12 @@ func (x *RefreshRequest) GetAppId() string {
 	return ""
 }
 
-// TokenResponse is the OAuth2/OIDC token set returned by Exchange and Refresh.
+// ExchangeResponse is the OAuth2/OIDC token set returned by Exchange.
 //
 // `expires_in` is seconds from issue time to expiry (OAuth2 standard). For a
 // wall-clock expiry, callers can compute issued_at + expires_in, or use the
 // `expires_at` field on Principal returned by Me/Introspect.
-type TokenResponse struct {
+type ExchangeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
 	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
@@ -335,20 +336,20 @@ type TokenResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *TokenResponse) Reset() {
-	*x = TokenResponse{}
+func (x *ExchangeResponse) Reset() {
+	*x = ExchangeResponse{}
 	mi := &file_authn_v1_authn_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TokenResponse) String() string {
+func (x *ExchangeResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TokenResponse) ProtoMessage() {}
+func (*ExchangeResponse) ProtoMessage() {}
 
-func (x *TokenResponse) ProtoReflect() protoreflect.Message {
+func (x *ExchangeResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_authn_v1_authn_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -360,47 +361,132 @@ func (x *TokenResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TokenResponse.ProtoReflect.Descriptor instead.
-func (*TokenResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ExchangeResponse.ProtoReflect.Descriptor instead.
+func (*ExchangeResponse) Descriptor() ([]byte, []int) {
 	return file_authn_v1_authn_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *TokenResponse) GetAccessToken() string {
+func (x *ExchangeResponse) GetAccessToken() string {
 	if x != nil {
 		return x.AccessToken
 	}
 	return ""
 }
 
-func (x *TokenResponse) GetRefreshToken() string {
+func (x *ExchangeResponse) GetRefreshToken() string {
 	if x != nil {
 		return x.RefreshToken
 	}
 	return ""
 }
 
-func (x *TokenResponse) GetIdToken() string {
+func (x *ExchangeResponse) GetIdToken() string {
 	if x != nil {
 		return x.IdToken
 	}
 	return ""
 }
 
-func (x *TokenResponse) GetTokenType() string {
+func (x *ExchangeResponse) GetTokenType() string {
 	if x != nil {
 		return x.TokenType
 	}
 	return ""
 }
 
-func (x *TokenResponse) GetExpiresIn() int64 {
+func (x *ExchangeResponse) GetExpiresIn() int64 {
 	if x != nil {
 		return x.ExpiresIn
 	}
 	return 0
 }
 
-func (x *TokenResponse) GetScope() string {
+func (x *ExchangeResponse) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+// RefreshResponse is the OAuth2/OIDC token set returned by Refresh.
+type RefreshResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	IdToken       string                 `protobuf:"bytes,3,opt,name=id_token,json=idToken,proto3" json:"id_token,omitempty"`
+	TokenType     string                 `protobuf:"bytes,4,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
+	ExpiresIn     int64                  `protobuf:"varint,5,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	Scope         string                 `protobuf:"bytes,6,opt,name=scope,proto3" json:"scope,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshResponse) Reset() {
+	*x = RefreshResponse{}
+	mi := &file_authn_v1_authn_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshResponse) ProtoMessage() {}
+
+func (x *RefreshResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_authn_v1_authn_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshResponse.ProtoReflect.Descriptor instead.
+func (*RefreshResponse) Descriptor() ([]byte, []int) {
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RefreshResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *RefreshResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *RefreshResponse) GetIdToken() string {
+	if x != nil {
+		return x.IdToken
+	}
+	return ""
+}
+
+func (x *RefreshResponse) GetTokenType() string {
+	if x != nil {
+		return x.TokenType
+	}
+	return ""
+}
+
+func (x *RefreshResponse) GetExpiresIn() int64 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
+func (x *RefreshResponse) GetScope() string {
 	if x != nil {
 		return x.Scope
 	}
@@ -431,7 +517,7 @@ type LogoutURLRequest struct {
 
 func (x *LogoutURLRequest) Reset() {
 	*x = LogoutURLRequest{}
-	mi := &file_authn_v1_authn_proto_msgTypes[5]
+	mi := &file_authn_v1_authn_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -443,7 +529,7 @@ func (x *LogoutURLRequest) String() string {
 func (*LogoutURLRequest) ProtoMessage() {}
 
 func (x *LogoutURLRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[5]
+	mi := &file_authn_v1_authn_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -456,7 +542,7 @@ func (x *LogoutURLRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutURLRequest.ProtoReflect.Descriptor instead.
 func (*LogoutURLRequest) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{5}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *LogoutURLRequest) GetPostLogoutRedirectUri() string {
@@ -510,7 +596,7 @@ type LogoutURLResponse struct {
 
 func (x *LogoutURLResponse) Reset() {
 	*x = LogoutURLResponse{}
-	mi := &file_authn_v1_authn_proto_msgTypes[6]
+	mi := &file_authn_v1_authn_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -522,7 +608,7 @@ func (x *LogoutURLResponse) String() string {
 func (*LogoutURLResponse) ProtoMessage() {}
 
 func (x *LogoutURLResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[6]
+	mi := &file_authn_v1_authn_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -535,7 +621,7 @@ func (x *LogoutURLResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutURLResponse.ProtoReflect.Descriptor instead.
 func (*LogoutURLResponse) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{6}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *LogoutURLResponse) GetLogoutUrl() string {
@@ -564,7 +650,7 @@ type RevokeRequest struct {
 
 func (x *RevokeRequest) Reset() {
 	*x = RevokeRequest{}
-	mi := &file_authn_v1_authn_proto_msgTypes[7]
+	mi := &file_authn_v1_authn_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -576,7 +662,7 @@ func (x *RevokeRequest) String() string {
 func (*RevokeRequest) ProtoMessage() {}
 
 func (x *RevokeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[7]
+	mi := &file_authn_v1_authn_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -589,7 +675,7 @@ func (x *RevokeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeRequest.ProtoReflect.Descriptor instead.
 func (*RevokeRequest) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{7}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RevokeRequest) GetToken() string {
@@ -644,7 +730,7 @@ type RevokeResponse struct {
 
 func (x *RevokeResponse) Reset() {
 	*x = RevokeResponse{}
-	mi := &file_authn_v1_authn_proto_msgTypes[8]
+	mi := &file_authn_v1_authn_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -656,7 +742,7 @@ func (x *RevokeResponse) String() string {
 func (*RevokeResponse) ProtoMessage() {}
 
 func (x *RevokeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[8]
+	mi := &file_authn_v1_authn_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -669,7 +755,7 @@ func (x *RevokeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeResponse.ProtoReflect.Descriptor instead.
 func (*RevokeResponse) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{8}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RevokeResponse) GetRevoked() bool {
@@ -715,7 +801,7 @@ type IntrospectRequest struct {
 
 func (x *IntrospectRequest) Reset() {
 	*x = IntrospectRequest{}
-	mi := &file_authn_v1_authn_proto_msgTypes[9]
+	mi := &file_authn_v1_authn_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -727,7 +813,7 @@ func (x *IntrospectRequest) String() string {
 func (*IntrospectRequest) ProtoMessage() {}
 
 func (x *IntrospectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[9]
+	mi := &file_authn_v1_authn_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -740,7 +826,7 @@ func (x *IntrospectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntrospectRequest.ProtoReflect.Descriptor instead.
 func (*IntrospectRequest) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{9}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *IntrospectRequest) GetToken() string {
@@ -804,7 +890,7 @@ type IntrospectResponse struct {
 
 func (x *IntrospectResponse) Reset() {
 	*x = IntrospectResponse{}
-	mi := &file_authn_v1_authn_proto_msgTypes[10]
+	mi := &file_authn_v1_authn_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -816,7 +902,7 @@ func (x *IntrospectResponse) String() string {
 func (*IntrospectResponse) ProtoMessage() {}
 
 func (x *IntrospectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[10]
+	mi := &file_authn_v1_authn_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -829,7 +915,7 @@ func (x *IntrospectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntrospectResponse.ProtoReflect.Descriptor instead.
 func (*IntrospectResponse) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{10}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *IntrospectResponse) GetActive() bool {
@@ -875,7 +961,7 @@ type MeRequest struct {
 
 func (x *MeRequest) Reset() {
 	*x = MeRequest{}
-	mi := &file_authn_v1_authn_proto_msgTypes[11]
+	mi := &file_authn_v1_authn_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -887,7 +973,7 @@ func (x *MeRequest) String() string {
 func (*MeRequest) ProtoMessage() {}
 
 func (x *MeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[11]
+	mi := &file_authn_v1_authn_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -900,7 +986,7 @@ func (x *MeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MeRequest.ProtoReflect.Descriptor instead.
 func (*MeRequest) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{11}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{12}
 }
 
 type MeResponse struct {
@@ -912,7 +998,7 @@ type MeResponse struct {
 
 func (x *MeResponse) Reset() {
 	*x = MeResponse{}
-	mi := &file_authn_v1_authn_proto_msgTypes[12]
+	mi := &file_authn_v1_authn_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -924,7 +1010,7 @@ func (x *MeResponse) String() string {
 func (*MeResponse) ProtoMessage() {}
 
 func (x *MeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[12]
+	mi := &file_authn_v1_authn_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -937,7 +1023,7 @@ func (x *MeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MeResponse.ProtoReflect.Descriptor instead.
 func (*MeResponse) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{12}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *MeResponse) GetPrincipal() *Principal {
@@ -1005,7 +1091,7 @@ type Principal struct {
 
 func (x *Principal) Reset() {
 	*x = Principal{}
-	mi := &file_authn_v1_authn_proto_msgTypes[13]
+	mi := &file_authn_v1_authn_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1017,7 +1103,7 @@ func (x *Principal) String() string {
 func (*Principal) ProtoMessage() {}
 
 func (x *Principal) ProtoReflect() protoreflect.Message {
-	mi := &file_authn_v1_authn_proto_msgTypes[13]
+	mi := &file_authn_v1_authn_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1030,7 +1116,7 @@ func (x *Principal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Principal.ProtoReflect.Descriptor instead.
 func (*Principal) Descriptor() ([]byte, []int) {
-	return file_authn_v1_authn_proto_rawDescGZIP(), []int{13}
+	return file_authn_v1_authn_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Principal) GetSubjectType() string {
@@ -1156,7 +1242,7 @@ var File_authn_v1_authn_proto protoreflect.FileDescriptor
 
 const file_authn_v1_authn_proto_rawDesc = "" +
 	"\n" +
-	"\x14authn/v1/authn.proto\x12\x15aisphere.hub.authn.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xab\x01\n" +
+	"\x14authn/v1/authn.proto\x12\bauthn.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1faisphere/access/v1/access.proto\"\xab\x01\n" +
 	"\x0fLoginURLRequest\x12&\n" +
 	"\fredirect_uri\x18\x01 \x01(\tB\x03\xe0A\x02R\vredirectUri\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x14\n" +
@@ -1177,8 +1263,17 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\x12\x14\n" +
 	"\x05scope\x18\x02 \x01(\tR\x05scope\x12\x15\n" +
 	"\x06org_id\x18\x03 \x01(\tR\x05orgId\x12\x15\n" +
-	"\x06app_id\x18\x04 \x01(\tR\x05appId\"\xc6\x01\n" +
-	"\rTokenResponse\x12!\n" +
+	"\x06app_id\x18\x04 \x01(\tR\x05appId\"\xc9\x01\n" +
+	"\x10ExchangeResponse\x12!\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x19\n" +
+	"\bid_token\x18\x03 \x01(\tR\aidToken\x12\x1d\n" +
+	"\n" +
+	"token_type\x18\x04 \x01(\tR\ttokenType\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x05 \x01(\x03R\texpiresIn\x12\x14\n" +
+	"\x05scope\x18\x06 \x01(\tR\x05scope\"\xc8\x01\n" +
+	"\x0fRefreshResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x19\n" +
 	"\bid_token\x18\x03 \x01(\tR\aidToken\x12\x1d\n" +
@@ -1215,18 +1310,18 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\x06issuer\x18\x03 \x01(\tR\x06issuer\x12\x1a\n" +
 	"\baudience\x18\x04 \x03(\tR\baudience\x12\x15\n" +
 	"\x06org_id\x18\x05 \x01(\tR\x05orgId\x12\x15\n" +
-	"\x06app_id\x18\x06 \x01(\tR\x05appId\"\xf6\x01\n" +
+	"\x06app_id\x18\x06 \x01(\tR\x05appId\"\xe9\x01\n" +
 	"\x12IntrospectResponse\x12\x16\n" +
-	"\x06active\x18\x01 \x01(\bR\x06active\x12>\n" +
-	"\tprincipal\x18\x02 \x01(\v2 .aisphere.hub.authn.v1.PrincipalR\tprincipal\x12\x14\n" +
+	"\x06active\x18\x01 \x01(\bR\x06active\x121\n" +
+	"\tprincipal\x18\x02 \x01(\v2\x13.authn.v1.PrincipalR\tprincipal\x12\x14\n" +
 	"\x05scope\x18\x03 \x01(\tR\x05scope\x129\n" +
 	"\n" +
 	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x127\n" +
 	"\tissued_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\"\v\n" +
-	"\tMeRequest\"L\n" +
+	"\tMeRequest\"?\n" +
 	"\n" +
-	"MeResponse\x12>\n" +
-	"\tprincipal\x18\x01 \x01(\v2 .aisphere.hub.authn.v1.PrincipalR\tprincipal\"\xa0\x04\n" +
+	"MeResponse\x121\n" +
+	"\tprincipal\x18\x01 \x01(\v2\x13.authn.v1.PrincipalR\tprincipal\"\xa0\x04\n" +
 	"\tPrincipal\x12!\n" +
 	"\fsubject_type\x18\x01 \x01(\tR\vsubjectType\x12\x1d\n" +
 	"\n" +
@@ -1251,16 +1346,18 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"expires_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x127\n" +
 	"\n" +
 	"attributes\x18\x11 \x01(\v2\x17.google.protobuf.StructR\n" +
-	"attributes2\xcf\x06\n" +
-	"\fAuthnService\x12x\n" +
-	"\bLoginURL\x12&.aisphere.hub.authn.v1.LoginURLRequest\x1a'.aisphere.hub.authn.v1.LoginURLResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/authn/login-url\x12w\n" +
-	"\bExchange\x12&.aisphere.hub.authn.v1.ExchangeRequest\x1a$.aisphere.hub.authn.v1.TokenResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/authn/exchange\x12t\n" +
-	"\aRefresh\x12%.aisphere.hub.authn.v1.RefreshRequest\x1a$.aisphere.hub.authn.v1.TokenResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/authn/refresh\x12|\n" +
-	"\tLogoutURL\x12'.aisphere.hub.authn.v1.LogoutURLRequest\x1a(.aisphere.hub.authn.v1.LogoutURLResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/authn/logout-url\x12r\n" +
-	"\x06Revoke\x12$.aisphere.hub.authn.v1.RevokeRequest\x1a%.aisphere.hub.authn.v1.RevokeResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/authn/revoke\x12\x82\x01\n" +
+	"attributes2\xd5\a\n" +
+	"\fAuthnService\x12\x93\x01\n" +
+	"\bLoginURL\x12\x19.authn.v1.LoginURLRequest\x1a\x1a.authn.v1.LoginURLResponse\"P\x92\xf4\x181\b\x01\x1a\x18\b\x01\x12\x0fauthn.login_url\x1a\x03low\"\x13\b\x01\x12\x02ip\x19\x00\x00\x00\x00\x00\x00\x14@ \n" +
+	"(\x01\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/authn/login-url\x12\x97\x01\n" +
+	"\bExchange\x12\x19.authn.v1.ExchangeRequest\x1a\x1a.authn.v1.ExchangeResponse\"T\x92\xf4\x183\b\x01\x1a\x1a\b\x01\x12\x0eauthn.exchange\x1a\x06medium\"\x13\b\x01\x12\x02ip\x19\x00\x00\x00\x00\x00\x00\b@ \x05(\x01\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/authn/exchange\x12\x92\x01\n" +
+	"\aRefresh\x12\x18.authn.v1.RefreshRequest\x1a\x19.authn.v1.RefreshResponse\"R\x92\xf4\x182\b\x01\x1a\x19\b\x01\x12\rauthn.refresh\x1a\x06medium\"\x13\b\x01\x12\x02ip\x19\x00\x00\x00\x00\x00\x00\b@ \x05(\x01\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/authn/refresh\x12\x98\x01\n" +
+	"\tLogoutURL\x12\x1a.authn.v1.LogoutURLRequest\x1a\x1b.authn.v1.LogoutURLResponse\"R\x92\xf4\x182\b\x01\x1a\x19\b\x01\x12\x10authn.logout_url\x1a\x03low\"\x13\b\x01\x12\x02ip\x19\x00\x00\x00\x00\x00\x00\x14@ \n" +
+	"(\x01\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/authn/logout-url\x12v\n" +
+	"\x06Revoke\x12\x17.authn.v1.RevokeRequest\x1a\x18.authn.v1.RevokeResponse\"9\x92\xf4\x18\x1a\b\x02\x1a\x16\b\x01\x12\fauthn.revoke\x1a\x04high\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/authn/revoke\x12\x8c\x01\n" +
 	"\n" +
-	"Introspect\x12(.aisphere.hub.authn.v1.IntrospectRequest\x1a).aisphere.hub.authn.v1.IntrospectResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/authn/introspect\x12_\n" +
-	"\x02Me\x12 .aisphere.hub.authn.v1.MeRequest\x1a!.aisphere.hub.authn.v1.MeResponse\"\x14\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/authn/meB9Z7github.com/aisphereio/aisphere-hub/api/authn/v1;authnv1b\x06proto3"
+	"Introspect\x12\x1b.authn.v1.IntrospectRequest\x1a\x1c.authn.v1.IntrospectResponse\"C\x92\xf4\x18 \b\x02\x1a\x1c\b\x01\x12\x10authn.introspect\x1a\x06medium\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/authn/introspect\x12^\n" +
+	"\x02Me\x12\x13.authn.v1.MeRequest\x1a\x14.authn.v1.MeResponse\"-\x92\xf4\x18\x15\b\x02\x1a\x11\b\x01\x12\bauthn.me\x1a\x03low\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/authn/meB9Z7github.com/aisphereio/aisphere-hub/api/authn/v1;authnv1b\x06proto3"
 
 var (
 	file_authn_v1_authn_proto_rawDescOnce sync.Once
@@ -1274,46 +1371,47 @@ func file_authn_v1_authn_proto_rawDescGZIP() []byte {
 	return file_authn_v1_authn_proto_rawDescData
 }
 
-var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_authn_v1_authn_proto_goTypes = []any{
-	(*LoginURLRequest)(nil),       // 0: aisphere.hub.authn.v1.LoginURLRequest
-	(*LoginURLResponse)(nil),      // 1: aisphere.hub.authn.v1.LoginURLResponse
-	(*ExchangeRequest)(nil),       // 2: aisphere.hub.authn.v1.ExchangeRequest
-	(*RefreshRequest)(nil),        // 3: aisphere.hub.authn.v1.RefreshRequest
-	(*TokenResponse)(nil),         // 4: aisphere.hub.authn.v1.TokenResponse
-	(*LogoutURLRequest)(nil),      // 5: aisphere.hub.authn.v1.LogoutURLRequest
-	(*LogoutURLResponse)(nil),     // 6: aisphere.hub.authn.v1.LogoutURLResponse
-	(*RevokeRequest)(nil),         // 7: aisphere.hub.authn.v1.RevokeRequest
-	(*RevokeResponse)(nil),        // 8: aisphere.hub.authn.v1.RevokeResponse
-	(*IntrospectRequest)(nil),     // 9: aisphere.hub.authn.v1.IntrospectRequest
-	(*IntrospectResponse)(nil),    // 10: aisphere.hub.authn.v1.IntrospectResponse
-	(*MeRequest)(nil),             // 11: aisphere.hub.authn.v1.MeRequest
-	(*MeResponse)(nil),            // 12: aisphere.hub.authn.v1.MeResponse
-	(*Principal)(nil),             // 13: aisphere.hub.authn.v1.Principal
-	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),       // 15: google.protobuf.Struct
+	(*LoginURLRequest)(nil),       // 0: authn.v1.LoginURLRequest
+	(*LoginURLResponse)(nil),      // 1: authn.v1.LoginURLResponse
+	(*ExchangeRequest)(nil),       // 2: authn.v1.ExchangeRequest
+	(*RefreshRequest)(nil),        // 3: authn.v1.RefreshRequest
+	(*ExchangeResponse)(nil),      // 4: authn.v1.ExchangeResponse
+	(*RefreshResponse)(nil),       // 5: authn.v1.RefreshResponse
+	(*LogoutURLRequest)(nil),      // 6: authn.v1.LogoutURLRequest
+	(*LogoutURLResponse)(nil),     // 7: authn.v1.LogoutURLResponse
+	(*RevokeRequest)(nil),         // 8: authn.v1.RevokeRequest
+	(*RevokeResponse)(nil),        // 9: authn.v1.RevokeResponse
+	(*IntrospectRequest)(nil),     // 10: authn.v1.IntrospectRequest
+	(*IntrospectResponse)(nil),    // 11: authn.v1.IntrospectResponse
+	(*MeRequest)(nil),             // 12: authn.v1.MeRequest
+	(*MeResponse)(nil),            // 13: authn.v1.MeResponse
+	(*Principal)(nil),             // 14: authn.v1.Principal
+	(*timestamppb.Timestamp)(nil), // 15: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),       // 16: google.protobuf.Struct
 }
 var file_authn_v1_authn_proto_depIdxs = []int32{
-	13, // 0: aisphere.hub.authn.v1.IntrospectResponse.principal:type_name -> aisphere.hub.authn.v1.Principal
-	14, // 1: aisphere.hub.authn.v1.IntrospectResponse.expires_at:type_name -> google.protobuf.Timestamp
-	14, // 2: aisphere.hub.authn.v1.IntrospectResponse.issued_at:type_name -> google.protobuf.Timestamp
-	13, // 3: aisphere.hub.authn.v1.MeResponse.principal:type_name -> aisphere.hub.authn.v1.Principal
-	14, // 4: aisphere.hub.authn.v1.Principal.expires_at:type_name -> google.protobuf.Timestamp
-	15, // 5: aisphere.hub.authn.v1.Principal.attributes:type_name -> google.protobuf.Struct
-	0,  // 6: aisphere.hub.authn.v1.AuthnService.LoginURL:input_type -> aisphere.hub.authn.v1.LoginURLRequest
-	2,  // 7: aisphere.hub.authn.v1.AuthnService.Exchange:input_type -> aisphere.hub.authn.v1.ExchangeRequest
-	3,  // 8: aisphere.hub.authn.v1.AuthnService.Refresh:input_type -> aisphere.hub.authn.v1.RefreshRequest
-	5,  // 9: aisphere.hub.authn.v1.AuthnService.LogoutURL:input_type -> aisphere.hub.authn.v1.LogoutURLRequest
-	7,  // 10: aisphere.hub.authn.v1.AuthnService.Revoke:input_type -> aisphere.hub.authn.v1.RevokeRequest
-	9,  // 11: aisphere.hub.authn.v1.AuthnService.Introspect:input_type -> aisphere.hub.authn.v1.IntrospectRequest
-	11, // 12: aisphere.hub.authn.v1.AuthnService.Me:input_type -> aisphere.hub.authn.v1.MeRequest
-	1,  // 13: aisphere.hub.authn.v1.AuthnService.LoginURL:output_type -> aisphere.hub.authn.v1.LoginURLResponse
-	4,  // 14: aisphere.hub.authn.v1.AuthnService.Exchange:output_type -> aisphere.hub.authn.v1.TokenResponse
-	4,  // 15: aisphere.hub.authn.v1.AuthnService.Refresh:output_type -> aisphere.hub.authn.v1.TokenResponse
-	6,  // 16: aisphere.hub.authn.v1.AuthnService.LogoutURL:output_type -> aisphere.hub.authn.v1.LogoutURLResponse
-	8,  // 17: aisphere.hub.authn.v1.AuthnService.Revoke:output_type -> aisphere.hub.authn.v1.RevokeResponse
-	10, // 18: aisphere.hub.authn.v1.AuthnService.Introspect:output_type -> aisphere.hub.authn.v1.IntrospectResponse
-	12, // 19: aisphere.hub.authn.v1.AuthnService.Me:output_type -> aisphere.hub.authn.v1.MeResponse
+	14, // 0: authn.v1.IntrospectResponse.principal:type_name -> authn.v1.Principal
+	15, // 1: authn.v1.IntrospectResponse.expires_at:type_name -> google.protobuf.Timestamp
+	15, // 2: authn.v1.IntrospectResponse.issued_at:type_name -> google.protobuf.Timestamp
+	14, // 3: authn.v1.MeResponse.principal:type_name -> authn.v1.Principal
+	15, // 4: authn.v1.Principal.expires_at:type_name -> google.protobuf.Timestamp
+	16, // 5: authn.v1.Principal.attributes:type_name -> google.protobuf.Struct
+	0,  // 6: authn.v1.AuthnService.LoginURL:input_type -> authn.v1.LoginURLRequest
+	2,  // 7: authn.v1.AuthnService.Exchange:input_type -> authn.v1.ExchangeRequest
+	3,  // 8: authn.v1.AuthnService.Refresh:input_type -> authn.v1.RefreshRequest
+	6,  // 9: authn.v1.AuthnService.LogoutURL:input_type -> authn.v1.LogoutURLRequest
+	8,  // 10: authn.v1.AuthnService.Revoke:input_type -> authn.v1.RevokeRequest
+	10, // 11: authn.v1.AuthnService.Introspect:input_type -> authn.v1.IntrospectRequest
+	12, // 12: authn.v1.AuthnService.Me:input_type -> authn.v1.MeRequest
+	1,  // 13: authn.v1.AuthnService.LoginURL:output_type -> authn.v1.LoginURLResponse
+	4,  // 14: authn.v1.AuthnService.Exchange:output_type -> authn.v1.ExchangeResponse
+	5,  // 15: authn.v1.AuthnService.Refresh:output_type -> authn.v1.RefreshResponse
+	7,  // 16: authn.v1.AuthnService.LogoutURL:output_type -> authn.v1.LogoutURLResponse
+	9,  // 17: authn.v1.AuthnService.Revoke:output_type -> authn.v1.RevokeResponse
+	11, // 18: authn.v1.AuthnService.Introspect:output_type -> authn.v1.IntrospectResponse
+	13, // 19: authn.v1.AuthnService.Me:output_type -> authn.v1.MeResponse
 	13, // [13:20] is the sub-list for method output_type
 	6,  // [6:13] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
@@ -1332,7 +1430,7 @@ func file_authn_v1_authn_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_authn_v1_authn_proto_rawDesc), len(file_authn_v1_authn_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

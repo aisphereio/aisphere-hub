@@ -11,7 +11,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -20,15 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthzService_CheckPermission_FullMethodName       = "/aisphere.hub.authz.v1.AuthzService/CheckPermission"
-	AuthzService_BatchCheckPermissions_FullMethodName = "/aisphere.hub.authz.v1.AuthzService/BatchCheckPermissions"
-	AuthzService_WriteRelationships_FullMethodName    = "/aisphere.hub.authz.v1.AuthzService/WriteRelationships"
-	AuthzService_DeleteRelationships_FullMethodName   = "/aisphere.hub.authz.v1.AuthzService/DeleteRelationships"
-	AuthzService_ReadRelationships_FullMethodName     = "/aisphere.hub.authz.v1.AuthzService/ReadRelationships"
-	AuthzService_LookupResources_FullMethodName       = "/aisphere.hub.authz.v1.AuthzService/LookupResources"
-	AuthzService_LookupSubjects_FullMethodName        = "/aisphere.hub.authz.v1.AuthzService/LookupSubjects"
-	AuthzService_ReadSchema_FullMethodName            = "/aisphere.hub.authz.v1.AuthzService/ReadSchema"
-	AuthzService_WriteSchema_FullMethodName           = "/aisphere.hub.authz.v1.AuthzService/WriteSchema"
+	AuthzService_CheckPermission_FullMethodName       = "/authz.v1.AuthzService/CheckPermission"
+	AuthzService_BatchCheckPermissions_FullMethodName = "/authz.v1.AuthzService/BatchCheckPermissions"
+	AuthzService_WriteRelationships_FullMethodName    = "/authz.v1.AuthzService/WriteRelationships"
+	AuthzService_DeleteRelationships_FullMethodName   = "/authz.v1.AuthzService/DeleteRelationships"
+	AuthzService_ReadRelationships_FullMethodName     = "/authz.v1.AuthzService/ReadRelationships"
+	AuthzService_LookupResources_FullMethodName       = "/authz.v1.AuthzService/LookupResources"
+	AuthzService_LookupSubjects_FullMethodName        = "/authz.v1.AuthzService/LookupSubjects"
+	AuthzService_ReadSchema_FullMethodName            = "/authz.v1.AuthzService/ReadSchema"
+	AuthzService_WriteSchema_FullMethodName           = "/authz.v1.AuthzService/WriteSchema"
 )
 
 // AuthzServiceClient is the client API for AuthzService service.
@@ -122,7 +121,7 @@ type AuthzServiceClient interface {
 	ReadSchema(ctx context.Context, in *ReadSchemaRequest, opts ...grpc.CallOption) (*ReadSchemaResponse, error)
 	// WriteSchema replaces the SpiceDB schema. Use with care — schema
 	// changes are global and may break existing tuples.
-	WriteSchema(ctx context.Context, in *WriteSchemaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	WriteSchema(ctx context.Context, in *WriteSchemaRequest, opts ...grpc.CallOption) (*WriteSchemaResponse, error)
 }
 
 type authzServiceClient struct {
@@ -213,9 +212,9 @@ func (c *authzServiceClient) ReadSchema(ctx context.Context, in *ReadSchemaReque
 	return out, nil
 }
 
-func (c *authzServiceClient) WriteSchema(ctx context.Context, in *WriteSchemaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *authzServiceClient) WriteSchema(ctx context.Context, in *WriteSchemaRequest, opts ...grpc.CallOption) (*WriteSchemaResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(WriteSchemaResponse)
 	err := c.cc.Invoke(ctx, AuthzService_WriteSchema_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -314,7 +313,7 @@ type AuthzServiceServer interface {
 	ReadSchema(context.Context, *ReadSchemaRequest) (*ReadSchemaResponse, error)
 	// WriteSchema replaces the SpiceDB schema. Use with care — schema
 	// changes are global and may break existing tuples.
-	WriteSchema(context.Context, *WriteSchemaRequest) (*emptypb.Empty, error)
+	WriteSchema(context.Context, *WriteSchemaRequest) (*WriteSchemaResponse, error)
 	mustEmbedUnimplementedAuthzServiceServer()
 }
 
@@ -349,7 +348,7 @@ func (UnimplementedAuthzServiceServer) LookupSubjects(context.Context, *LookupSu
 func (UnimplementedAuthzServiceServer) ReadSchema(context.Context, *ReadSchemaRequest) (*ReadSchemaResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadSchema not implemented")
 }
-func (UnimplementedAuthzServiceServer) WriteSchema(context.Context, *WriteSchemaRequest) (*emptypb.Empty, error) {
+func (UnimplementedAuthzServiceServer) WriteSchema(context.Context, *WriteSchemaRequest) (*WriteSchemaResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteSchema not implemented")
 }
 func (UnimplementedAuthzServiceServer) mustEmbedUnimplementedAuthzServiceServer() {}
@@ -539,7 +538,7 @@ func _AuthzService_WriteSchema_Handler(srv interface{}, ctx context.Context, dec
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AuthzService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "aisphere.hub.authz.v1.AuthzService",
+	ServiceName: "authz.v1.AuthzService",
 	HandlerType: (*AuthzServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

@@ -7,6 +7,7 @@
 package auditv1
 
 import (
+	_ "github.com/aisphereio/kernel/api/aisphere/access/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -522,16 +523,16 @@ var File_audit_v1_audit_proto protoreflect.FileDescriptor
 
 const file_audit_v1_audit_proto_rawDesc = "" +
 	"\n" +
-	"\x14audit/v1/audit.proto\x12\x15aisphere.hub.audit.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xd7\x03\n" +
+	"\x14audit/v1/audit.proto\x12\baudit.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1faisphere/access/v1/access.proto\"\xbd\x03\n" +
 	"\vAuditRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
 	"\x04time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x04time\x12\x16\n" +
 	"\x06action\x18\x03 \x01(\tR\x06action\x12\x16\n" +
 	"\x06result\x18\x04 \x01(\tR\x06result\x12\x1a\n" +
 	"\bseverity\x18\x05 \x01(\tR\bseverity\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reason\x127\n" +
-	"\x05actor\x18\a \x01(\v2!.aisphere.hub.audit.v1.AuditActorR\x05actor\x12@\n" +
-	"\bresource\x18\b \x01(\v2$.aisphere.hub.audit.v1.AuditResourceR\bresource\x12\x1d\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\x12*\n" +
+	"\x05actor\x18\a \x01(\v2\x14.audit.v1.AuditActorR\x05actor\x123\n" +
+	"\bresource\x18\b \x01(\v2\x17.audit.v1.AuditResourceR\bresource\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\t \x01(\tR\trequestId\x12\x19\n" +
 	"\btrace_id\x18\n" +
@@ -574,12 +575,12 @@ const file_audit_v1_audit_proto_rawDesc = "" +
 	"\x04from\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\x04from\x12*\n" +
 	"\x02to\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\x02to\x12\x14\n" +
-	"\x05limit\x18\f \x01(\x05R\x05limit\"o\n" +
-	"\x19QueryAuditRecordsResponse\x12<\n" +
-	"\arecords\x18\x01 \x03(\v2\".aisphere.hub.audit.v1.AuditRecordR\arecords\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total2\xa2\x01\n" +
-	"\fAuditService\x12\x91\x01\n" +
-	"\x11QueryAuditRecords\x12/.aisphere.hub.audit.v1.QueryAuditRecordsRequest\x1a0.aisphere.hub.audit.v1.QueryAuditRecordsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/audit/recordsB9Z7github.com/aisphereio/aisphere-hub/api/audit/v1;auditv1b\x06proto3"
+	"\x05limit\x18\f \x01(\x05R\x05limit\"b\n" +
+	"\x19QueryAuditRecordsResponse\x12/\n" +
+	"\arecords\x18\x01 \x03(\v2\x15.audit.v1.AuditRecordR\arecords\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total2\xaf\x01\n" +
+	"\fAuditService\x12\x9e\x01\n" +
+	"\x11QueryAuditRecords\x12\".audit.v1.QueryAuditRecordsRequest\x1a#.audit.v1.QueryAuditRecordsResponse\"@\x92\xf4\x18#\b\x02\x1a\x1f\b\x01\x12\x13audit.records.query\x1a\x06medium\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/audit/recordsB9Z7github.com/aisphereio/aisphere-hub/api/audit/v1;auditv1b\x06proto3"
 
 var (
 	file_audit_v1_audit_proto_rawDescOnce sync.Once
@@ -595,24 +596,24 @@ func file_audit_v1_audit_proto_rawDescGZIP() []byte {
 
 var file_audit_v1_audit_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_audit_v1_audit_proto_goTypes = []any{
-	(*AuditRecord)(nil),               // 0: aisphere.hub.audit.v1.AuditRecord
-	(*AuditActor)(nil),                // 1: aisphere.hub.audit.v1.AuditActor
-	(*AuditResource)(nil),             // 2: aisphere.hub.audit.v1.AuditResource
-	(*QueryAuditRecordsRequest)(nil),  // 3: aisphere.hub.audit.v1.QueryAuditRecordsRequest
-	(*QueryAuditRecordsResponse)(nil), // 4: aisphere.hub.audit.v1.QueryAuditRecordsResponse
+	(*AuditRecord)(nil),               // 0: audit.v1.AuditRecord
+	(*AuditActor)(nil),                // 1: audit.v1.AuditActor
+	(*AuditResource)(nil),             // 2: audit.v1.AuditResource
+	(*QueryAuditRecordsRequest)(nil),  // 3: audit.v1.QueryAuditRecordsRequest
+	(*QueryAuditRecordsResponse)(nil), // 4: audit.v1.QueryAuditRecordsResponse
 	(*timestamppb.Timestamp)(nil),     // 5: google.protobuf.Timestamp
 	(*structpb.Struct)(nil),           // 6: google.protobuf.Struct
 }
 var file_audit_v1_audit_proto_depIdxs = []int32{
-	5, // 0: aisphere.hub.audit.v1.AuditRecord.time:type_name -> google.protobuf.Timestamp
-	1, // 1: aisphere.hub.audit.v1.AuditRecord.actor:type_name -> aisphere.hub.audit.v1.AuditActor
-	2, // 2: aisphere.hub.audit.v1.AuditRecord.resource:type_name -> aisphere.hub.audit.v1.AuditResource
-	6, // 3: aisphere.hub.audit.v1.AuditRecord.metadata:type_name -> google.protobuf.Struct
-	5, // 4: aisphere.hub.audit.v1.QueryAuditRecordsRequest.from:type_name -> google.protobuf.Timestamp
-	5, // 5: aisphere.hub.audit.v1.QueryAuditRecordsRequest.to:type_name -> google.protobuf.Timestamp
-	0, // 6: aisphere.hub.audit.v1.QueryAuditRecordsResponse.records:type_name -> aisphere.hub.audit.v1.AuditRecord
-	3, // 7: aisphere.hub.audit.v1.AuditService.QueryAuditRecords:input_type -> aisphere.hub.audit.v1.QueryAuditRecordsRequest
-	4, // 8: aisphere.hub.audit.v1.AuditService.QueryAuditRecords:output_type -> aisphere.hub.audit.v1.QueryAuditRecordsResponse
+	5, // 0: audit.v1.AuditRecord.time:type_name -> google.protobuf.Timestamp
+	1, // 1: audit.v1.AuditRecord.actor:type_name -> audit.v1.AuditActor
+	2, // 2: audit.v1.AuditRecord.resource:type_name -> audit.v1.AuditResource
+	6, // 3: audit.v1.AuditRecord.metadata:type_name -> google.protobuf.Struct
+	5, // 4: audit.v1.QueryAuditRecordsRequest.from:type_name -> google.protobuf.Timestamp
+	5, // 5: audit.v1.QueryAuditRecordsRequest.to:type_name -> google.protobuf.Timestamp
+	0, // 6: audit.v1.QueryAuditRecordsResponse.records:type_name -> audit.v1.AuditRecord
+	3, // 7: audit.v1.AuditService.QueryAuditRecords:input_type -> audit.v1.QueryAuditRecordsRequest
+	4, // 8: audit.v1.AuditService.QueryAuditRecords:output_type -> audit.v1.QueryAuditRecordsResponse
 	8, // [8:9] is the sub-list for method output_type
 	7, // [7:8] is the sub-list for method input_type
 	7, // [7:7] is the sub-list for extension type_name
