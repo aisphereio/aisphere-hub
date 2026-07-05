@@ -23,7 +23,7 @@ import (
 // The 302 redirect routes (/v1/authn/login, /v1/authn/logout) are
 // HTTP-only by design (gRPC clients are SPAs/SDKs that should consume
 // the JSON RPCs directly), so they do not have gRPC equivalents.
-func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *kgrpc.Server {
+func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *kgrpc.Server {
 	var opts []kgrpc.ServerOption
 	if c.GRPC.Addr != "" {
 		opts = append(opts, kgrpc.Address(c.GRPC.Addr))
@@ -38,11 +38,9 @@ func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resource
 		opts = append(opts, kgrpc.Metrics(resources.Metrics))
 	}
 	opts = append(opts, kgrpc.AccessLog(accessLog))
-	if unaryAuthn := newAuthnUnaryInterceptor(resources); unaryAuthn != nil {
-		opts = append(opts, kgrpc.UnaryInterceptor(unaryAuthn))
-	}
-	if streamAuthn := newAuthnStreamInterceptor(resources); streamAuthn != nil {
-		opts = append(opts, kgrpc.StreamInterceptor(streamAuthn))
+	if m := hubServerMiddlewares(resources, securityCfg); len(m) > 0 {
+		opts = append(opts, kgrpc.Middleware(m...))
+		opts = append(opts, kgrpc.StreamMiddleware(m...))
 	}
 	srv := kgrpc.NewServer(opts...)
 	if authnSvc != nil {

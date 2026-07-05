@@ -68,15 +68,16 @@ func TestAuthnRepoLoginURLPreservesExplicitScope(t *testing.T) {
 }
 
 func TestAuthnRepoLogoutURLBuildsFromCasdoorConfig(t *testing.T) {
-	repo := NewAuthnRepo(&Resources{}, conf.AuthnConfig{
-		Provider: "casdoor",
-		Casdoor:  casdoorConfigForTest(),
-	})
+	client, err := casdoor.New(casdoorConfigForTest())
+	if err != nil {
+		t.Fatalf("casdoor.New: %v", err)
+	}
+	repo := NewAuthnRepo(&Resources{LogoutService: client}, conf.AuthnConfig{})
 
 	rawURL, err := repo.LogoutURL(context.Background(), biz.AuthnLogoutURLRequest{
 		PostLogoutRedirectURI: "http://localhost:3000/login",
 		IDTokenHint:           "id-token",
-		State:                 "aisphere",
+		State:                 "app-test",
 	})
 	if err != nil {
 		t.Fatalf("LogoutURL returned error: %v", err)
@@ -86,8 +87,8 @@ func TestAuthnRepoLogoutURLBuildsFromCasdoorConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse logout URL: %v", err)
 	}
-	if parsed.Scheme+"://"+parsed.Host+parsed.Path != "http://casdoor.example/login/oauth/logout" {
-		t.Fatalf("logout endpoint = %s, want http://casdoor.example/login/oauth/logout", parsed.Scheme+"://"+parsed.Host+parsed.Path)
+	if parsed.Scheme+"://"+parsed.Host+parsed.Path != "http://casdoor.example/api/logout" {
+		t.Fatalf("logout endpoint = %s, want http://casdoor.example/api/logout", parsed.Scheme+"://"+parsed.Host+parsed.Path)
 	}
 	q := parsed.Query()
 	if q.Get("client_id") != "client-id" {
@@ -99,7 +100,7 @@ func TestAuthnRepoLogoutURLBuildsFromCasdoorConfig(t *testing.T) {
 	if q.Get("id_token_hint") != "id-token" {
 		t.Fatalf("id_token_hint = %q", q.Get("id_token_hint"))
 	}
-	if q.Get("state") != "aisphere" {
+	if q.Get("state") != "app-test" {
 		t.Fatalf("state = %q", q.Get("state"))
 	}
 }

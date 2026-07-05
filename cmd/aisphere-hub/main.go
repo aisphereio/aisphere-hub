@@ -107,8 +107,8 @@ func main() {
 		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
 	}
 
-	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, authnService, authzService, auditService, skillService)
-	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, authnService, authzService, auditService, skillService)
+	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService)
+	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService)
 
 	opts := []kernel.Option{
 		kernel.Name(bc.Service.Name),

@@ -49,7 +49,7 @@ data:
     config:
       auto_create_database: true
       driver: postgres
-      dsn: "${POSTGRES_DSN}"
+      dsn: "postgres://postgres:ChangeMe_PostgreSQL_123@36.137.200.194:30080/aisphere_hub?sslmode=disable"
       max_open_conns: 20
       max_idle_conns: 10
       conn_max_lifetime_ns: 1800000000000
@@ -72,7 +72,7 @@ data:
       driver: redis
       addrs: [36.137.200.194:30085]
       username: ""
-      password: "${REDIS_PASSWORD}"
+      password: "Redis@Passw0rd"
       db: 0
       key_prefix: aisphere-hub
       dial_timeout_ns: 5000000000
@@ -83,11 +83,11 @@ data:
     enabled: true
     config:
       driver: minio
-      endpoint: "${MINIO_ENDPOINT}"
+      endpoint: "36.137.200.194:30089"
       use_ssl: false
-      access_key: "${MINIO_ACCESS_KEY}"
-      secret_key: "${MINIO_SECRET_KEY}"
-      bucket: "${MINIO_BUCKET}"
+      access_key: "minioadmin"
+      secret_key: "minioadmin@123"
+      bucket: "aisphere-hub"
       ensure_bucket: true
       presign_expiry_ns: 900000000000
       metrics_enabled: true
@@ -96,24 +96,62 @@ security:
   authn:
     enabled: true
     provider: casdoor
+    mode: gateway_trusted
+    cache_ttl_ns: 300000000000
+    oidc:
+      provider: casdoor
+      issuer: http://36.137.200.194:30082
+      discovery_url: http://36.137.200.194:30082/.well-known/openid-configuration
+      jwks_url: http://36.137.200.194:30082/.well-known/jwks
+      audience: [bbdcfc272e2b990cb923]
+      allowed_owners: [aisphere]
+      allowed_algs: [RS256, RS512, ES256, ES512]
+      jwks_cache_ttl_ns: 600000000000
+      clock_skew_ns: 60000000000
     casdoor:
       endpoint: http://36.137.200.194:30082
       organization_name: aisphere
       application_name: aisphere
       client_id: bbdcfc272e2b990cb923
-      client_secret: "${CASDOOR_CLIENT_SECRET}"
+      client_secret: "c4d351406d40251b267624328e50e8a1f7352a65"
       jwt_certificate_file: ../aisphere-iam/configs/casdoor.pub
       timeout: 10000000000
       metrics_enabled: true
       admin:
         enabled: false
+  internal_call:
+    enabled: true
+    header: X-Aisphere-Internal-Token
+    token: "aisphere-internal-token-2026"
+  access:
+    # Public operations bypass authn/authz but are still audited by accessx.
+    # All other operations are authenticated here; fine-grained authz remains
+    # in the Hub biz layer.
+    public_operations:
+      - /healthz
+      - /readyz
+      - /internal/dtm/*
+      - /v1/authn/login*
+      - /v1/authn/logout*
+      - /v1/authn/exchange
+      - /v1/authn/refresh
+      - /v1/authn/revoke
+      - /v1/authn/introspect
+      - /aisphere.hub.authn.v1.AuthnService/LoginURL
+      - /aisphere.hub.authn.v1.AuthnService/Exchange
+      - /aisphere.hub.authn.v1.AuthnService/Refresh
+      - /aisphere.hub.authn.v1.AuthnService/LogoutURL
+      - /aisphere.hub.authn.v1.AuthnService/Revoke
+      - /aisphere.hub.authn.v1.AuthnService/Introspect
+      - /grpc.health.v1.Health/*
+    skip_operations: []
   authz:
     enabled: true
     provider: spicedb
     dev_allow_all: false
     spicedb:
       endpoint: 36.137.200.194:30084
-      token: "${SPICEDB_TOKEN}"
+      token: "keykeykey"
       transport: grpc
       insecure: true
       timeout: 5000000000

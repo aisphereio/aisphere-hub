@@ -3,7 +3,10 @@ package conf
 import (
 	"time"
 
+	"github.com/aisphereio/kernel/accessx"
+	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authn/casdoor"
+	"github.com/aisphereio/kernel/authn/oidcx"
 	"github.com/aisphereio/kernel/authz/spicedb"
 	"github.com/aisphereio/kernel/cachex"
 	"github.com/aisphereio/kernel/dbx"
@@ -81,14 +84,19 @@ type ObjectStoreConfig struct {
 }
 
 type SecurityConfig struct {
-	Authn AuthnConfig `json:"authn" yaml:"authn"`
-	Authz AuthzConfig `json:"authz" yaml:"authz"`
+	Authn        AuthnConfig                      `json:"authn" yaml:"authn"`
+	Authz        AuthzConfig                      `json:"authz" yaml:"authz"`
+	Access       accessx.AccessConfig             `json:"access" yaml:"access"`
+	InternalCall authn.InternalServiceTokenConfig `json:"internal_call" yaml:"internal_call"`
 }
 
 type AuthnConfig struct {
 	Enabled  bool           `json:"enabled" yaml:"enabled"`
 	Provider string         `json:"provider" yaml:"provider"`
+	Mode     string         `json:"mode" yaml:"mode"` // casdoor_jwt or gateway_trusted
+	OIDC     oidcx.Config   `json:"oidc" yaml:"oidc"`
 	Casdoor  casdoor.Config `json:"casdoor" yaml:"casdoor"`
+	CacheTTL time.Duration  `json:"cache_ttl_ns" yaml:"cache_ttl_ns"`
 }
 
 type AuthzConfig struct {

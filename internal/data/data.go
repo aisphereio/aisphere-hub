@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/aisphereio/aisphere-hub/internal/conf"
@@ -11,6 +12,7 @@ import (
 	"github.com/aisphereio/kernel/auditx"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authn/casdoor"
+	"github.com/aisphereio/kernel/authn/oidcx"
 	"github.com/aisphereio/kernel/authz"
 	"github.com/aisphereio/kernel/authz/spicedb"
 	"github.com/aisphereio/kernel/cachex"
@@ -63,6 +65,10 @@ type Resources struct {
 	// login URL construction is cheap and includes a per-request state
 	// parameter that should NOT be cached.
 	LoginService authn.LoginService
+	// LogoutService builds IdP logout (end-session) URLs. Always the raw
+	// casdoor.Client — logout URL construction is cheap and includes
+	// per-request state that should NOT be cached.
+	LogoutService authn.LogoutService
 	// TokenService exchanges codes, refreshes tokens, verifies tokens, and
 	// revokes tokens. When Cache is configured this is wrapped by
 	// authn.CachedClient so VerifyToken hits the cache; ExchangeCode and
@@ -211,48 +217,56 @@ func NewResources(ctx context.Context, cfg conf.Bootstrap) (*Resources, func(), 
 	}
 	r.SkillConfig = cfg.Skill
 
-	observability.ComponentConfigured(metrics, "authn", cfg.Security.Authn.Enabled)
-	if cfg.Security.Authn.Enabled {
-		start := time.Now()
-		authnCfg := cfg.Security.Authn
-		authnCfg.Casdoor.Logger = logger.Named("authn.casdoor")
-		authnCfg.Casdoor.Metrics = metrics
-		authnCfg.Casdoor.MetricsEnabled = cfg.Metrics.Enabled || authnCfg.Casdoor.MetricsEnabled
-		authenticator, err := newAuthenticator(authnCfg)
-		observability.ComponentInit(ctx, metrics, "authn", start, err)
-		if err != nil {
-			logger.Error("authn init failed", logx.Err(err))
-			r.Close()
-			return nil, nil, err
-		}
-		logger.Info("authn initialized", logx.String("provider", authnCfg.Provider))
-		r.Authn = authenticator
-		// Preserve a typed reference to the Casdoor client so business layers
-		// can call LoginService / TokenService methods without re-constructing
-		// the SDK client. The data layer still goes through the kernel
-		// authn.Authenticator interface for token verification so that
-		// middleware and access checks remain provider-neutral.
-		if client, ok := authenticator.(*casdoor.Client); ok {
-			r.Casdoor = client
-			// LoginService is always the raw client (cheap, per-request state).
-			r.LoginService = client
-			// TokenService is wrapped with CachedClient when cache is available,
-			// so VerifyToken (high-frequency, called on every authenticated
-			// request via middleware) hits the cache. ExchangeCode / RefreshToken
-			// are one-shot and bypass the cache; RevokeToken invalidates the
-			// cache entry on success.
+observability.ComponentConfigured(metrics, "authn", cfg.Security.Authn.Enabled)
+		if cfg.Security.Authn.Enabled {
+			start := time.Now()
+			authnCfg := cfg.Security.Authn
+			authnCfg.Casdoor.Logger = logger.Named("authn.casdoor")
+			authnCfg.Casdoor.Metrics = metrics
+			authnCfg.Casdoor.MetricsEnabled = cfg.Metrics.Enabled || authnCfg.Casdoor.MetricsEnabled
+
+			// Always create the Casdoor client for login/logout/token operations.
+			casdoorClient, err := casdoor.New(authnCfg.Casdoor)
+			if err != nil {
+				logger.Error("authn casdoor client init failed", logx.Err(err))
+				r.Close()
+				return nil, nil, err
+			}
+			r.Casdoor = casdoorClient
+			r.LoginService = casdoorClient
+			r.LogoutService = casdoorClient
+
+			// Create the authenticator based on mode.
+			authenticator, err := newAuthenticator(authnCfg, logger)
+			if err != nil {
+				logger.Error("authn authenticator init failed", logx.Err(err))
+				r.Close()
+				return nil, nil, err
+			}
+			observability.ComponentInit(ctx, metrics, "authn", start, err)
+			if err != nil {
+				logger.Error("authn init failed", logx.Err(err))
+				r.Close()
+				return nil, nil, err
+			}
+			logger.Info("authn initialized",
+				logx.String("provider", authnCfg.Provider),
+				logx.String("mode", authnCfg.Mode),
+			)
+			r.Authn = authenticator
+
+			// TokenService is wrapped with CachedClient when cache is available.
 			if r.Cache != nil {
-				cached := authn.NewCachedClient(client, client, r.Cache)
+				cached := authn.NewCachedClient(casdoorClient, casdoorClient, casdoorClient, r.Cache)
 				r.TokenService = cached
 				r.CachedTokenService = cached
 				// Also wrap r.Authn so middleware-driven Authenticate calls go
 				// through the same cache as explicit VerifyToken calls.
 				r.Authn = cached
 			} else {
-				r.TokenService = client
+				r.TokenService = casdoorClient
 			}
 		}
-	}
 
 	observability.ComponentConfigured(metrics, "authz", cfg.Security.Authz.Enabled && !cfg.Security.Authz.DevAllowAll)
 	if cfg.Security.Authz.Enabled && !cfg.Security.Authz.DevAllowAll {
@@ -291,12 +305,55 @@ func NewData(resources *Resources) *Data {
 	return &Data{Resources: resources}
 }
 
-func newAuthenticator(cfg conf.AuthnConfig) (authn.Authenticator, error) {
-	switch cfg.Provider {
-	case "", "casdoor":
-		return casdoor.New(cfg.Casdoor)
+func newAuthenticator(cfg conf.AuthnConfig, logger logx.Logger) (authn.Authenticator, error) {
+	// Mode-based authenticator selection.
+	switch strings.ToLower(strings.TrimSpace(cfg.Mode)) {
+	case "gateway_trusted":
+		return authn.TrustedHeaderAuthenticator{}, nil
+	case "", "casdoor_jwt", "jwt_verify":
+		// Use OIDC/JWKS verifier for local JWT validation.
+		oidcCfg := oidcConfigFromAuthn(cfg)
+		oidcCfg.Logger = logger.Named("authn.oidc")
+		return oidcx.New(oidcCfg)
 	default:
-		return nil, errorx.BadRequest(errorx.Code("AUTHN_UNSUPPORTED_PROVIDER"), "unsupported authn provider: "+cfg.Provider)
+		// Fallback to provider-based authenticator.
+		switch cfg.Provider {
+		case "", "casdoor":
+			return casdoor.New(cfg.Casdoor)
+		default:
+			return nil, errorx.BadRequest(errorx.Code("AUTHN_UNSUPPORTED_PROVIDER"), "unsupported authn provider: "+cfg.Provider)
+		}
+	}
+}
+
+// oidcConfigFromAuthn builds an oidcx.Config from the authn config.
+func oidcConfigFromAuthn(cfg conf.AuthnConfig) oidcx.Config {
+	if cfg.OIDC.DiscoveryURL != "" || cfg.OIDC.JWKSURL != "" || cfg.OIDC.Issuer != "" {
+		oidc := cfg.OIDC.Normalized()
+		if oidc.Provider == "" || oidc.Provider == "oidc" {
+			oidc.Provider = "casdoor"
+		}
+		return oidc
+	}
+	c := cfg.Casdoor.Normalized()
+	return oidcx.Config{
+		Provider:       "casdoor",
+		Issuer:         c.Issuer,
+		DiscoveryURL:   c.DiscoveryURL,
+		JWKSURL:        c.JWKSURL,
+		Audience:       c.Audience,
+		AllowedAlgs:    c.AllowedAlgs,
+		AllowedOwners:  c.AllowedOwners,
+		JWKSCacheTTL:   c.JWKSCacheTTL,
+		ClockSkew:      60 * time.Second,
+		SubjectIDClaim: "sub",
+		UsernameClaim:  "name",
+		NameClaim:      "displayName",
+		EmailClaim:     "email",
+		OwnerClaim:     "owner",
+		GroupsClaim:    "groups",
+		RolesClaim:     "roles",
+		ScopesClaim:    "scope",
 	}
 }
 

@@ -3,10 +3,8 @@ package server
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
-	authnv1 "github.com/aisphereio/aisphere-hub/api/authn/v1"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
 	"github.com/aisphereio/aisphere-hub/internal/service"
@@ -36,11 +34,11 @@ import (
 //  4. A second authz round-trip per request would double SpiceDB load
 //     for no security gain.
 //
-// Authn strategy: when security.authn is enabled, the transport-level
-// authn filter verifies Bearer tokens on non-public routes and injects
-// authn.Principal into ctx. When authn is disabled, no filter is mounted
-// and principalFromContext returns Anonymous so dev mode remains usable.
-func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *khttp.Server {
+// Authn strategy: securityx builds the authn runtime from security.authn and
+// serverx/autowire mounts the standard authn middleware before access. Public
+// routes are configured through security.access.public_operations instead of a
+// Hub-specific authn filter.
+func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *khttp.Server {
 	addr := cfg.HTTP.Addr
 	if addr == "" {
 		addr = "0.0.0.0:8000"
@@ -68,17 +66,11 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 		opts = append(opts, khttp.Metrics(resources.Metrics))
 	}
 	opts = append(opts, khttp.AccessLog(accessLog))
-	// Register the authn filter BEFORE any routes are mounted. The filter
-	// verifies Bearer tokens on all non-public paths and injects
-	// authn.Principal into the request context, so service handlers can
-	// call authn.PrincipalFromContext(ctx) instead of each handler
-	// re-implementing Authorization header parsing.
-	//
-	// When authn is disabled (resources.Authn == nil), newAuthnFilter
-	// returns nil and no filter is registered — dev mode stays usable
-	// without a Casdoor backend.
-	if authnFilter := newAuthnFilter(resources); authnFilter != nil {
-		opts = append(opts, khttp.Filter(authnFilter))
+	// Register the unified Kernel security chain BEFORE any routes are mounted.
+	// securityx builds the authn runtime and access skip policy from config;
+	// serverx/autowire owns the actual middleware order.
+	if m := hubServerMiddlewares(resources, securityCfg); len(m) > 0 {
+		opts = append(opts, khttp.Middleware(m...))
 	}
 	srv := khttp.NewServer(opts...)
 	// Register each service that is enabled. Services may be nil when
@@ -166,36 +158,6 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	})
 	return srv
 }
-
-// isAuthnPublicPath reports whether the given path should skip authn
-// middleware. Public authn paths are the login/logout/exchange/refresh
-// endpoints (both the JSON RPCs and the 302 redirect routes), plus the
-// health/readiness probes.
-//
-// Used by the authn middleware selector in app.NewApp; kept in the server
-// package so the path list lives next to the route registration.
-func isAuthnPublicPath(path string) bool {
-	switch {
-	case path == "/healthz" || path == "/readyz":
-		return true
-	case strings.HasPrefix(path, "/internal/dtm/"):
-		return true
-	case strings.HasPrefix(path, "/v1/authn/login"),
-		strings.HasPrefix(path, "/v1/authn/logout"),
-		strings.HasPrefix(path, "/v1/authn/exchange"),
-		strings.HasPrefix(path, "/v1/authn/refresh"),
-		strings.HasPrefix(path, "/v1/authn/revoke"),
-		strings.HasPrefix(path, "/v1/authn/introspect"),
-		strings.HasPrefix(path, "/v1/authn/login-url"),
-		strings.HasPrefix(path, "/v1/authn/logout-url"):
-		return true
-	}
-	return false
-}
-
-// Compile-time reference to ensure authnv1 stays imported even if the
-// generated HTTP server registration moves into a separate file later.
-var _ = authnv1.RegisterAuthnServiceHTTPServer
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")

@@ -1,17 +1,12 @@
 // Package data authn module — Casdoor OAuth adapter through kernel authn.
 //
 // This file implements biz.AuthnRepo. It bridges hub's authn usecase to the
-// kernel authn contracts (Authenticator, LoginService, TokenService) provided
-// by github.com/aisphereio/kernel/authn/casdoor.
+// kernel authn contracts (Authenticator, LoginService, LogoutService,
+// TokenService) provided by github.com/aisphereio/kernel/authn/casdoor.
 //
-// Two kernel-side/runtime gaps are handled here so the biz layer stays clean:
+// One kernel-side/runtime gap is handled here so the biz layer stays clean:
 //
-//  1. Revoke: kernel/authn/casdoor/token.go:RevokeToken may return
-//     ErrIdentityBackendFailed("casdoor sdk does not expose token
-//     revocation"). We surface this as IDPRevoked=false instead of an error
-//     so the biz layer can fall back to local blacklist enforcement.
-//
-//  2. Session blacklist: kernel authn does not maintain a hub-local token
+//  1. Session blacklist: kernel authn does not maintain a hub-local token
 //     blacklist. We use cachex.Cache when available; otherwise we fall back
 //     to an in-memory sync.Map. The blacklist stores the SHA-256 hash of the
 //     token (not the token itself) with TTL = token exp - now, so the entry
@@ -27,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -37,7 +31,6 @@ import (
 	"github.com/aisphereio/aisphere-hub/internal/observability"
 
 	"github.com/aisphereio/kernel/authn"
-	"github.com/aisphereio/kernel/authn/casdoor"
 	"github.com/aisphereio/kernel/cachex"
 	"github.com/aisphereio/kernel/errorx"
 	"github.com/aisphereio/kernel/logx"
@@ -55,9 +48,9 @@ const defaultLoginScope = "openid profile email"
 
 // NewAuthnRepo creates a new biz.AuthnRepo backed by kernel authn + Casdoor.
 //
-// cfg is the hub authn config; it is used to build logout URLs and to look
-// up the configured Casdoor endpoint. Pass resources so the repo can reach
-// the kernel Casdoor client and the cache for the local blacklist.
+// cfg is the hub authn config; it is used to look up the configured Casdoor
+// endpoint. Pass resources so the repo can reach the kernel Casdoor client
+// and the cache for the local blacklist.
 func NewAuthnRepo(resources *Resources, cfg conf.AuthnConfig) biz.AuthnRepo {
 	return &authnRepo{resources: resources, cfg: cfg}
 }
@@ -159,42 +152,31 @@ func (r *authnRepo) Refresh(ctx context.Context, req biz.AuthnRefreshRequest) (o
 	return authTokenFromKernel(tokenSet), nil
 }
 
-// LogoutURL builds the IdP logout URL from Hub's Casdoor configuration.
-func (r *authnRepo) LogoutURL(ctx context.Context, req biz.AuthnLogoutURLRequest) (out string, err error) {
-	ctx, logger, started := observability.Begin(ctx, r.logger(), "authn.repo", "logout_url", logx.Bool("has_state", req.State != ""), logx.Bool("has_id_token_hint", req.IDTokenHint != ""))
-	defer func() { observability.End(ctx, logger, r.metrics(), "authn.repo", "logout_url", started, err) }()
-	return r.fallbackCasdoorLogoutURL(req)
-}
-
-func (r *authnRepo) fallbackCasdoorLogoutURL(req biz.AuthnLogoutURLRequest) (string, error) {
-	cfg, err := r.casdoorConfig()
-	if err != nil {
-		return "", err
+// LogoutURL builds the IdP logout (end-session) URL through kernel
+	// authn.LogoutService.
+	//
+	// Always uses the raw casdoor.Client (Resources.LogoutService), never the
+	// cached wrapper — logout URL construction is cheap and includes per-request
+	// state that should NOT be cached.
+	func (r *authnRepo) LogoutURL(ctx context.Context, req biz.AuthnLogoutURLRequest) (out string, err error) {
+		ctx, logger, started := observability.Begin(ctx, r.logger(), "authn.repo", "logout_url", logx.Bool("has_state", req.State != ""), logx.Bool("has_id_token_hint", req.IDTokenHint != ""))
+		defer func() { observability.End(ctx, logger, r.metrics(), "authn.repo", "logout_url", started, err) }()
+		svc, err := r.logoutService()
+		if err != nil {
+			return "", err
+		}
+		logoutURL, err := svc.BuildLogoutURL(ctx, authn.LogoutURLRequest{
+			PostLogoutRedirectURI: req.PostLogoutRedirectURI,
+			IDTokenHint:           req.IDTokenHint,
+			State:                 req.State,
+			OrgID:                 req.OrgID,
+			AppID:                 req.AppID,
+		})
+		if err != nil {
+			return "", err
+		}
+		return logoutURL.URL, nil
 	}
-	endpoint := strings.TrimRight(strings.TrimSpace(cfg.Endpoint), "/")
-	if endpoint == "" {
-		return "", errorx.Unavailable(errorx.Code("AUTHN_CASDOOR_ENDPOINT_NOT_CONFIGURED"), "casdoor endpoint is not configured")
-	}
-	q := url.Values{}
-	q.Set("client_id", cfg.ClientID)
-	if req.PostLogoutRedirectURI != "" {
-		q.Set("post_logout_redirect_uri", req.PostLogoutRedirectURI)
-		q.Set("logout_uri", req.PostLogoutRedirectURI)
-	}
-	if req.IDTokenHint != "" {
-		q.Set("id_token_hint", req.IDTokenHint)
-	}
-	if req.State != "" {
-		q.Set("state", req.State)
-	}
-	if cfg.OrganizationName != "" {
-		q.Set("organization", cfg.OrganizationName)
-	}
-	if cfg.ApplicationName != "" {
-		q.Set("application", cfg.ApplicationName)
-	}
-	return endpoint + "/login/oauth/logout?" + q.Encode(), nil
-}
 
 // Revoke attempts to revoke a token at the IdP through kernel authn.TokenService.
 //
@@ -377,15 +359,11 @@ func (r *authnRepo) tokenService() (authn.TokenService, error) {
 	return r.resources.TokenService, nil
 }
 
-func (r *authnRepo) casdoorConfig() (casdoor.Config, error) {
-	if r.cfg.Provider != "" && r.cfg.Provider != "casdoor" {
-		return casdoor.Config{}, errorx.BadRequest(errorx.Code("AUTHN_UNSUPPORTED_PROVIDER"), fmt.Sprintf("authn provider %q does not support logout URL", r.cfg.Provider))
+func (r *authnRepo) logoutService() (authn.LogoutService, error) {
+	if r.resources == nil || r.resources.LogoutService == nil {
+		return nil, errorx.Unavailable(errorx.Code("AUTHN_LOGOUT_SERVICE_NOT_CONFIGURED"), "casdoor logout service is not configured; enable security.authn and set provider=casdoor")
 	}
-	cfg := r.cfg.Casdoor.Normalized()
-	if cfg.Endpoint == "" {
-		return casdoor.Config{}, errorx.Unavailable(errorx.Code("AUTHN_CASDOOR_ENDPOINT_NOT_CONFIGURED"), "casdoor endpoint is not configured")
-	}
-	return cfg, nil
+	return r.resources.LogoutService, nil
 }
 
 func authTokenFromKernel(t authn.TokenSet) *biz.AuthnToken {
