@@ -117,8 +117,6 @@ security:
       jwt_certificate_file: ../aisphere-iam/configs/casdoor.pub
       timeout: 10000000000
       metrics_enabled: true
-      admin:
-        enabled: false
   internal_call:
     enabled: true
     header: X-Aisphere-Internal-Token
