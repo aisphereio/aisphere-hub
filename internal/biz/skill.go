@@ -1113,7 +1113,7 @@ func (uc *SkillUsecase) requireSkillRead(ctx context.Context, principal authn.Pr
 	ok, err := uc.authz.Can(ctx, AuthzCheckRequest{
 		Subject:    AuthzSubjectRef{Type: "user", ID: principal.SubjectID},
 		Resource:   AuthzObjectRef{Type: "skill", ID: name},
-		Permission: "read",
+		Permission: "view",
 		OrgID:      principal.OrgID,
 	})
 	if err != nil {
@@ -1162,7 +1162,7 @@ func (uc *SkillUsecase) canReadSkill(ctx context.Context, principal authn.Princi
 		ok, _ := uc.authz.Can(ctx, AuthzCheckRequest{
 			Subject:    AuthzSubjectRef{Type: "user", ID: principal.SubjectID},
 			Resource:   AuthzObjectRef{Type: "skill", ID: skill.Name},
-			Permission: "read",
+			Permission: "view",
 			OrgID:      principal.OrgID,
 		})
 		if ok {
@@ -1181,7 +1181,7 @@ func (uc *SkillUsecase) lookupVisibleSkills(ctx context.Context, principal authn
 	result, err := uc.authz.LookupResources(ctx, AuthzLookupResourcesRequest{
 		Subject:      AuthzSubjectRef{Type: "user", ID: principal.SubjectID},
 		ResourceType: "skill",
-		Permission:   "read",
+		Permission:   "view",
 		OrgID:        principal.OrgID,
 		Limit:        1000, // upper bound; pagination happens in the DB layer
 	})

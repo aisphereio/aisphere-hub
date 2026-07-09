@@ -91,76 +91,7 @@ const HubAuthzSchemaVersion = "1.0.0"
 // state transitions) independently of the parent skill, but currently
 // all checks go through the skill resource type for simplicity. The
 // skill_version type is defined for forward compatibility.
-const HubAuthzSchema = `definition user {}
-definition service {}
-
-definition platform {
-  relation super_admin: user | service
-  permission admin = super_admin
-}
-
-definition organization {
-  relation platform: platform
-  relation owner: user | service
-  relation admin: user | service | group#member
-  relation member: user | service | group#member
-
-  permission manage = owner + admin + platform->admin
-  permission read = owner + admin + member + platform->admin
-}
-
-definition group {
-  relation org: organization
-  relation parent: group
-  relation member: user | service | group#member
-
-  permission read = member + parent->read + org->read
-}
-
-definition application {
-  relation org: organization
-  relation owner: user | service
-  relation admin: user | service | group#member
-  relation member: user | service | group#member
-
-  permission manage = owner + admin + org->manage
-  permission read = owner + admin + member + org->read
-}
-
-definition project {
-  relation org: organization
-  relation owner: user | service
-  relation editor: user | service | group#member
-  relation viewer: user | service | group#member
-
-  permission read = viewer + editor + owner + org->read
-  permission edit = editor + owner + org->manage
-  permission delete = owner + org->manage
-}
-
-definition resource {
-  relation project: project
-  relation owner: user | service
-  relation editor: user | service | group#member
-  relation viewer: user | service | group#member
-
-  permission read = viewer + editor + owner + project->read
-  permission edit = editor + owner + project->edit
-  permission delete = owner + project->delete
-}
-
-definition skill {
-  relation owner: user | service
-  relation editor: user | service | group#member
-  relation viewer: user | service | group#member
-
-  permission read = viewer + editor + owner
-  permission edit = editor + owner
-  permission delete = owner
-  permission share = owner
-}
-
-definition skill_version {
+const HubAuthzSchema = `definition skill_version {
   relation skill: skill
   permission read = skill->read
   permission edit = skill->edit
@@ -213,10 +144,13 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 			)
 			return nil
 		}
-		log.WithContext(ctx).Warn("authz schema missing hub definitions; applying hub schema",
+		// Schema exists but is managed by another service (e.g. aisphere-iam).
+		// Skip bootstrap to avoid conflicts. The skill_version definition
+		// must be added manually or via the IAM service's schema.
+		log.WithContext(ctx).Info("authz schema exists but managed externally; skipping bootstrap",
 			logx.Int("current_size", len(schema.Text)),
-			logx.String("schema_version", HubAuthzSchemaVersion),
 		)
+		return nil
 	}
 
 	if err := resources.AuthzService.WriteSchema(ctx, authz.Schema{Text: HubAuthzSchema}); err != nil {
@@ -233,8 +167,8 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 
 func hasHubAuthzDefinitions(schema string) bool {
 	normalized := strings.ToLower(schema)
-	return strings.Contains(normalized, "definition skill ") &&
-		strings.Contains(normalized, "definition skill_version ")
+	// IAM schema already defines skill; we only need skill_version.
+	return strings.Contains(normalized, "definition skill_version ")
 }
 
 const authzRelationshipBootstrapBatchSize = 100
