@@ -6,6 +6,8 @@ import (
 	"github.com/aisphereio/kernel/authn"
 )
 
+const rootSkillCatalogScanBatchSize = 100
+
 // CreateRootSkill creates a Skill in the global Hub root catalog.
 //
 // This is the public API-facing variant of CreateSkill. It intentionally
@@ -18,29 +20,60 @@ func (uc *SkillUsecase) CreateRootSkill(ctx context.Context, principal authn.Pri
 
 // ListRootCatalogSkills lists the Skill root catalog visible to the caller.
 //
-// Unlike the older ListSkills path, this method does not rely solely on
-// authz.LookupResources. Public Skills are stored as row visibility, not as a
-// SpiceDB relationship, so the API must always apply the row-level
-// public/owner fallback when building the visible list.
+// Visibility is evaluated before the API page is finalized. Public Skills are
+// stored as row visibility rather than as SpiceDB relationships, so filtering a
+// single database page after pagination can return a sparse or empty page even
+// when later visible Skills exist. This method scans database batches until it
+// fills the requested visible page or reaches the end of the catalog.
 func (uc *SkillUsecase) ListRootCatalogSkills(ctx context.Context, principal authn.Principal, opts SkillListOptions) (*SkillListResult, error) {
 	opts = normalizeSkillListOptions(opts)
-	all, err := uc.repo.ListSkills(ctx, opts)
-	if err != nil {
-		return nil, err
-	}
 	if uc.authz == nil {
-		return all, nil
+		return uc.repo.ListSkills(ctx, opts)
 	}
-	items := make([]*Skill, 0, len(all.Items))
-	for _, item := range all.Items {
-		if uc.canReadSkill(ctx, principal, item) {
-			items = append(items, item)
+
+	requestedLimit := opts.Limit
+	scanOffset := opts.Offset
+	visible := make([]*Skill, 0, requestedLimit)
+	hasMoreSource := true
+
+	for len(visible) < requestedLimit && hasMoreSource {
+		batchLimit := rootSkillCatalogScanBatchSize
+		if batchLimit < requestedLimit {
+			batchLimit = requestedLimit
+		}
+		batchOpts := opts
+		batchOpts.Limit = batchLimit
+		batchOpts.Offset = scanOffset
+
+		batch, err := uc.repo.ListSkills(ctx, batchOpts)
+		if err != nil {
+			return nil, err
+		}
+		if batch == nil || len(batch.Items) == 0 {
+			hasMoreSource = false
+			break
+		}
+
+		for _, item := range batch.Items {
+			scanOffset++
+			if uc.canReadSkill(ctx, principal, item) {
+				visible = append(visible, item)
+				if len(visible) == requestedLimit {
+					break
+				}
+			}
+		}
+
+		hasMoreSource = batch.HasMore
+		if len(batch.Items) < batchLimit {
+			hasMoreSource = false
 		}
 	}
+
 	return &SkillListResult{
-		Items:      items,
-		NextOffset: all.NextOffset,
-		HasMore:    all.HasMore,
+		Items:      visible,
+		NextOffset: scanOffset,
+		HasMore:    hasMoreSource,
 	}, nil
 }
 
