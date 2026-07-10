@@ -1,0 +1,38 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  # Keep this name aligned with the IAM gateway package so kubectl apply
+  # updates one gateway-wide sanitization policy instead of creating two.
+  name: aisphere-sanitize-headers
+  namespace: aisphere
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: aisphere-gateway
+  headers:
+    earlyRequestHeaders:
+      remove:
+        - x-aisphere-auth-verified
+        - x-aisphere-subject
+        - x-aisphere-external-sub
+        - x-aisphere-external-id
+        - x-aisphere-external-issuer
+        - x-aisphere-external-email
+        - x-aisphere-external-name
+        - x-aisphere-external-display-name
+        - x-aisphere-external-username
+        - x-aisphere-external-phone
+        - x-aisphere-external-owner
+        - x-aisphere-external-scope
+        - x-aisphere-principal
+        - x-aisphere-user-id
+        - x-aisphere-org-id
+        - x-aisphere-project-id
+        - x-aisphere-roles
+        - x-aisphere-groups
+        - x-aisphere-scopes
+        - x-aisphere-authz-decision-id
+        - x-aisphere-internal-token
+        - x-aisphere-internal-jwt
+        - x-internal-jwt
