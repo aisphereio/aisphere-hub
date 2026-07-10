@@ -1,0 +1,82 @@
+# Hub API HTTPRoute — routes /v1/authn/*, /v1/authz/*, /v1/skills/*,
+# /v1/audit/*, /v1/users/* to aisphere-hub:18001.
+#
+# Public routes (login, exchange, refresh) are in hub-api-public-route and
+# do NOT have OIDC protection. Protected routes are in hub-api-protected-route
+# and require OIDC authentication (see hub-security-policy.yaml).
+#
+# After OIDC authentication, Envoy injects x-aisphere-* headers that the hub
+# trusts (authn mode: gateway_trusted).
+---
+# Public routes — no OIDC required
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hub-api-public-route
+  namespace: aisphere
+  labels:
+    app.kubernetes.io/name: aisphere-hub
+    app.kubernetes.io/component: gateway-route
+    aisphere.io/exposure-bucket: public
+spec:
+  parentRefs:
+    - name: aisphere-gateway
+      namespace: aisphere-system
+  hostnames:
+    - "api.weagent.cc"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1/authn/login
+        - path:
+            type: PathPrefix
+            value: /v1/authn/logout
+        - path:
+            type: PathPrefix
+            value: /v1/authn/exchange
+        - path:
+            type: PathPrefix
+            value: /v1/authn/refresh
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 18001
+---
+# Protected routes — OIDC required
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hub-api-protected-route
+  namespace: aisphere
+  labels:
+    app.kubernetes.io/name: aisphere-hub
+    app.kubernetes.io/component: gateway-route
+    aisphere.io/exposure-bucket: authenticated
+spec:
+  parentRefs:
+    - name: aisphere-gateway
+      namespace: aisphere-system
+  hostnames:
+    - "api.weagent.cc"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1/authn/
+        - path:
+            type: PathPrefix
+            value: /v1/authz/
+        - path:
+            type: PathPrefix
+            value: /v1/skills/
+        - path:
+            type: PathPrefix
+            value: /v1/audit/
+        - path:
+            type: PathPrefix
+            value: /v1/users/
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 18001

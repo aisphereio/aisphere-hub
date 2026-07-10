@@ -1,0 +1,9 @@
+.git/
+.gitignore
+*.md
+Dockerfile
+.dockerignore
+.gitkeep
+.worktrees/
+deploy/
+configs/config.local.yaml

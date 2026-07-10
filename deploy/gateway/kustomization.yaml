@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: aisphere-system
+
+resources:
+  - hub-http-route.yaml
+  - hub-grpc-route.yaml
+  - hub-security-policy.yaml
+  # - hub-front-http-route.yaml  # Uncomment when frontend is deployed
+
+commonLabels:
+  app.kubernetes.io/name: aisphere-hub
+  app.kubernetes.io/part-of: aisphere
+  app.kubernetes.io/managed-by: kustomize
