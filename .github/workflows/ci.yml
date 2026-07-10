@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'feat/**'
+  push:
+    branches:
+      - main
+      - 'feat/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hub-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Test
+        run: go test ./... -count=1 -short
+
+      - name: Build
+        run: go build ./...
+
+      - name: Render Kubernetes manifests
+        run: kubectl kustomize deploy/k8s/base > /tmp/aisphere-hub-k8s.yaml
+
+      - name: Build container image
+        run: docker build --build-arg VERSION=${{ github.sha }} -t aisphere-hub:${{ github.sha }} .
