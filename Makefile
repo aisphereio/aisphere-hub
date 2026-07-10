@@ -2,7 +2,7 @@ GO ?= go
 BUF ?= buf
 
 KERNEL_MODULE ?= github.com/aisphereio/kernel
-KERNEL_VERSION ?= v0.2.2
+KERNEL_VERSION ?= v0.4.1
 KERNEL_LOCAL ?= ../kernel
 
 APP_NAME ?= aisphere-hub
