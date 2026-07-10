@@ -16,7 +16,7 @@ The Hub should not become a second IAM. Platform login, token verification, dire
 
 ## Current status
 
-- Uses `github.com/aisphereio/kernel v0.2.2`.
+- Uses `github.com/aisphereio/kernel v0.4.1`.
 - Uses Kernel code generation tools through `make tools`.
 - `buf.gen.yaml` includes `protoc-gen-go-authz`, `protoc-gen-go-gateway`, and `protoc-gen-go-kernel`.
 - Kernel access proto definitions are vendored under `api/aisphere/...` so Hub protos can declare `aisphere.access.v1.policy`.
@@ -109,6 +109,17 @@ Related design notes:
 - `docs/ai/skill-draft-workspace-dtm.md`
 - `docs/ai/skill-directory-first-storage.md`
 - `docs/ai/root-skill-iam-share.md`
+
+## Kubernetes deployment
+
+Hub is deployed as two images:
+
+- `aisphere-hub`: HTTP `18001`, gRPC `19001`, metrics `19090`.
+- `aisphere-hub-frontend`: Next.js standalone server on `3000`.
+
+The test deployment package includes the Deployments, Services, `HTTPRoute`,
+`GRPCRoute`, Envoy Gateway `SecurityPolicy`, Casdoor OIDC setup, ACR Actions
+configuration, and validation commands. See `deploy/k8s/README.md`.
 
 ## Generate
 
