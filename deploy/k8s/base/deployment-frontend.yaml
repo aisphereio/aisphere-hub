@@ -35,7 +35,7 @@ spec:
           emptyDir: {}
       containers:
         - name: frontend
-          image: registry.cn-beijing.aliyuncs.com/ainfracn/aisphere-hub-frontend:feat-root-skill-iam-share
+          image: registry.cn-beijing.aliyuncs.com/ainfracn/aisphere-hub-front:feat-root-skill-iam-share
           imagePullPolicy: Always
           env:
             - name: HOSTNAME
