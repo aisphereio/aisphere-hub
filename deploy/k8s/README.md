@@ -67,8 +67,8 @@ kubectl get gateway -n aisphere aisphere-gateway -o yaml
 aisphere-hub:feat-root-skill-iam-share
 aisphere-hub:sha-<short-sha>
 
-aisphere-hub-frontend:feat-root-skill-iam-share
-aisphere-hub-frontend:sha-<short-sha>
+aisphere-hub-front:feat-root-skill-iam-share
+aisphere-hub-front:sha-<short-sha>
 ```
 
 测试环境建议固定 `sha-*`，这样前后端版本可以明确对应；分支 tag 适合快速联调。
@@ -309,7 +309,7 @@ kubectl set image -n aisphere deploy/aisphere-hub \
   backend=registry.cn-beijing.aliyuncs.com/ainfracn/aisphere-hub:sha-<old-sha>
 
 kubectl set image -n aisphere deploy/aisphere-hub-frontend \
-  frontend=registry.cn-beijing.aliyuncs.com/ainfracn/aisphere-hub-frontend:sha-<old-sha>
+  frontend=registry.cn-beijing.aliyuncs.com/ainfracn/aisphere-hub-front:sha-<old-sha>
 
 kubectl rollout status -n aisphere deploy/aisphere-hub
 kubectl rollout status -n aisphere deploy/aisphere-hub-frontend
