@@ -1,22 +1,9 @@
-// Package data authz_bootstrap.go — startup-time SpiceDB schema loader.
+// Package data contains startup repair helpers for Hub authorization data.
 //
-// On hub startup, after Resources are constructed, BootstrapAuthzSchema
-// checks whether SpiceDB already has a schema. If not (or if the schema
-// is empty), it writes a default schema that covers all resource types
-// the hub currently uses (skill, organization, project, group, etc.).
-//
-// This is idempotent: WriteSchema on SpiceDB replaces the schema in
-// place, so re-running on an already-initialized SpiceDB is safe (but
-// will invalidate any tuples that reference relations not present in
-// the new schema — operators should review the schema text before
-// deploying a new hub version).
-//
-// The default schema is sourced from kernel/authz/spicedb.DefaultSchema
-// extended with hub-specific resource types (skill, skill_version).
-// Keeping the kernel default ensures platform / organization / group /
-// application / project / resource types stay in sync with the kernel
-// IAM projection layer.
-
+// IAM is the owner of the shared SpiceDB schema, including the skill resource
+// definition. Hub must not overwrite an existing IAM-managed schema. The only
+// schema fragment kept here is the optional skill_version definition used when
+// Hub is started against an empty development SpiceDB instance.
 package data
 
 import (
@@ -27,95 +14,26 @@ import (
 	"github.com/aisphereio/kernel/logx"
 )
 
-// HubAuthzSchemaVersion is the schema version. Bump this when the schema
-// text below changes. Operators can compare this against the version
-// stored in their SpiceDB metadata to know whether a migration is needed.
-//
-// Versioning policy:
-//   - Breaking changes (renamed relations, removed permissions, changed
-//     permission composition): bump MAJOR. Operators MUST review and
-//     manually run WriteSchema with the new text; existing tuples that
-//     reference removed relations will be rejected.
-//   - Additive changes (new relations, new permissions, new resource
-//     types): bump MINOR. Auto-bootstrap is safe but operators who
-//     already have a custom schema should still review.
-//   - Cosmetic changes (comments, whitespace): bump PATCH. No migration
-//     needed.
-const HubAuthzSchemaVersion = "1.0.0"
+// HubAuthzSchemaVersion versions the Hub-only development schema fragment.
+// Production schema changes should be applied through aisphere-iam.
+const HubAuthzSchemaVersion = "1.1.0"
 
-// HubAuthzSchema is the default SpiceDB schema for aisphere-hub. It
-// extends kernel/authz/spicedb.DefaultSchema with the skill resource
-// type and its relations / permissions.
+// HubAuthzSchema is a minimal development bootstrap fragment. It assumes the
+// IAM-owned schema defines skill with view/edit/delete permissions.
 //
-// Schema versioning & migration:
-//
-//   - BootstrapAuthzSchema writes this schema ONLY when SpiceDB has no
-//     schema at all (empty / missing). It never overwrites an existing
-//     schema — operators who customize the schema can do so safely.
-//
-//   - When this constant changes (version bump), operators must
-//     explicitly migrate by calling the WriteSchema RPC with the new
-//     schema text. The hub does NOT auto-migrate because:
-//
-//   - Breaking schema changes can invalidate existing tuples.
-//
-//   - Operators need to review the diff before applying.
-//
-//   - Migration timing should be coordinated with SpiceDB
-//     maintenance windows.
-//
-//   - The CHANGELOG should document every schema version bump with the
-//     specific changes and any required operator actions.
-//
-// Resource types:
-//
-//   - platform, organization, group, application, project, resource
-//     (inherited from kernel default — managed by kernel IAM projection)
-//
-//   - skill (hub-specific):
-//     relation owner:  user | service
-//     relation editor: user | service | group#member
-//     relation viewer: user | service | group#member
-//     permission read   = viewer + editor + owner
-//     permission edit   = editor + owner
-//     permission delete = owner
-//     permission share  = owner   (only owner can grant/revoke shares)
-//
-//   - skill_version (hub-specific, derived from skill):
-//     relation skill: skill
-//     permission read   = skill->read
-//     permission edit   = skill->edit
-//     permission delete = skill->delete
-//
-// The skill_version type lets us gate per-version operations (download,
-// state transitions) independently of the parent skill, but currently
-// all checks go through the skill resource type for simplicity. The
-// skill_version type is defined for forward compatibility.
+// When SpiceDB already has any schema, Hub leaves it untouched. In production,
+// skill_version should be added to the IAM schema if per-version authorization
+// is needed. Current runtime checks still authorize through the parent skill.
 const HubAuthzSchema = `definition skill_version {
   relation skill: skill
-  permission read = skill->read
+  permission view = skill->view
   permission edit = skill->edit
   permission delete = skill->delete
 }`
 
-// BootstrapAuthzSchema writes the default hub authz schema to SpiceDB
-// when the schema is empty or missing. Called from main.go after
-// Resources are constructed.
-//
-// Behavior:
-//   - If AuthzService is nil (authz disabled), returns nil immediately.
-//   - If ReadSchema returns an error other than "schema not found",
-//     returns the error so main.go can surface it.
-//   - If ReadSchema returns a non-empty schema text that already contains
-//     Hub definitions, returns nil.
-//   - If ReadSchema returns a non-empty schema text that only contains the
-//     Kernel base definitions, writes HubAuthzSchema to add the skill model.
-//   - If ReadSchema returns empty schema text, writes HubAuthzSchema.
-//
-// The function is safe to call on every startup — it only writes when
-// the schema is empty, so re-running on an initialized SpiceDB is a
-// no-op. Operators who want to replace the schema should use the
-// WriteSchema RPC directly.
+// BootstrapAuthzSchema writes the minimal Hub development schema only when
+// SpiceDB has no schema. Existing schemas are always treated as externally
+// managed and are never replaced by Hub.
 func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Logger) error {
 	if resources == nil || resources.AuthzService == nil {
 		if log != nil {
@@ -130,36 +48,29 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 
 	schema, err := resources.AuthzService.ReadSchema(ctx)
 	if err != nil {
-		// SpiceDB returns a NotFound-style error when no schema has been
-		// written yet. We treat any error here as "schema missing" and
-		// attempt to write the default. If the write also fails, we
-		// surface THAT error (which is more actionable).
-		log.WithContext(ctx).Warn("read schema failed; will attempt to write default",
-			logx.Err(err),
-		)
-	} else if schema.Text != "" {
+		// An empty development SpiceDB may report schema-not-found. Attempt the
+		// minimal bootstrap; a real connectivity/permission problem will surface
+		// again from WriteSchema with a more actionable error.
+		log.WithContext(ctx).Warn("read schema failed; attempting minimal development bootstrap", logx.Err(err))
+	} else if strings.TrimSpace(schema.Text) != "" {
 		if hasHubAuthzDefinitions(schema.Text) {
-			log.WithContext(ctx).Info("authz schema already installed; skipping bootstrap",
+			log.WithContext(ctx).Info("hub authz definition already present; skipping bootstrap",
 				logx.Int("size", len(schema.Text)),
 			)
 			return nil
 		}
-		// Schema exists but is managed by another service (e.g. aisphere-iam).
-		// Skip bootstrap to avoid conflicts. The skill_version definition
-		// must be added manually or via the IAM service's schema.
-		log.WithContext(ctx).Info("authz schema exists but managed externally; skipping bootstrap",
+		log.WithContext(ctx).Info("authz schema is managed externally; Hub will not modify it",
 			logx.Int("current_size", len(schema.Text)),
 		)
 		return nil
 	}
 
 	if err := resources.AuthzService.WriteSchema(ctx, authz.Schema{Text: HubAuthzSchema}); err != nil {
-		log.WithContext(ctx).Error("authz schema bootstrap failed",
-			logx.Err(err),
-		)
+		log.WithContext(ctx).Error("minimal authz schema bootstrap failed", logx.Err(err))
 		return err
 	}
-	log.WithContext(ctx).Info("authz schema bootstrapped",
+	log.WithContext(ctx).Info("minimal hub authz schema bootstrapped",
+		logx.String("schema_version", HubAuthzSchemaVersion),
 		logx.Int("size", len(HubAuthzSchema)),
 	)
 	return nil
@@ -167,7 +78,6 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 
 func hasHubAuthzDefinitions(schema string) bool {
 	normalized := strings.ToLower(schema)
-	// IAM schema already defines skill; we only need skill_version.
 	return strings.Contains(normalized, "definition skill_version ")
 }
 
@@ -178,10 +88,10 @@ type skillOwnerRelationshipRow struct {
 	OwnerID string
 }
 
-// BootstrapAuthzRelationships repairs the SpiceDB projection for durable hub
+// BootstrapAuthzRelationships repairs the SpiceDB projection for durable Hub
 // rows that already exist in PostgreSQL. The normal request path writes the
-// skill:{name}#owner@user:{owner_id} tuple during CreateSkill; this startup
-// pass covers historical rows and previous best-effort grant failures.
+// skill:{name}#owner@user:{owner_id} tuple during CreateSkill; this startup pass
+// covers historical rows and previous best-effort grant failures.
 //
 // SpiceDB writes are idempotent because kernel/authz/spicedb uses TOUCH for
 // WriteRelationships, so this function is safe to run on every startup.
