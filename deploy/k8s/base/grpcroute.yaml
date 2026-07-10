@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: aisphere-hub-grpc
+  namespace: aisphere
+spec:
+  parentRefs:
+    - name: aisphere-gateway
+  # Gateway API requires a different hostname when HTTPRoute and GRPCRoute
+  # share a listener. The Gateway certificate must cover this hostname.
+  hostnames:
+    - grpc.hub.example.com
+  rules:
+    - backendRefs:
+        - name: aisphere-hub
+          port: 19001
