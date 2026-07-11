@@ -212,10 +212,19 @@ func (s *AuthnService) Introspect(ctx context.Context, req *v1.IntrospectRequest
 
 // Me implements v1.AuthnServiceHTTPServer.Me.
 //
-// The access token is read from the Authorization header (Bearer scheme).
-// The biz layer verifies it through the kernel Authenticator and checks the
-// local blacklist.
+// In gateway_trusted mode, the Envoy Gateway injects the authenticated
+// principal via x-aisphere-* headers. The kernel middleware restores it
+// into the context. Prefer that principal when available.
+//
+// When no gateway principal is present (legacy token mode), fall back to
+// reading the Authorization header and verifying through the biz layer.
 func (s *AuthnService) Me(ctx context.Context, req *v1.MeRequest) (*v1.MeResponse, error) {
+	// gateway_trusted path: principal already in context
+	if p, ok := authn.PrincipalFromContext(ctx); ok && p.IsAuthenticated() {
+		return &v1.MeResponse{Principal: principalToDTO(p)}, nil
+	}
+
+	// legacy token path
 	accessToken := bearerTokenFromContext(ctx)
 	principal, err := s.uc.Me(ctx, accessToken)
 	if err != nil {
