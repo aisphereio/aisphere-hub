@@ -35,6 +35,9 @@ jobs:
           python3 .github/scripts/apply_iam_grpc_contract_fix.py
           python3 .github/scripts/align_skill_iam_policy.py
 
+      - name: Pin repaired IAM runtime client
+        run: go get github.com/aisphereio/aisphere-iam@0d4ce5dffaf57cfaae3525491775cb359a5cc1eb
+
       - name: Generate Skill API policies
         run: |
           make tools
