@@ -112,13 +112,9 @@ type AuthnServiceClient interface {
 	// expires. The `access_token` field makes this previously-implicit side
 	// effect visible in the API contract.
 	//
-	// NOTE: kernel authn does not currently expose a LogoutURLBuilder
-	// interface. The hub data layer must construct the Casdoor logout URL
-	// itself using the configured Casdoor endpoint, client_id and
-	// post_logout_redirect_uri. See legacy backend internal/data/auth.go for
-	// the pattern (it built the URL via the old aisphere-kit authn adapter;
-	// the new hub will need to call casdoor SDK directly or compose the URL
-	// from config).
+	// The logout URL is built by kernel authn.LogoutService (implemented by
+	// the Casdoor adapter in kernel/authn/casdoor). The hub data layer
+	// delegates to Resources.LogoutService.BuildLogoutURL().
 	LogoutURL(ctx context.Context, in *LogoutURLRequest, opts ...grpc.CallOption) (*LogoutURLResponse, error)
 	// Revoke explicitly revokes an access or refresh token.
 	//
@@ -315,13 +311,9 @@ type AuthnServiceServer interface {
 	// expires. The `access_token` field makes this previously-implicit side
 	// effect visible in the API contract.
 	//
-	// NOTE: kernel authn does not currently expose a LogoutURLBuilder
-	// interface. The hub data layer must construct the Casdoor logout URL
-	// itself using the configured Casdoor endpoint, client_id and
-	// post_logout_redirect_uri. See legacy backend internal/data/auth.go for
-	// the pattern (it built the URL via the old aisphere-kit authn adapter;
-	// the new hub will need to call casdoor SDK directly or compose the URL
-	// from config).
+	// The logout URL is built by kernel authn.LogoutService (implemented by
+	// the Casdoor adapter in kernel/authn/casdoor). The hub data layer
+	// delegates to Resources.LogoutService.BuildLogoutURL().
 	LogoutURL(context.Context, *LogoutURLRequest) (*LogoutURLResponse, error)
 	// Revoke explicitly revokes an access or refresh token.
 	//

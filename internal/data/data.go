@@ -15,7 +15,6 @@ import (
 	"github.com/aisphereio/kernel/authn/casdoor"
 	"github.com/aisphereio/kernel/authn/oidcx"
 	"github.com/aisphereio/kernel/authz"
-	"github.com/aisphereio/kernel/authz/spicedb"
 	"github.com/aisphereio/kernel/cachex"
 	_ "github.com/aisphereio/kernel/cachex/redis"
 	"github.com/aisphereio/kernel/dbx"
@@ -60,7 +59,7 @@ type Resources struct {
 	// configured authorizer implements it. May be nil when authz is
 	// disabled or the configured provider only implements Authorizer
 	// (e.g. memory / noop). Business layers MUST nil-check before use.
-	AuthzService authz.Service
+	AuthzService runtimeAuthzService
 
 	// LoginService builds IdP login URLs. Always the raw casdoor.Client —
 	// login URL construction is cheap and includes a per-request state
@@ -218,56 +217,56 @@ func NewResources(ctx context.Context, cfg conf.Bootstrap) (*Resources, func(), 
 	}
 	r.SkillConfig = cfg.Skill
 
-observability.ComponentConfigured(metrics, "authn", cfg.Security.Authn.Enabled)
-		if cfg.Security.Authn.Enabled {
-			start := time.Now()
-			authnCfg := cfg.Security.Authn
-			authnCfg.Casdoor.Logger = logger.Named("authn.casdoor")
-			authnCfg.Casdoor.Metrics = metrics
-			authnCfg.Casdoor.MetricsEnabled = cfg.Metrics.Enabled || authnCfg.Casdoor.MetricsEnabled
+	observability.ComponentConfigured(metrics, "authn", cfg.Security.Authn.Enabled)
+	if cfg.Security.Authn.Enabled {
+		start := time.Now()
+		authnCfg := cfg.Security.Authn
+		authnCfg.Casdoor.Logger = logger.Named("authn.casdoor")
+		authnCfg.Casdoor.Metrics = metrics
+		authnCfg.Casdoor.MetricsEnabled = cfg.Metrics.Enabled || authnCfg.Casdoor.MetricsEnabled
 
-			// Always create the Casdoor client for login/logout/token operations.
-			casdoorClient, err := casdoor.New(authnCfg.Casdoor)
-			if err != nil {
-				logger.Error("authn casdoor client init failed", logx.Err(err))
-				r.Close()
-				return nil, nil, err
-			}
-			r.Casdoor = casdoorClient
-			r.LoginService = casdoorClient
-			r.LogoutService = casdoorClient
-
-			// Create the authenticator based on mode.
-			authenticator, err := newAuthenticator(authnCfg, logger)
-			if err != nil {
-				logger.Error("authn authenticator init failed", logx.Err(err))
-				r.Close()
-				return nil, nil, err
-			}
-			observability.ComponentInit(ctx, metrics, "authn", start, err)
-			if err != nil {
-				logger.Error("authn init failed", logx.Err(err))
-				r.Close()
-				return nil, nil, err
-			}
-			logger.Info("authn initialized",
-				logx.String("provider", authnCfg.Provider),
-				logx.String("mode", authnCfg.Mode),
-			)
-			r.Authn = authenticator
-
-			// TokenService is wrapped with CachedClient when cache is available.
-			if r.Cache != nil {
-				cached := authn.NewCachedClient(casdoorClient, casdoorClient, casdoorClient, r.Cache)
-				r.TokenService = cached
-				r.CachedTokenService = cached
-				// Also wrap r.Authn so middleware-driven Authenticate calls go
-				// through the same cache as explicit VerifyToken calls.
-				r.Authn = cached
-			} else {
-				r.TokenService = casdoorClient
-			}
+		// Always create the Casdoor client for login/logout/token operations.
+		casdoorClient, err := casdoor.New(authnCfg.Casdoor)
+		if err != nil {
+			logger.Error("authn casdoor client init failed", logx.Err(err))
+			r.Close()
+			return nil, nil, err
 		}
+		r.Casdoor = casdoorClient
+		r.LoginService = casdoorClient
+		r.LogoutService = casdoorClient
+
+		// Create the authenticator based on mode.
+		authenticator, err := newAuthenticator(authnCfg, logger)
+		if err != nil {
+			logger.Error("authn authenticator init failed", logx.Err(err))
+			r.Close()
+			return nil, nil, err
+		}
+		observability.ComponentInit(ctx, metrics, "authn", start, err)
+		if err != nil {
+			logger.Error("authn init failed", logx.Err(err))
+			r.Close()
+			return nil, nil, err
+		}
+		logger.Info("authn initialized",
+			logx.String("provider", authnCfg.Provider),
+			logx.String("mode", authnCfg.Mode),
+		)
+		r.Authn = authenticator
+
+		// TokenService is wrapped with CachedClient when cache is available.
+		if r.Cache != nil {
+			cached := authn.NewCachedClient(casdoorClient, casdoorClient, casdoorClient, r.Cache)
+			r.TokenService = cached
+			r.CachedTokenService = cached
+			// Also wrap r.Authn so middleware-driven Authenticate calls go
+			// through the same cache as explicit VerifyToken calls.
+			r.Authn = cached
+		} else {
+			r.TokenService = casdoorClient
+		}
+	}
 
 	observability.ComponentConfigured(metrics, "authz", cfg.Security.Authz.Enabled && !cfg.Security.Authz.DevAllowAll)
 	if cfg.Security.Authz.Enabled && !cfg.Security.Authz.DevAllowAll {
@@ -285,14 +284,7 @@ observability.ComponentConfigured(metrics, "authn", cfg.Security.Authn.Enabled)
 		}
 		logger.Info("authz initialized", logx.String("provider", authzCfg.Provider))
 		r.Authz = authorizer
-		// If the authorizer also implements authz.Service (full ReBAC
-		// surface), preserve the typed reference so business layers can
-		// call WriteRelationships / LookupResources / etc. without
-		// re-constructing the client. spicedb.Client implements Service;
-		// memory / noop do not.
-		if svc, ok := authorizer.(authz.Service); ok {
-			r.AuthzService = svc
-		}
+		r.AuthzService = authorizer
 		if closeFn != nil {
 			r.closers = append(r.closers, closeFn)
 		}
@@ -358,20 +350,19 @@ func oidcConfigFromAuthn(cfg conf.AuthnConfig) oidcx.Config {
 	}
 }
 
-func newAuthorizer(cfg conf.AuthzConfig) (authz.Authorizer, func() error, error) {
-	switch cfg.Provider {
-	case "", "spicedb":
-		client, err := spicedb.New(cfg.SpiceDB)
-		if err != nil {
-			return nil, nil, err
-		}
-		return client, client.Close, nil
-	case "iam_grpc":
+func newAuthorizer(cfg conf.AuthzConfig) (runtimeAuthzService, func() error, error) {
+	switch strings.ToLower(strings.TrimSpace(cfg.Provider)) {
+	case "", "iam_grpc":
 		client, err := iamauthz.New(cfg.IAMGRPC)
 		if err != nil {
 			return nil, nil, err
 		}
 		return client, client.Close, nil
+	case "spicedb":
+		return nil, nil, errorx.BadRequest(
+			errorx.Code("AUTHZ_DIRECT_SPICEDB_FORBIDDEN"),
+			"Hub must use security.authz.provider=iam_grpc; IAM owns SpiceDB access and schema",
+		)
 	default:
 		return nil, nil, errorx.BadRequest(errorx.Code("AUTHZ_UNSUPPORTED_PROVIDER"), "unsupported authz provider: "+cfg.Provider)
 	}

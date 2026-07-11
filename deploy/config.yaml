@@ -165,15 +165,14 @@ security:
     skip_operations: []
   authz:
     enabled: true
-    provider: spicedb
+    provider: iam_grpc
     dev_allow_all: false
-    spicedb:
-      endpoint: spicedb.aisphere:50051
-      token: "keykeykey"
-      transport: grpc
+    iam_grpc:
+      endpoint: "aisphere-iam.aisphere.svc.cluster.local:19080"
+      caller_service: aisphere-hub
       insecure: true
       timeout: 5000000000
-      fully_consistent: true
+      retry_max: 3
       metrics_enabled: true
 
 gateway:

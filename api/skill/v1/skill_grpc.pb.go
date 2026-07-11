@@ -143,14 +143,14 @@ type SkillServiceClient interface {
 	// CommitSkillDraft materializes the draft workspace into a SkillVersion.
 	CommitSkillDraft(ctx context.Context, in *CommitSkillDraftRequest, opts ...grpc.CallOption) (*CommitSkillDraftResponse, error)
 	// ListSkillShares lists subjects that have any relation on the named
-	// skill. Requires skill.read (with ownership + public fallback).
+	// skill. Requires skill.manage.
 	ListSkillShares(ctx context.Context, in *ListSkillSharesRequest, opts ...grpc.CallOption) (*ListSkillSharesResponse, error)
 	// CreateSkillShare grants a viewer or editor relation on the named
-	// skill to a subject. Requires skill.edit. The relation field accepts
-	// "viewer" or "editor"; passing "owner" returns INVALID_ARGUMENT.
+	// skill to a subject. Requires skill.manage. The relation field accepts
+	// "viewer", "editor", or "reviewer"; passing "owner" returns INVALID_ARGUMENT.
 	CreateSkillShare(ctx context.Context, in *CreateSkillShareRequest, opts ...grpc.CallOption) (*SkillShare, error)
 	// DeleteSkillShare revokes ALL relations between the named skill and
-	// the named subject. Requires skill.edit.
+	// the named subject. Requires skill.manage.
 	DeleteSkillShare(ctx context.Context, in *DeleteSkillShareRequest, opts ...grpc.CallOption) (*DeleteSkillShareResponse, error)
 }
 
@@ -518,14 +518,14 @@ type SkillServiceServer interface {
 	// CommitSkillDraft materializes the draft workspace into a SkillVersion.
 	CommitSkillDraft(context.Context, *CommitSkillDraftRequest) (*CommitSkillDraftResponse, error)
 	// ListSkillShares lists subjects that have any relation on the named
-	// skill. Requires skill.read (with ownership + public fallback).
+	// skill. Requires skill.manage.
 	ListSkillShares(context.Context, *ListSkillSharesRequest) (*ListSkillSharesResponse, error)
 	// CreateSkillShare grants a viewer or editor relation on the named
-	// skill to a subject. Requires skill.edit. The relation field accepts
-	// "viewer" or "editor"; passing "owner" returns INVALID_ARGUMENT.
+	// skill to a subject. Requires skill.manage. The relation field accepts
+	// "viewer", "editor", or "reviewer"; passing "owner" returns INVALID_ARGUMENT.
 	CreateSkillShare(context.Context, *CreateSkillShareRequest) (*SkillShare, error)
 	// DeleteSkillShare revokes ALL relations between the named skill and
-	// the named subject. Requires skill.edit.
+	// the named subject. Requires skill.manage.
 	DeleteSkillShare(context.Context, *DeleteSkillShareRequest) (*DeleteSkillShareResponse, error)
 	mustEmbedUnimplementedSkillServiceServer()
 }

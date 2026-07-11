@@ -637,9 +637,11 @@ type RevokeRequest struct {
 	// token is the access, refresh, or id token to revoke.
 	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	// token_type hints which kind of token is being revoked. Accepted values:
-	//   "access_token"  (default)
-	//   "refresh_token"
-	//   "id_token"
+	//
+	//	"access_token"  (default)
+	//	"refresh_token"
+	//	"id_token"
+	//
 	// Maps to kernel authn.RevokeTokenRequest.TokenType.
 	TokenType     string `protobuf:"bytes,2,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
 	OrgId         string `protobuf:"bytes,3,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`

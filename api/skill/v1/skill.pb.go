@@ -519,7 +519,7 @@ func (x *UpdateSkillResponse) GetSkill() *Skill {
 type UpdateSkillVisibilityRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Visibility    string                 `protobuf:"bytes,2,opt,name=visibility,proto3" json:"visibility,omitempty"` // "private" | "public"
+	Visibility    string                 `protobuf:"bytes,2,opt,name=visibility,proto3" json:"visibility,omitempty"` // "private" | "internal" | "public"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3017,7 +3017,7 @@ type SkillShare struct {
 	// resource is always "skill:{name}" — echoed for client convenience.
 	ResourceType    string `protobuf:"bytes,1,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
 	ResourceId      string `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	Relation        string `protobuf:"bytes,3,opt,name=relation,proto3" json:"relation,omitempty"`                          // "viewer" | "editor" | "owner"
+	Relation        string `protobuf:"bytes,3,opt,name=relation,proto3" json:"relation,omitempty"`                          // "viewer" | "editor" | "reviewer" | "owner"
 	SubjectType     string `protobuf:"bytes,4,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"` // "user" | "service" | "group"
 	SubjectId       string `protobuf:"bytes,5,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	SubjectRelation string `protobuf:"bytes,6,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"` // optional, e.g. "member" for group subjects
@@ -3188,7 +3188,7 @@ func (x *ListSkillSharesResponse) GetShares() []*SkillShare {
 type CreateSkillShareRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Relation        string                 `protobuf:"bytes,2,opt,name=relation,proto3" json:"relation,omitempty"` // "viewer" | "editor"
+	Relation        string                 `protobuf:"bytes,2,opt,name=relation,proto3" json:"relation,omitempty"` // "viewer" | "editor" | "reviewer"
 	SubjectType     string                 `protobuf:"bytes,3,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
 	SubjectId       string                 `protobuf:"bytes,4,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	SubjectRelation string                 `protobuf:"bytes,5,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"` // optional, for group#member subjects
@@ -3624,55 +3624,52 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\fsubject_type\x18\x02 \x01(\tB\x03\xe0A\x02R\vsubjectType\x12\"\n" +
 	"\n" +
 	"subject_id\x18\x03 \x01(\tB\x03\xe0A\x02R\tsubjectId\"\x1a\n" +
-	"\x18DeleteSkillShareResponse2\xb4,\n" +
-	"\fSkillService\x12\xb8\x01\n" +
-	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"l\x92\xf4\x18L\b\x03\x12(\n" +
-	"\x06create\x12\raihub:skill:*\x1a\raihub-service \x01\x1a\x1e\b\x01\x12\x12aihub.skill.create\x1a\x06medium\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
-	"/v1/skills\x12\xc4\x01\n" +
-	"\vUpdateSkill\x12\x1c.skill.v1.UpdateSkillRequest\x1a\x1d.skill.v1.UpdateSkillResponse\"x\x92\xf4\x18Q\b\x03\x12-\n" +
-	"\x06update\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\x1e\b\x01\x12\x12aihub.skill.update\x1a\x06medium\x82\xd3\xe4\x93\x02\x1d:\x01*b\x05skill\x1a\x11/v1/skills/{name}\x12\x82\x02\n" +
-	"\x15UpdateSkillVisibility\x12&.skill.v1.UpdateSkillVisibilityRequest\x1a'.skill.v1.UpdateSkillVisibilityResponse\"\x97\x01\x92\xf4\x18e\b\x03\x128\n" +
-	"\x11visibility:update\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a'\b\x01\x12\x1daihub.skill.visibility.update\x1a\x04high\x82\xd3\xe4\x93\x02(:\x01*b\x05skill\"\x1c/v1/skills/{name}:visibility\x12|\n" +
+	"\x18DeleteSkillShareResponse2\xc9)\n" +
+	"\fSkillService\x12\x8e\x01\n" +
+	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"B\x92\xf4\x18\"\b\x02\x1a\x1e\b\x01\x12\x12aihub.skill.create\x1a\x06medium\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
+	"/v1/skills\x12\xba\x01\n" +
+	"\vUpdateSkill\x12\x1c.skill.v1.UpdateSkillRequest\x1a\x1d.skill.v1.UpdateSkillResponse\"n\x92\xf4\x18G\b\x03\x12#\n" +
+	"\x04edit\x12\fskill:{name}\x1a\viam-service \x01\x1a\x1e\b\x01\x12\x12aihub.skill.update\x1a\x06medium\x82\xd3\xe4\x93\x02\x1d:\x01*b\x05skill\x1a\x11/v1/skills/{name}\x12\xef\x01\n" +
+	"\x15UpdateSkillVisibility\x12&.skill.v1.UpdateSkillVisibilityRequest\x1a'.skill.v1.UpdateSkillVisibilityResponse\"\x84\x01\x92\xf4\x18R\b\x03\x12%\n" +
+	"\x06manage\x12\fskill:{name}\x1a\viam-service \x01\x1a'\b\x01\x12\x1daihub.skill.visibility.update\x1a\x04high\x82\xd3\xe4\x93\x02(:\x01*b\x05skill\"\x1c/v1/skills/{name}:visibility\x12|\n" +
 	"\n" +
 	"ListSkills\x12\x1b.skill.v1.ListSkillsRequest\x1a\x1c.skill.v1.ListSkillsResponse\"3\x92\xf4\x18\x1d\b\x02\x1a\x19\b\x01\x12\x10aihub.skill.list\x1a\x03low\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/v1/skills\x12\x83\x01\n" +
-	"\bGetSkill\x12\x19.skill.v1.GetSkillRequest\x1a\x1a.skill.v1.GetSkillResponse\"@\x92\xf4\x18\x1c\b\x02\x1a\x18\b\x01\x12\x0faihub.skill.get\x1a\x03low\x82\xd3\xe4\x93\x02\x1ab\x05skill\x12\x11/v1/skills/{name}\x12\xb8\x01\n" +
-	"\vDeleteSkill\x12\x1c.skill.v1.DeleteSkillRequest\x1a\x1d.skill.v1.DeleteSkillResponse\"l\x92\xf4\x18O\b\x03\x12-\n" +
-	"\x06delete\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\x1c\b\x01\x12\x12aihub.skill.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x13*\x11/v1/skills/{name}\x12\xd6\x01\n" +
-	"\x12UploadSkillPackage\x12#.skill.v1.UploadSkillPackageRequest\x1a$.skill.v1.UploadSkillPackageResponse\"u\x92\xf4\x18L\b\x03\x12(\n" +
-	"\x06upload\x12\raihub:skill:*\x1a\raihub-service \x01\x1a\x1e\b\x01\x12\x12aihub.skill.upload\x1a\x06medium\x82\xd3\xe4\x93\x02\x1f:\x01*b\aversion\"\x11/v1/skills:upload\x12\xa9\x01\n" +
+	"\bGetSkill\x12\x19.skill.v1.GetSkillRequest\x1a\x1a.skill.v1.GetSkillResponse\"@\x92\xf4\x18\x1c\b\x02\x1a\x18\b\x01\x12\x0faihub.skill.get\x1a\x03low\x82\xd3\xe4\x93\x02\x1ab\x05skill\x12\x11/v1/skills/{name}\x12\xb0\x01\n" +
+	"\vDeleteSkill\x12\x1c.skill.v1.DeleteSkillRequest\x1a\x1d.skill.v1.DeleteSkillResponse\"d\x92\xf4\x18G\b\x03\x12%\n" +
+	"\x06manage\x12\fskill:{name}\x1a\viam-service \x01\x1a\x1c\b\x01\x12\x12aihub.skill.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x13*\x11/v1/skills/{name}\x12\xac\x01\n" +
+	"\x12UploadSkillPackage\x12#.skill.v1.UploadSkillPackageRequest\x1a$.skill.v1.UploadSkillPackageResponse\"K\x92\xf4\x18\"\b\x02\x1a\x1e\b\x01\x12\x12aihub.skill.upload\x1a\x06medium\x82\xd3\xe4\x93\x02\x1f:\x01*b\aversion\"\x11/v1/skills:upload\x12\xa9\x01\n" +
 	"\x11ListSkillVersions\x12\".skill.v1.ListSkillVersionsRequest\x1a#.skill.v1.ListSkillVersionsResponse\"K\x92\xf4\x18%\b\x02\x1a!\b\x01\x12\x18aihub.skill_version.list\x1a\x03low\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/skills/{name}/versions\x12\xb5\x01\n" +
-	"\x0fGetSkillVersion\x12 .skill.v1.GetSkillVersionRequest\x1a!.skill.v1.GetSkillVersionResponse\"]\x92\xf4\x18$\b\x02\x1a \b\x01\x12\x17aihub.skill_version.get\x1a\x03low\x82\xd3\xe4\x93\x02/b\aversion\x12$/v1/skills/{name}/versions/{version}\x12\x90\x02\n" +
-	"\x12SubmitSkillVersion\x12#.skill.v1.SubmitSkillVersionRequest\x1a$.skill.v1.SubmitSkillVersionResponse\"\xae\x01\x92\xf4\x18k\b\x03\x12?\n" +
-	"\x06submit\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a&\b\x01\x12\x1aaihub.skill_version.submit\x1a\x06medium\x82\xd3\xe4\x93\x029:\x01*b\aversion\"+/v1/skills/{name}/versions/{version}:submit\x12\x94\x02\n" +
-	"\x13PublishSkillVersion\x12$.skill.v1.PublishSkillVersionRequest\x1a%.skill.v1.PublishSkillVersionResponse\"\xaf\x01\x92\xf4\x18k\b\x03\x12@\n" +
-	"\apublish\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a%\b\x01\x12\x1baihub.skill_version.publish\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\aversion\",/v1/skills/{name}/versions/{version}:publish\x12\x8e\x02\n" +
-	"\x12OnlineSkillVersion\x12#.skill.v1.OnlineSkillVersionRequest\x1a$.skill.v1.OnlineSkillVersionResponse\"\xac\x01\x92\xf4\x18i\b\x03\x12?\n" +
-	"\x06online\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a$\b\x01\x12\x1aaihub.skill_version.online\x1a\x04high\x82\xd3\xe4\x93\x029:\x01*b\aversion\"+/v1/skills/{name}/versions/{version}:online\x12\x94\x02\n" +
-	"\x13OfflineSkillVersion\x12$.skill.v1.OfflineSkillVersionRequest\x1a%.skill.v1.OfflineSkillVersionResponse\"\xaf\x01\x92\xf4\x18k\b\x03\x12@\n" +
-	"\aoffline\x12$aihub:skill:{name}:version:{version}\x1a\raihub-service \x01\x1a%\b\x01\x12\x1baihub.skill_version.offline\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\aversion\",/v1/skills/{name}/versions/{version}:offline\x12\xc1\x01\n" +
+	"\x0fGetSkillVersion\x12 .skill.v1.GetSkillVersionRequest\x1a!.skill.v1.GetSkillVersionResponse\"]\x92\xf4\x18$\b\x02\x1a \b\x01\x12\x17aihub.skill_version.get\x1a\x03low\x82\xd3\xe4\x93\x02/b\aversion\x12$/v1/skills/{name}/versions/{version}\x12\xf4\x01\n" +
+	"\x12SubmitSkillVersion\x12#.skill.v1.SubmitSkillVersionRequest\x1a$.skill.v1.SubmitSkillVersionResponse\"\x92\x01\x92\xf4\x18O\b\x03\x12#\n" +
+	"\x04edit\x12\fskill:{name}\x1a\viam-service \x01\x1a&\b\x01\x12\x1aaihub.skill_version.submit\x1a\x06medium\x82\xd3\xe4\x93\x029:\x01*b\aversion\"+/v1/skills/{name}/versions/{version}:submit\x12\xfa\x01\n" +
+	"\x13PublishSkillVersion\x12$.skill.v1.PublishSkillVersionRequest\x1a%.skill.v1.PublishSkillVersionResponse\"\x95\x01\x92\xf4\x18Q\b\x03\x12&\n" +
+	"\apublish\x12\fskill:{name}\x1a\viam-service \x01\x1a%\b\x01\x12\x1baihub.skill_version.publish\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\aversion\",/v1/skills/{name}/versions/{version}:publish\x12\xf5\x01\n" +
+	"\x12OnlineSkillVersion\x12#.skill.v1.OnlineSkillVersionRequest\x1a$.skill.v1.OnlineSkillVersionResponse\"\x93\x01\x92\xf4\x18P\b\x03\x12&\n" +
+	"\apublish\x12\fskill:{name}\x1a\viam-service \x01\x1a$\b\x01\x12\x1aaihub.skill_version.online\x1a\x04high\x82\xd3\xe4\x93\x029:\x01*b\aversion\"+/v1/skills/{name}/versions/{version}:online\x12\xfa\x01\n" +
+	"\x13OfflineSkillVersion\x12$.skill.v1.OfflineSkillVersionRequest\x1a%.skill.v1.OfflineSkillVersionResponse\"\x95\x01\x92\xf4\x18Q\b\x03\x12&\n" +
+	"\apublish\x12\fskill:{name}\x1a\viam-service \x01\x1a%\b\x01\x12\x1baihub.skill_version.offline\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\aversion\",/v1/skills/{name}/versions/{version}:offline\x12\xc1\x01\n" +
 	"\x14DownloadSkillVersion\x12%.skill.v1.DownloadSkillVersionRequest\x1a\x1e.skill.v1.SkillPackageDownload\"b\x92\xf4\x18)\b\x02\x1a%\b\x01\x12\x1caihub.skill_version.download\x1a\x03low\x82\xd3\xe4\x93\x02/\x12-/v1/skills/{name}/versions/{version}/download\x12\xc2\x01\n" +
 	"\x15ListSkillVersionFiles\x12&.skill.v1.ListSkillVersionFilesRequest\x1a'.skill.v1.ListSkillVersionFilesResponse\"X\x92\xf4\x18\"\b\x02\x1a\x1e\b\x01\x12\x15aihub.skill_file.list\x1a\x03low\x82\xd3\xe4\x93\x02,\x12*/v1/skills/{name}/versions/{version}/files\x12\xc0\x01\n" +
 	"\x13GetSkillVersionFile\x12$.skill.v1.GetSkillVersionFileRequest\x1a%.skill.v1.GetSkillVersionFileResponse\"\\\x92\xf4\x18!\b\x02\x1a\x1d\b\x01\x12\x14aihub.skill_file.get\x1a\x03low\x82\xd3\xe4\x93\x021b\x04file\x12)/v1/skills/{name}/versions/{version}/file\x12\xb5\x01\n" +
 	"\x13ListSkillDraftFiles\x12$.skill.v1.ListSkillDraftFilesRequest\x1a%.skill.v1.ListSkillDraftFilesResponse\"Q\x92\xf4\x18(\b\x02\x1a$\b\x01\x12\x1baihub.skill_draft_file.list\x1a\x03low\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/skills/{name}/draft/files\x12\xb3\x01\n" +
-	"\x11GetSkillDraftFile\x12\".skill.v1.GetSkillDraftFileRequest\x1a#.skill.v1.GetSkillDraftFileResponse\"U\x92\xf4\x18'\b\x02\x1a#\b\x01\x12\x1aaihub.skill_draft_file.get\x1a\x03low\x82\xd3\xe4\x93\x02$b\x04file\x12\x1c/v1/skills/{name}/draft/file\x12\xfe\x01\n" +
-	"\x14UpsertSkillDraftFile\x12%.skill.v1.UpsertSkillDraftFileRequest\x1a&.skill.v1.UpsertSkillDraftFileResponse\"\x96\x01\x92\xf4\x18e\b\x03\x127\n" +
-	"\x10draft:file:write\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a(\b\x01\x12\x1caihub.skill_draft_file.write\x1a\x06medium\x82\xd3\xe4\x93\x02':\x01*b\x04file\x1a\x1c/v1/skills/{name}/draft/file\x12\x8a\x02\n" +
-	"\x19UpsertSkillDraftDirectory\x12*.skill.v1.UpsertSkillDraftDirectoryRequest\x1a+.skill.v1.UpsertSkillDraftDirectoryResponse\"\x93\x01\x92\xf4\x18c\b\x03\x126\n" +
-	"\x0fdraft:dir:write\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a'\b\x01\x12\x1baihub.skill_draft_dir.write\x1a\x06medium\x82\xd3\xe4\x93\x02&:\x01*b\x04file\"\x1b/v1/skills/{name}/draft/dir\x12\xf7\x01\n" +
-	"\x14DeleteSkillDraftPath\x12%.skill.v1.DeleteSkillDraftPathRequest\x1a&.skill.v1.DeleteSkillDraftPathResponse\"\x8f\x01\x92\xf4\x18g\b\x03\x128\n" +
-	"\x11draft:path:delete\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a)\b\x01\x12\x1daihub.skill_draft_path.delete\x1a\x06medium\x82\xd3\xe4\x93\x02\x1e*\x1c/v1/skills/{name}/draft/path\x12\xf5\x01\n" +
-	"\x12MoveSkillDraftPath\x12#.skill.v1.MoveSkillDraftPathRequest\x1a$.skill.v1.MoveSkillDraftPathResponse\"\x93\x01\x92\xf4\x18c\b\x03\x126\n" +
-	"\x0fdraft:path:move\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a'\b\x01\x12\x1baihub.skill_draft_path.move\x1a\x06medium\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/skills/{name}/draft/path:move\x12\xef\x01\n" +
-	"\x10CommitSkillDraft\x12!.skill.v1.CommitSkillDraftRequest\x1a\".skill.v1.CommitSkillDraftResponse\"\x93\x01\x92\xf4\x18]\b\x03\x123\n" +
-	"\fdraft:commit\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a$\b\x01\x12\x18aihub.skill_draft.commit\x1a\x06medium\x82\xd3\xe4\x93\x02,:\x01*b\aversion\"\x1e/v1/skills/{name}/draft:commit\x12\xd5\x01\n" +
-	"\x0fListSkillShares\x12 .skill.v1.ListSkillSharesRequest\x1a!.skill.v1.ListSkillSharesResponse\"}\x92\xf4\x18Y\b\x03\x121\n" +
-	"\n" +
-	"share:list\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\"\b\x01\x12\x16aihub.skill_share.list\x1a\x06medium\x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/skills/{name}/shares\x12\xd0\x01\n" +
-	"\x10CreateSkillShare\x12!.skill.v1.CreateSkillShareRequest\x1a\x14.skill.v1.SkillShare\"\x82\x01\x92\xf4\x18[\b\x03\x123\n" +
-	"\fshare:create\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\"\b\x01\x12\x18aihub.skill_share.create\x1a\x04high\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/skills/{name}/shares\x12\xf7\x01\n" +
-	"\x10DeleteSkillShare\x12!.skill.v1.DeleteSkillShareRequest\x1a\".skill.v1.DeleteSkillShareResponse\"\x9b\x01\x92\xf4\x18[\b\x03\x123\n" +
-	"\fshare:delete\x12\x12aihub:skill:{name}\x1a\raihub-service \x01\x1a\"\b\x01\x12\x18aihub.skill_share.delete\x1a\x04high\x82\xd3\xe4\x93\x026*4/v1/skills/{name}/shares/{subject_type}/{subject_id}B9Z7github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1b\x06proto3"
+	"\x11GetSkillDraftFile\x12\".skill.v1.GetSkillDraftFileRequest\x1a#.skill.v1.GetSkillDraftFileResponse\"U\x92\xf4\x18'\b\x02\x1a#\b\x01\x12\x1aaihub.skill_draft_file.get\x1a\x03low\x82\xd3\xe4\x93\x02$b\x04file\x12\x1c/v1/skills/{name}/draft/file\x12\xea\x01\n" +
+	"\x14UpsertSkillDraftFile\x12%.skill.v1.UpsertSkillDraftFileRequest\x1a&.skill.v1.UpsertSkillDraftFileResponse\"\x82\x01\x92\xf4\x18Q\b\x03\x12#\n" +
+	"\x04edit\x12\fskill:{name}\x1a\viam-service \x01\x1a(\b\x01\x12\x1caihub.skill_draft_file.write\x1a\x06medium\x82\xd3\xe4\x93\x02':\x01*b\x04file\x1a\x1c/v1/skills/{name}/draft/file\x12\xf7\x01\n" +
+	"\x19UpsertSkillDraftDirectory\x12*.skill.v1.UpsertSkillDraftDirectoryRequest\x1a+.skill.v1.UpsertSkillDraftDirectoryResponse\"\x80\x01\x92\xf4\x18P\b\x03\x12#\n" +
+	"\x04edit\x12\fskill:{name}\x1a\viam-service \x01\x1a'\b\x01\x12\x1baihub.skill_draft_dir.write\x1a\x06medium\x82\xd3\xe4\x93\x02&:\x01*b\x04file\"\x1b/v1/skills/{name}/draft/dir\x12\xe1\x01\n" +
+	"\x14DeleteSkillDraftPath\x12%.skill.v1.DeleteSkillDraftPathRequest\x1a&.skill.v1.DeleteSkillDraftPathResponse\"z\x92\xf4\x18R\b\x03\x12#\n" +
+	"\x04edit\x12\fskill:{name}\x1a\viam-service \x01\x1a)\b\x01\x12\x1daihub.skill_draft_path.delete\x1a\x06medium\x82\xd3\xe4\x93\x02\x1e*\x1c/v1/skills/{name}/draft/path\x12\xe2\x01\n" +
+	"\x12MoveSkillDraftPath\x12#.skill.v1.MoveSkillDraftPathRequest\x1a$.skill.v1.MoveSkillDraftPathResponse\"\x80\x01\x92\xf4\x18P\b\x03\x12#\n" +
+	"\x04edit\x12\fskill:{name}\x1a\viam-service \x01\x1a'\b\x01\x12\x1baihub.skill_draft_path.move\x1a\x06medium\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/skills/{name}/draft/path:move\x12\xdf\x01\n" +
+	"\x10CommitSkillDraft\x12!.skill.v1.CommitSkillDraftRequest\x1a\".skill.v1.CommitSkillDraftResponse\"\x83\x01\x92\xf4\x18M\b\x03\x12#\n" +
+	"\x04edit\x12\fskill:{name}\x1a\viam-service \x01\x1a$\b\x01\x12\x18aihub.skill_draft.commit\x1a\x06medium\x82\xd3\xe4\x93\x02,:\x01*b\aversion\"\x1e/v1/skills/{name}/draft:commit\x12\xc9\x01\n" +
+	"\x0fListSkillShares\x12 .skill.v1.ListSkillSharesRequest\x1a!.skill.v1.ListSkillSharesResponse\"q\x92\xf4\x18M\b\x03\x12%\n" +
+	"\x06manage\x12\fskill:{name}\x1a\viam-service \x01\x1a\"\b\x01\x12\x16aihub.skill_share.list\x1a\x06medium\x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/skills/{name}/shares\x12\xc1\x01\n" +
+	"\x10CreateSkillShare\x12!.skill.v1.CreateSkillShareRequest\x1a\x14.skill.v1.SkillShare\"t\x92\xf4\x18M\b\x03\x12%\n" +
+	"\x06manage\x12\fskill:{name}\x1a\viam-service \x01\x1a\"\b\x01\x12\x18aihub.skill_share.create\x1a\x04high\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/skills/{name}/shares\x12\xe9\x01\n" +
+	"\x10DeleteSkillShare\x12!.skill.v1.DeleteSkillShareRequest\x1a\".skill.v1.DeleteSkillShareResponse\"\x8d\x01\x92\xf4\x18M\b\x03\x12%\n" +
+	"\x06manage\x12\fskill:{name}\x1a\viam-service \x01\x1a\"\b\x01\x12\x18aihub.skill_share.delete\x1a\x04high\x82\xd3\xe4\x93\x026*4/v1/skills/{name}/shares/{subject_type}/{subject_id}B9Z7github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1b\x06proto3"
 
 var (
 	file_skill_v1_skill_proto_rawDescOnce sync.Once

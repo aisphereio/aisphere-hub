@@ -57,7 +57,7 @@ func (r *authzRepo) metrics() metricsx.Manager {
 // service returns the kernel authz.Service, or an error if it is not
 // configured. Callers MUST handle the error before using the returned
 // service.
-func (r *authzRepo) service() (authz.Service, error) {
+func (r *authzRepo) service() (runtimeAuthzService, error) {
 	if r == nil || r.resources == nil || r.resources.AuthzService == nil {
 		return nil, errorx.BadRequest(errorx.Code("AUTHZ_UNSUPPORTED_CAPABILITY"),
 			"authz service is not configured; set security.authz.enabled=true and provider=spicedb in config")
@@ -279,30 +279,18 @@ func (r *authzRepo) LookupSubjects(ctx context.Context, req biz.AuthzLookupSubje
 
 // --- Schema ---
 
-func (r *authzRepo) ReadSchema(ctx context.Context) (out biz.AuthzSchema, err error) {
-	ctx, logger, started := observability.Begin(ctx, r.logger(), "authz.repo", "read_schema")
-	defer func() {
-		observability.End(ctx, logger, r.metrics(), "authz.repo", "read_schema", started, err, logx.Int("schema_size", len(out.Text)))
-	}()
-	svc, err := r.service()
-	if err != nil {
-		return biz.AuthzSchema{}, err
-	}
-	schema, err := svc.ReadSchema(ctx)
-	if err != nil {
-		return biz.AuthzSchema{}, err
-	}
-	return biz.AuthzSchema{Text: schema.Text}, nil
+func (r *authzRepo) ReadSchema(context.Context) (biz.AuthzSchema, error) {
+	return biz.AuthzSchema{}, errorx.BadRequest(
+		errorx.Code("AUTHZ_UNSUPPORTED_CAPABILITY"),
+		"authorization schema is owned and managed by IAM",
+	)
 }
 
-func (r *authzRepo) WriteSchema(ctx context.Context, schema biz.AuthzSchema) (err error) {
-	ctx, logger, started := observability.Begin(ctx, r.logger(), "authz.repo", "write_schema", logx.Int("schema_size", len(schema.Text)))
-	defer func() { observability.End(ctx, logger, r.metrics(), "authz.repo", "write_schema", started, err) }()
-	svc, err := r.service()
-	if err != nil {
-		return err
-	}
-	return svc.WriteSchema(ctx, authz.Schema{Text: schema.Text})
+func (r *authzRepo) WriteSchema(context.Context, biz.AuthzSchema) error {
+	return errorx.BadRequest(
+		errorx.Code("AUTHZ_UNSUPPORTED_CAPABILITY"),
+		"authorization schema is owned and managed by IAM",
+	)
 }
 
 // --- conversion helpers ---
