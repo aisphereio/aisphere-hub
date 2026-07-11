@@ -10,17 +10,17 @@ permissions:
   contents: write
 
 concurrency:
-  group: hub-iam-grpc-repair
+  group: hub-iam-grpc-final
   cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repair branch
+      - name: Checkout final repair branch
         uses: actions/checkout@v4
         with:
-          ref: fix/iam-grpc-authz-contract
+          ref: fix/hub-iam-grpc-final
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -30,8 +30,19 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Apply IAM gRPC authorization repair
-        run: python3 .github/scripts/apply_iam_grpc_contract_fix.py
+      - name: Apply authorization repairs
+        run: |
+          python3 .github/scripts/apply_iam_grpc_contract_fix.py
+          python3 .github/scripts/align_skill_iam_policy.py
+
+      - name: Pin repaired IAM runtime client
+        run: go get github.com/aisphereio/aisphere-iam@0d4ce5dffaf57cfaae3525491775cb359a5cc1eb
+
+      - name: Generate Skill API policies
+        run: |
+          make tools
+          make api
+          make proto-check
 
       - name: Format and normalize modules
         run: |
@@ -53,8 +64,8 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -f .github/hub-test-failure.log
-          git commit -m "chore: capture Hub test failure"
-          git push origin HEAD:fix/iam-grpc-authz-contract
+          git commit -m "chore: capture Hub test failure" || true
+          git push origin HEAD:fix/hub-iam-grpc-final
           exit 1
 
       - name: Build
@@ -63,22 +74,70 @@ jobs:
       - name: Render Kubernetes manifests
         run: kubectl kustomize deploy/k8s/base > /tmp/aisphere-hub-k8s.yaml
 
-      - name: Verify authorization deployment boundary
+      - name: Verify authorization boundary
         run: |
           ! grep -R "provider: spicedb" deploy/config.yaml deploy/k8s/base/configmap.yaml
+          ! grep -R 'resource: "aihub:skill' api/skill/v1/skill.proto
           grep -R "provider: iam_grpc" deploy/config.yaml deploy/k8s/base/configmap.yaml
           grep -R "aisphere-iam.aisphere.svc.cluster.local:19080" deploy/config.yaml deploy/k8s/base/configmap.yaml
 
       - name: Build container image
         run: docker build --build-arg VERSION=${{ github.sha }} -t aisphere-hub:${{ github.sha }} .
 
-      - name: Commit final repair
+      - name: Commit final Hub repair
         run: |
-          git checkout origin/main -- .github/workflows/ci.yml
-          rm -f .github/scripts/apply_iam_grpc_contract_fix.py .github/hub-test-failure.log
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: CI
+
+          on:
+            pull_request:
+              branches:
+                - main
+                - 'feat/**'
+            push:
+              branches:
+                - main
+                - 'feat/**'
+
+          permissions:
+            contents: read
+
+          concurrency:
+            group: hub-ci-${{ github.ref }}
+            cancel-in-progress: true
+
+          jobs:
+            verify:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Checkout
+                  uses: actions/checkout@v4
+
+                - name: Set up Go
+                  uses: actions/setup-go@v5
+                  with:
+                    go-version-file: go.mod
+                    cache: true
+
+                - name: Download dependencies
+                  run: go mod download
+
+                - name: Test
+                  run: go test ./... -count=1 -short
+
+                - name: Build
+                  run: go build ./...
+
+                - name: Render Kubernetes manifests
+                  run: kubectl kustomize deploy/k8s/base > /tmp/aisphere-hub-k8s.yaml
+
+                - name: Build container image
+                  run: docker build --build-arg VERSION=${{ github.sha }} -t aisphere-hub:${{ github.sha }} .
+          YAML
+          rm -f .github/scripts/apply_iam_grpc_contract_fix.py .github/scripts/align_skill_iam_policy.py .github/hub-test-failure.log
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
           git diff --cached --stat
-          git commit -m "fix: route Hub authorization through IAM runtime API"
-          git push origin HEAD:fix/iam-grpc-authz-contract
+          git commit -m "fix: complete Hub IAM authorization integration"
+          git push origin HEAD:fix/hub-iam-grpc-final
