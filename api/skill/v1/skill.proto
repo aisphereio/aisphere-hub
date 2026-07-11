@@ -462,7 +462,7 @@ message UpdateSkillResponse {
 
 message UpdateSkillVisibilityRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string visibility = 2 [(google.api.field_behavior) = REQUIRED]; // "private" | "public"
+  string visibility = 2 [(google.api.field_behavior) = REQUIRED]; // "private" | "internal" | "public"
 }
 
 message UpdateSkillVisibilityResponse {
@@ -715,7 +715,7 @@ message SkillShare {
   // resource is always "skill:{name}" — echoed for client convenience.
   string resource_type = 1;
   string resource_id = 2;
-  string relation = 3;        // "viewer" | "editor" | "owner"
+  string relation = 3;        // "viewer" | "editor" | "reviewer" | "owner"
   string subject_type = 4;    // "user" | "service" | "group"
   string subject_id = 5;
   string subject_relation = 6; // optional, e.g. "member" for group subjects
@@ -731,7 +731,7 @@ message ListSkillSharesResponse {
 
 message CreateSkillShareRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string relation = 2 [(google.api.field_behavior) = REQUIRED];  // "viewer" | "editor"
+  string relation = 2 [(google.api.field_behavior) = REQUIRED];  // "viewer" | "editor" | "reviewer"
   string subject_type = 3 [(google.api.field_behavior) = REQUIRED];
   string subject_id = 4 [(google.api.field_behavior) = REQUIRED];
   string subject_relation = 5; // optional, for group#member subjects

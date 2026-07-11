@@ -14,17 +14,26 @@ const (
 
 	SkillSubjectRelationMember = "member"
 
-	SkillShareRelationViewer = "viewer"
-	SkillShareRelationEditor = "editor"
+	SkillShareRelationViewer   = "viewer"
+	SkillShareRelationEditor   = "editor"
+	SkillShareRelationReviewer = "reviewer"
+
+	// SkillVisibilityInternal means every authenticated principal whose
+	// stable IAM org_id matches Skill.OrgID can discover and read the Skill.
+	// The Skill still lives in the global root catalog; OrgID is a governance
+	// and access boundary, not a catalog parent.
+	SkillVisibilityInternal = "internal"
 )
 
 // NormalizeRootSkillCreate stamps server-owned placement fields for the
 // root Skill catalog model.
 //
 // Hub does not create Skills under a Hub organization/group/project. The
-// authenticated principal becomes the owner and org/project placement is not
-// accepted from client payloads. Keeping this as a small helper makes the
-// product rule reusable by service code, upload/import code, and tests.
+// authenticated principal becomes the owner; principal.OrgID is retained only
+// as the governing organization used by internal visibility, IAM directory
+// pickers, audit, and future quota policy. Project placement is never accepted
+// from client payloads. Keeping this as a small helper makes the product rule
+// reusable by service code, upload/import code, and tests.
 func NormalizeRootSkillCreate(skill *Skill, principal authn.Principal) *Skill {
 	if skill == nil {
 		return nil
@@ -35,6 +44,7 @@ func NormalizeRootSkillCreate(skill *Skill, principal authn.Principal) *Skill {
 	out.ProjectID = ""
 	if principal.IsAuthenticated() {
 		out.OwnerID = principal.SubjectID
+		out.OrgID = principal.OrgID
 	}
 	return &out
 }
@@ -69,13 +79,112 @@ func NormalizeSkillShareSubject(subjectType, subjectID, subjectRelation string) 
 	}
 }
 
-// NormalizeSkillShareRelation accepts only the two grantable relations for
-// user-managed Skill sharing. Ownership is intentionally not transferable from
-// the share dialog.
+// NormalizeSkillShareRelation accepts the grantable relations defined by
+// the IAM-owned SpiceDB skill model. Ownership is intentionally not transferable
+// from the share dialog. reviewer is the publish/review role; editor cannot
+// change visibility or grant other users access.
 func NormalizeSkillShareRelation(relation string) (string, error) {
 	rel := strings.ToLower(strings.TrimSpace(relation))
-	if rel == SkillShareRelationViewer || rel == SkillShareRelationEditor {
+	switch rel {
+	case SkillShareRelationViewer, SkillShareRelationEditor, SkillShareRelationReviewer:
 		return rel, nil
+	default:
+		return "", errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("relation must be 'viewer', 'editor', or 'reviewer'"))
 	}
-	return "", errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("relation must be 'viewer' or 'editor'"))
+}
+
+// NormalizeSkillVisibility validates the three product visibility states.
+func NormalizeSkillVisibility(visibility string) (string, error) {
+	v := strings.ToLower(strings.TrimSpace(visibility))
+	switch v {
+	case SkillVisibilityPrivate, SkillVisibilityInternal, SkillVisibilityPublic:
+		return v, nil
+	default:
+		return "", errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("visibility must be 'private', 'internal', or 'public'"))
+	}
+}
+
+// SkillShareUnderlyingRelations translates one product role into the IAM-owned
+// SpiceDB relations needed to make it usable. The current shared Schema keeps
+// reviewer separate from view, so the reviewer product role is represented by
+// reviewer + viewer.
+func SkillShareUnderlyingRelations(role string) []string {
+	switch role {
+	case SkillShareRelationReviewer:
+		return []string{SkillShareRelationReviewer, SkillShareRelationViewer}
+	case SkillShareRelationEditor:
+		return []string{SkillShareRelationEditor}
+	default:
+		return []string{SkillShareRelationViewer}
+	}
+}
+
+// CollapseSkillShareRelationships converts the low-level relation set into one
+// product role per subject. Role precedence is owner > reviewer > editor > viewer.
+func CollapseSkillShareRelationships(rels []AuthzRelationship) []*SkillShare {
+	type entry struct {
+		share    *SkillShare
+		priority int
+	}
+	bySubject := make(map[string]entry, len(rels))
+	order := make([]string, 0, len(rels))
+	priority := map[string]int{
+		"owner":                    4,
+		SkillShareRelationReviewer: 3,
+		SkillShareRelationEditor:   2,
+		SkillShareRelationViewer:   1,
+	}
+	for _, rel := range rels {
+		p, ok := priority[rel.Relation]
+		if !ok {
+			continue
+		}
+		key := rel.Subject.Type + ":" + rel.Subject.ID + "#" + rel.Subject.Relation
+		current, exists := bySubject[key]
+		if exists && current.priority >= p {
+			continue
+		}
+		if !exists {
+			order = append(order, key)
+		}
+		bySubject[key] = entry{
+			priority: p,
+			share: &SkillShare{
+				ResourceType:    rel.Resource.Type,
+				ResourceID:      rel.Resource.ID,
+				Relation:        rel.Relation,
+				SubjectType:     rel.Subject.Type,
+				SubjectID:       rel.Subject.ID,
+				SubjectRelation: rel.Subject.Relation,
+			},
+		}
+	}
+	out := make([]*SkillShare, 0, len(order))
+	for _, key := range order {
+		out = append(out, bySubject[key].share)
+	}
+	return out
+}
+
+// CanReadSkillByImplicitPolicy evaluates the durable Hub-side fallbacks used
+// when IAM/SpiceDB has no explicit relation or is temporarily unavailable.
+// It never grants write, publish, share, visibility, or delete permissions.
+func CanReadSkillByImplicitPolicy(principal authn.Principal, skill *Skill) bool {
+	if skill == nil || !principal.IsAuthenticated() {
+		return false
+	}
+	if skill.OwnerID != "" && skill.OwnerID == principal.SubjectID {
+		return true
+	}
+	switch strings.ToLower(strings.TrimSpace(skill.Visibility)) {
+	case SkillVisibilityPublic:
+		// Current /v1/skills routes are authenticated, so public means every
+		// platform user. A future anonymous catalog must use separate PUBLIC
+		// routes that expose only online versions.
+		return true
+	case SkillVisibilityInternal:
+		return skill.OrgID != "" && principal.OrgID != "" && skill.OrgID == principal.OrgID
+	default:
+		return false
+	}
 }

@@ -432,8 +432,8 @@ func (uc *SkillUsecase) UpdateSkill(ctx context.Context, principal authn.Princip
 	return out, nil
 }
 
-// UpdateSkillVisibility changes a skill between private and public. Requires
-// skill.edit because it changes who can read the resource.
+// UpdateSkillVisibility changes a skill between private, internal, and public.
+// It requires skill.manage because visibility changes the resource trust boundary.
 func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, principal authn.Principal, name, visibility string) (out *Skill, err error) {
 	ctx, logger, started := uc.begin(ctx, principal, "update_visibility", logx.String("name", name), logx.String("visibility", visibility))
 	defer func() {
@@ -442,12 +442,21 @@ func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, principal aut
 	if err := ValidateSkillName(name); err != nil {
 		return nil, err
 	}
-	visibility = normalizeSkillVisibility(visibility)
-	if visibility != SkillVisibilityPrivate && visibility != SkillVisibilityPublic {
-		return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("visibility must be 'private' or 'public'"))
-	}
-	if err := uc.requireSkillPermission(ctx, principal, name, "edit"); err != nil {
+	visibility, err = NormalizeSkillVisibility(visibility)
+	if err != nil {
 		return nil, err
+	}
+	if err := uc.requireSkillPermission(ctx, principal, name, "manage"); err != nil {
+		return nil, err
+	}
+	if visibility == SkillVisibilityInternal {
+		current, getErr := uc.repo.GetSkill(ctx, name)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if strings.TrimSpace(current.OrgID) == "" {
+			return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("internal visibility requires a governing org_id; backfill the Skill owner organization first"))
+		}
 	}
 	out, err = uc.repo.UpdateSkillVisibility(ctx, name, visibility)
 	if err != nil {
@@ -530,7 +539,7 @@ func (uc *SkillUsecase) GetSkill(ctx context.Context, principal authn.Principal,
 
 // DeleteSkill soft-deletes one skill by name. Cascades to versions and
 // files; S3 objects are purged best-effort after the DB commit. Requires
-// skill.delete permission via authz. After the DB delete succeeds,
+// skill.manage permission via authz. After the DB delete succeeds,
 // removes all relationships on skill:{name} so authz stops recognizing
 // the (now-deleted) resource.
 func (uc *SkillUsecase) DeleteSkill(ctx context.Context, principal authn.Principal, name string) (err error) {
@@ -539,7 +548,7 @@ func (uc *SkillUsecase) DeleteSkill(ctx context.Context, principal authn.Princip
 	if err := ValidateSkillName(name); err != nil {
 		return err
 	}
-	if err := uc.requireSkillPermission(ctx, principal, name, "delete"); err != nil {
+	if err := uc.requireSkillPermission(ctx, principal, name, "manage"); err != nil {
 		return err
 	}
 	if err := uc.repo.DeleteSkill(ctx, name); err != nil {
@@ -882,7 +891,7 @@ type SkillShare struct {
 // SkillShareInput is the input for CreateSkillShare.
 type SkillShareInput struct {
 	Name            string
-	Relation        string // "viewer" | "editor" (NOT "owner")
+	Relation        string // "viewer" | "editor" | "reviewer" (NOT "owner")
 	SubjectType     string
 	SubjectID       string
 	SubjectRelation string
@@ -891,16 +900,16 @@ type SkillShareInput struct {
 // --- Skill share (authz relationship management) ---
 
 // ListSkillShares lists all subjects that have any relation on the named
-// skill. Requires skill.read (with ownership + public fallback).
+// skill. Requires skill.manage because the subject list is authorization metadata.
 //
-// Returns owner / viewer / editor relationships. The owner relation is
+// Returns owner / viewer / editor / reviewer relationships. The owner relation is
 // read-only — it can only be set at CreateSkill time and is not
 // modifiable via the share RPCs.
 func (uc *SkillUsecase) ListSkillShares(ctx context.Context, principal authn.Principal, name string) ([]*SkillShare, error) {
 	if err := ValidateSkillName(name); err != nil {
 		return nil, err
 	}
-	if err := uc.requireSkillRead(ctx, principal, name); err != nil {
+	if err := uc.requireSkillPermission(ctx, principal, name, "manage"); err != nil {
 		return nil, err
 	}
 	if uc.authz == nil {
@@ -918,23 +927,12 @@ func (uc *SkillUsecase) ListSkillShares(ctx context.Context, principal authn.Pri
 		)
 		return nil, err
 	}
-	out := make([]*SkillShare, 0, len(rels))
-	for _, rel := range rels {
-		out = append(out, &SkillShare{
-			ResourceType:    rel.Resource.Type,
-			ResourceID:      rel.Resource.ID,
-			Relation:        rel.Relation,
-			SubjectType:     rel.Subject.Type,
-			SubjectID:       rel.Subject.ID,
-			SubjectRelation: rel.Subject.Relation,
-		})
-	}
-	return out, nil
+	return CollapseSkillShareRelationships(rels), nil
 }
 
-// CreateSkillShare grants a viewer or editor relation on the named skill
-// to a subject. Requires skill.edit. The relation field accepts only
-// "viewer" or "editor"; passing "owner" returns ErrSkillInvalidArgument
+// CreateSkillShare grants a viewer, editor, or reviewer relation on the named
+// skill to a subject. Requires skill.manage. Passing "owner" returns
+// ErrSkillInvalidArgument
 // (owner is set at CreateSkill time and is not transferable).
 func (uc *SkillUsecase) CreateSkillShare(ctx context.Context, principal authn.Principal, in SkillShareInput) (out *SkillShare, err error) {
 	ctx, logger, started := uc.begin(ctx, principal, "create_share", logx.String("name", in.Name), logx.String("subject_type", in.SubjectType))
@@ -944,24 +942,53 @@ func (uc *SkillUsecase) CreateSkillShare(ctx context.Context, principal authn.Pr
 	if err := ValidateSkillName(in.Name); err != nil {
 		return nil, err
 	}
-	in.Relation = strings.TrimSpace(in.Relation)
-	if in.Relation != "viewer" && in.Relation != "editor" {
-		return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("relation must be 'viewer' or 'editor' (owner is not transferable)"))
+	in.Relation, err = NormalizeSkillShareRelation(in.Relation)
+	if err != nil {
+		return nil, err
 	}
 	if strings.TrimSpace(in.SubjectType) == "" || strings.TrimSpace(in.SubjectID) == "" {
 		return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("subject_type and subject_id are required"))
 	}
-	if err := uc.requireSkillPermission(ctx, principal, in.Name, "edit"); err != nil {
+	if err := uc.requireSkillPermission(ctx, principal, in.Name, "manage"); err != nil {
 		return nil, err
 	}
 	if uc.authz == nil {
 		return nil, ErrSkillPermissionDenied // dev mode: no authz, no share
 	}
-	if err := uc.authz.GrantRole(ctx,
-		AuthzObjectRef{Type: "skill", ID: in.Name},
-		in.Relation,
-		AuthzSubjectRef{Type: in.SubjectType, ID: in.SubjectID, Relation: in.SubjectRelation},
-	); err != nil {
+	subject := AuthzSubjectRef{Type: in.SubjectType, ID: in.SubjectID, Relation: in.SubjectRelation}
+	resource := AuthzObjectRef{Type: "skill", ID: in.Name}
+	existing, _, err := uc.authz.ReadRelationships(ctx, AuthzRelationshipFilter{
+		ResourceType: resource.Type,
+		ResourceID:   resource.ID,
+		SubjectType:  subject.Type,
+		SubjectID:    subject.ID,
+	}, 0, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := uc.authz.RevokeAll(ctx, resource, subject); err != nil {
+		return nil, err
+	}
+	newRelationships := make([]AuthzRelationship, 0, 3)
+	for _, rel := range existing {
+		if rel.Relation == "owner" {
+			newRelationships = append(newRelationships, rel)
+		}
+	}
+	for _, relation := range SkillShareUnderlyingRelations(in.Relation) {
+		newRelationships = append(newRelationships, AuthzRelationship{
+			Resource: resource,
+			Relation: relation,
+			Subject:  subject,
+		})
+	}
+	if _, err := uc.authz.WriteRelationships(ctx, newRelationships...); err != nil {
+		// Best-effort compensation restores the previous relation set if role
+		// replacement fails after revoke.
+		if len(existing) > 0 {
+			_, _ = uc.authz.WriteRelationships(ctx, existing...)
+		}
+
 		uc.recordAudit(ctx, principal, "skill.share.create", auditx.ResultFailure, err.Error(), "skill", in.Name, map[string]any{
 			"subject_type": in.SubjectType,
 			"subject_id":   in.SubjectID,
@@ -997,8 +1024,8 @@ func (uc *SkillUsecase) CreateSkillShare(ctx context.Context, principal authn.Pr
 }
 
 // DeleteSkillShare revokes ALL relations between the named skill and the
-// named subject (viewer, editor, but NOT owner — owner can only be
-// removed by deleting the skill). Requires skill.edit.
+// named subject (viewer, editor, reviewer, but NOT owner — owner can only be
+// removed by deleting the skill). Requires skill.manage.
 func (uc *SkillUsecase) DeleteSkillShare(ctx context.Context, principal authn.Principal, name, subjectType, subjectID string) (err error) {
 	ctx, logger, started := uc.begin(ctx, principal, "delete_share", logx.String("name", name), logx.String("subject_type", subjectType))
 	defer func() {
@@ -1010,7 +1037,7 @@ func (uc *SkillUsecase) DeleteSkillShare(ctx context.Context, principal authn.Pr
 	if strings.TrimSpace(subjectType) == "" || strings.TrimSpace(subjectID) == "" {
 		return errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("subject_type and subject_id are required"))
 	}
-	if err := uc.requireSkillPermission(ctx, principal, name, "edit"); err != nil {
+	if err := uc.requireSkillPermission(ctx, principal, name, "manage"); err != nil {
 		return err
 	}
 	if uc.authz == nil {
@@ -1101,7 +1128,7 @@ func (uc *SkillUsecase) requireSkillPermission(ctx context.Context, principal au
 // public-visibility fallbacks. Used by GetSkill / ListSkillVersions /
 // GetSkillVersion / DownloadSkillPackage / ListSkillVersionFiles /
 // GetSkillVersionFile — read operations where a brand-new user with no
-// explicit grants should still see public skills and their own skills.
+// explicit grants should still see internal/public skills and their own skills.
 func (uc *SkillUsecase) requireSkillRead(ctx context.Context, principal authn.Principal, name string) error {
 	if uc.authz == nil {
 		return nil // dev mode
@@ -1117,9 +1144,9 @@ func (uc *SkillUsecase) requireSkillRead(ctx context.Context, principal authn.Pr
 		OrgID:      principal.OrgID,
 	})
 	if err != nil {
-		// Backend failure: log + fall through to ownership / public check.
+		// Backend failure: log + fall through to ownership / internal / public check.
 		// We never want authz outage to make read endpoints 500.
-		uc.log.WithContext(ctx).Warn("authz check failed; falling back to ownership/public",
+		uc.log.WithContext(ctx).Warn("authz check failed; falling back to ownership/internal/public",
 			logx.String("name", name),
 			logx.String("caller", principal.SubjectID),
 			logx.Err(err),
@@ -1127,7 +1154,7 @@ func (uc *SkillUsecase) requireSkillRead(ctx context.Context, principal authn.Pr
 	} else if ok {
 		return nil
 	}
-	// Fallback: load skill row and check ownership / public visibility.
+	// Fallback: load skill row and check ownership / internal / public visibility.
 	// This catches the case where the authz owner-grant failed at create
 	// time but the user is still the legitimate owner, AND it lets any
 	// authenticated user read public skills even without an explicit grant.
@@ -1142,19 +1169,14 @@ func (uc *SkillUsecase) requireSkillRead(ctx context.Context, principal authn.Pr
 }
 
 // canReadSkill returns true if principal can read the given skill,
-// considering (1) authz allow, (2) ownership fallback, (3) public
-// visibility fallback. Used by GetSkill and requireSkillRead.
+// considering (1) durable owner/internal/public fallbacks and (2) explicit IAM
+// relationships evaluated by SpiceDB. Used by GetSkill and requireSkillRead.
 func (uc *SkillUsecase) canReadSkill(ctx context.Context, principal authn.Principal, skill *Skill) bool {
+	if CanReadSkillByImplicitPolicy(principal, skill) {
+		return true
+	}
 	if skill == nil {
 		return false
-	}
-	// Public skills are world-readable by any authenticated user.
-	if skill.Visibility == SkillVisibilityPublic {
-		return true
-	}
-	// Owner can always read their own skill.
-	if principal.IsAuthenticated() && skill.OwnerID != "" && skill.OwnerID == principal.SubjectID {
-		return true
 	}
 	// Authz check (may be a re-check in the requireSkillRead path, but
 	// SpiceDB caches internally so the cost is low).
