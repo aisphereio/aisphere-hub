@@ -27,6 +27,7 @@ WORKDIR /app
 
 COPY --from=builder /out/aisphere-hub /app/aisphere-hub
 COPY --from=builder /src/migrations /app/migrations
+COPY --from=builder /src/configs /app/configs
 
 RUN chown -R app:app /app
 
