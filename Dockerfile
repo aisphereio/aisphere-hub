@@ -6,7 +6,7 @@ WORKDIR /src
 RUN apk add --no-cache ca-certificates git make tzdata
 
 COPY go.mod go.sum ./
-RUN GOPROXY=direct go mod download
+RUN go mod download
 
 COPY . .
 
