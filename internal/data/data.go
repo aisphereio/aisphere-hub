@@ -8,6 +8,7 @@ import (
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/observability"
 
+	iamauthz "github.com/aisphereio/aisphere-iam/client/authzgrpc"
 	"github.com/aisphereio/kernel/accessx"
 	"github.com/aisphereio/kernel/auditx"
 	"github.com/aisphereio/kernel/authn"
@@ -361,6 +362,12 @@ func newAuthorizer(cfg conf.AuthzConfig) (authz.Authorizer, func() error, error)
 	switch cfg.Provider {
 	case "", "spicedb":
 		client, err := spicedb.New(cfg.SpiceDB)
+		if err != nil {
+			return nil, nil, err
+		}
+		return client, client.Close, nil
+	case "iam_grpc":
+		client, err := iamauthz.New(cfg.IAMGRPC)
 		if err != nil {
 			return nil, nil, err
 		}

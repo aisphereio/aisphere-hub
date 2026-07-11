@@ -3,6 +3,7 @@ package conf
 import (
 	"time"
 
+	"github.com/aisphereio/aisphere-iam/client/authzgrpc"
 	"github.com/aisphereio/kernel/accessx"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authn/casdoor"
@@ -100,10 +101,11 @@ type AuthnConfig struct {
 }
 
 type AuthzConfig struct {
-	Enabled     bool           `json:"enabled" yaml:"enabled"`
-	Provider    string         `json:"provider" yaml:"provider"`
-	DevAllowAll bool           `json:"dev_allow_all" yaml:"dev_allow_all"`
-	SpiceDB     spicedb.Config `json:"spicedb" yaml:"spicedb"`
+	Enabled     bool              `json:"enabled" yaml:"enabled"`
+	Provider    string            `json:"provider" yaml:"provider"`
+	DevAllowAll bool              `json:"dev_allow_all" yaml:"dev_allow_all"`
+	SpiceDB     spicedb.Config    `json:"spicedb" yaml:"spicedb"`
+	IAMGRPC     authzgrpc.Config `json:"iam_grpc" yaml:"iam_grpc"`
 }
 
 type GatewayConfig struct {
