@@ -59,16 +59,13 @@ func (s *SkillService) RegisterHTTPServer(srv *khttp.Server) {
 
 func (s *SkillService) CreateSkill(ctx context.Context, req *v1.CreateSkillRequest) (*v1.CreateSkillResponse, error) {
 	principal := principalFromContext(ctx)
-	out, err := s.uc.CreateSkill(ctx, principal, &biz.Skill{
+	out, err := s.uc.CreateRootSkill(ctx, principal, &biz.Skill{
 		Name:         req.GetName(),
 		DisplayName:  req.GetDisplayName(),
 		Description:  req.GetDescription(),
 		Version:      req.GetVersion(),
 		Status:       req.GetStatus(),
 		Visibility:   req.GetVisibility(),
-		OwnerID:      req.GetOwnerId(),
-		OrgID:        req.GetOrgId(),
-		ProjectID:    req.GetProjectId(),
 		SourceType:   req.GetSourceType(),
 		SourceURI:    req.GetSourceUri(),
 		ManifestJSON: req.GetManifestJson(),
@@ -117,7 +114,7 @@ func (s *SkillService) ListSkills(ctx context.Context, req *v1.ListSkillsRequest
 	if err != nil {
 		return nil, err
 	}
-	out, err := s.uc.ListSkills(ctx, principal, biz.SkillListOptions{
+	out, err := s.uc.ListRootCatalogSkills(ctx, principal, biz.SkillListOptions{
 		Limit:      limit,
 		Offset:     offset,
 		Query:      req.GetQ(),
@@ -358,7 +355,7 @@ func (s *SkillService) ListSkillShares(ctx context.Context, req *v1.ListSkillSha
 
 func (s *SkillService) CreateSkillShare(ctx context.Context, req *v1.CreateSkillShareRequest) (*v1.SkillShare, error) {
 	principal := principalFromContext(ctx)
-	out, err := s.uc.CreateSkillShare(ctx, principal, biz.SkillShareInput{
+	out, err := s.uc.CreateRootSkillShare(ctx, principal, biz.SkillShareInput{
 		Name:            req.GetName(),
 		Relation:        req.GetRelation(),
 		SubjectType:     req.GetSubjectType(),

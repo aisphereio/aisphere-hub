@@ -1,0 +1,46 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: aisphere-hub-http-security
+  namespace: aisphere
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: aisphere-hub-protected
+  # Browser flow. The referenced Secret must contain key "client-secret".
+  oidc:
+    provider:
+      issuer: https://casdoor.example.com
+    clientID: CHANGE_ME_CASDOOR_CLIENT_ID
+    clientSecret:
+      name: casdoor-hub-oidc
+    redirectURL: https://hub.example.com/oauth2/callback
+    logoutPath: /logout
+    scopes: [openid, profile, email]
+    refreshToken: true
+    forwardAccessToken: true
+    passThroughAuthHeader: true
+    disableTokenEncryption: false
+    # API fetches receive 401 instead of following a cross-origin login 302.
+    # The frontend then reloads /, allowing a normal browser OIDC redirect.
+    denyRedirect:
+      headers:
+        - name: x-requested-with
+          type: Exact
+          value: XMLHttpRequest
+  # CLI/Agent flow. Missing JWT is optional because browsers use OIDC cookies;
+  # a supplied bearer token is still verified.
+  jwt:
+    optional: true
+    providers:
+      - name: casdoor
+        issuer: https://casdoor.example.com
+        audiences:
+          - CHANGE_ME_CASDOOR_CLIENT_ID
+        remoteJWKS:
+          uri: https://casdoor.example.com/.well-known/jwks
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "

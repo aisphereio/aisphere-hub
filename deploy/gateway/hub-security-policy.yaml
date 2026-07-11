@@ -1,0 +1,64 @@
+# Hub SecurityPolicy — OIDC authentication + JWT verification for hub API routes.
+#
+# This policy is applied to the hub-api-protected-route HTTPRoute. It:
+#   1. Terminates OIDC at the Envoy Gateway layer (redirects unauthenticated
+#      users to Casdoor login).
+#   2. Verifies the JWT access token against Casdoor's JWKS endpoint.
+#   3. Injects x-aisphere-* headers with user claims for the backend.
+#
+# Public routes (login, exchange, refresh) are in hub-api-public-route and
+# do NOT have OIDC protection — they are matched first by Envoy Gateway
+# and bypass this SecurityPolicy.
+#
+# The hub runs in gateway_trusted mode, meaning it trusts the headers
+# injected by Envoy Gateway and does not re-verify the JWT on every request.
+#
+# Casdoor application: aisphere (client_id: bbdcfc272e2b990cb923)
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: hub-oidc-policy
+  namespace: aisphere-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: hub-api-protected-route
+  oidc:
+    provider:
+      issuer: "https://casdoor.weagent.cc:30723"
+    clientID: "bbdcfc272e2b990cb923"
+    clientSecret:
+      name: casdoor-hub-client-secret
+    redirectURL: "https://api.weagent.cc:30723/v1/authn/exchange"
+    logoutPath: "/v1/authn/logout"
+    scopes:
+      - openid
+      - profile
+      - email
+    refreshToken: true
+    forwardAccessToken: true
+    passThroughAuthHeader: true
+    disableTokenEncryption: false
+  jwt:
+    providers:
+      - name: casdoor
+        issuer: "https://casdoor.weagent.cc:30723"
+        audiences:
+          - "bbdcfc272e2b990cb923"
+        remoteJWKS:
+          uri: "https://casdoor.weagent.cc:30723/.well-known/jwks"
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "
+        claimToHeaders:
+          - claim: sub
+            header: x-aisphere-external-sub
+          - claim: email
+            header: x-aisphere-external-email
+          - claim: name
+            header: x-aisphere-external-name
+          - claim: preferred_username
+            header: x-aisphere-external-username

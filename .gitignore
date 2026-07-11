@@ -39,4 +39,4 @@ bin/
 
 # config
 configs/config.yaml
-configs/casdoor.pub
+configs/casdoor.pub.worktrees/

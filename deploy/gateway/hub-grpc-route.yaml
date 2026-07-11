@@ -1,0 +1,66 @@
+# Hub gRPC routes — routes gRPC service calls to aisphere-hub:19001.
+#
+# These routes are for service-to-service gRPC calls that carry a Bearer
+# token. The hub verifies the JWT directly (authn mode: gateway_trusted
+# for HTTP, but gRPC clients present a Bearer token that the hub validates
+# via OIDC discovery + JWKS).
+#
+# NOTE: gRPC routes use the HTTP listener (port 80 / NodePort 30936) since
+# Envoy Gateway's GRPCRoute does not support TLS passthrough on the HTTPS
+# listener. gRPC clients should connect to api.weagent.cc:30936.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: hub-grpc-route
+  namespace: aisphere
+  labels:
+    app.kubernetes.io/name: aisphere-hub
+    app.kubernetes.io/component: gateway-route
+    aisphere.io/exposure-bucket: authenticated
+spec:
+  parentRefs:
+    - name: aisphere-gateway
+      namespace: aisphere-system
+  hostnames:
+    - "api.weagent.cc"
+  rules:
+    - matches:
+        - method:
+            type: Exact
+            service: aisphere.hub.authn.v1.AuthnService
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 19001
+    - matches:
+        - method:
+            type: Exact
+            service: aisphere.hub.authz.v1.AuthzService
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 19001
+    - matches:
+        - method:
+            type: Exact
+            service: aisphere.hub.skill.v1.SkillService
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 19001
+    - matches:
+        - method:
+            type: Exact
+            service: aisphere.hub.audit.v1.AuditService
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 19001
+    - matches:
+        - method:
+            type: Exact
+            service: grpc.health.v1.Health
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 19001

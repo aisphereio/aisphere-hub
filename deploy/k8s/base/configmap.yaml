@@ -1,0 +1,183 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aisphere-hub-config
+  namespace: aisphere
+data:
+  config.yaml: |
+    service:
+      name: aisphere-hub
+      version: dev
+      env: production
+
+    server:
+      http:
+        addr: 0.0.0.0:18001
+        timeout_ns: 30000000000
+        cors:
+          enabled: false
+      grpc:
+        addr: 0.0.0.0:19001
+        timeout_ns: 30000000000
+
+    log:
+      service_name: aisphere-hub
+      env: production
+      version: dev
+      level: info
+      format: json
+      output: stdout
+      add_source: false
+      redact:
+        enabled: true
+        keys: [password, secret, token, access_key, secret_key, client_secret]
+        value: "***"
+      access_log:
+        enabled: true
+        skip_paths: [/healthz, /readyz, /metrics]
+        slow_threshold: 1000000000
+        request_id_header: X-Request-ID
+        route_header: X-Route-Pattern
+        log_user_agent: true
+
+    data:
+      database:
+        enabled: true
+        config:
+          auto_create_database: false
+          driver: postgres
+          dsn: "${HUB_POSTGRES_DSN}"
+          max_open_conns: 20
+          max_idle_conns: 10
+          conn_max_lifetime_ns: 1800000000000
+          conn_max_idle_time_ns: 300000000000
+          query_timeout_ns: 5000000000
+          slow_query_threshold_ns: 200000000
+          audit_enabled: true
+          metrics_enabled: true
+        migration:
+          enabled: true
+          engine: goose
+          dir: /app/migrations/postgres
+          table: aihub_schema_migrations
+          mode: apply
+          fail_on_pending: true
+          allow_concurrent: true
+      cache:
+        enabled: true
+        config:
+          driver: redis
+          addrs: ["${HUB_REDIS_ADDR}"]
+          username: ""
+          password: "${HUB_REDIS_PASSWORD}"
+          db: 0
+          key_prefix: aisphere-hub
+          dial_timeout_ns: 5000000000
+          read_timeout_ns: 3000000000
+          write_timeout_ns: 3000000000
+          metrics_enabled: true
+      object_store:
+        enabled: true
+        config:
+          driver: minio
+          endpoint: "${HUB_S3_ENDPOINT}"
+          use_ssl: false
+          access_key: "${HUB_S3_ACCESS_KEY}"
+          secret_key: "${HUB_S3_SECRET_KEY}"
+          bucket: aisphere-hub
+          ensure_bucket: true
+          presign_expiry_ns: 900000000000
+          metrics_enabled: true
+
+    security:
+      # Envoy performs browser OIDC and forwards the Casdoor access token.
+      # Hub verifies the forwarded JWT again with Casdoor JWKS.
+      authn:
+        enabled: true
+        provider: casdoor
+        mode: casdoor_jwt
+        cache_ttl_ns: 300000000000
+        oidc:
+          provider: casdoor
+          issuer: "${CASDOOR_ISSUER}"
+          discovery_url: "${CASDOOR_ISSUER}/.well-known/openid-configuration"
+          jwks_url: "${CASDOOR_ISSUER}/.well-known/jwks"
+          audience: ["${CASDOOR_CLIENT_ID}"]
+          allowed_owners: ["${CASDOOR_OWNER:aisphere}"]
+          allowed_algs: [RS256, RS512, ES256, ES512]
+          jwks_cache_ttl_ns: 600000000000
+          clock_skew_ns: 60000000000
+        casdoor:
+          endpoint: "${CASDOOR_ENDPOINT}"
+          issuer: "${CASDOOR_ISSUER}"
+          discovery_url: "${CASDOOR_ISSUER}/.well-known/openid-configuration"
+          jwks_url: "${CASDOOR_ISSUER}/.well-known/jwks"
+          audience: ["${CASDOOR_CLIENT_ID}"]
+          allowed_owners: ["${CASDOOR_OWNER:aisphere}"]
+          allowed_algs: [RS256, RS512, ES256, ES512]
+          organization_name: "${CASDOOR_OWNER:aisphere}"
+          application_name: aisphere-hub
+          client_id: "${CASDOOR_CLIENT_ID}"
+          client_secret: "${CASDOOR_CLIENT_SECRET}"
+          timeout: 10000000000
+          metrics_enabled: true
+      internal_call:
+        enabled: false
+      access:
+        public_operations:
+          - /healthz
+          - /readyz
+          - /internal/dtm/*
+          - /v1/authn/login*
+          - /v1/authn/logout*
+          - /v1/authn/exchange
+          - /v1/authn/refresh
+          - /aisphere.hub.authn.v1.AuthnService/LoginURL
+          - /aisphere.hub.authn.v1.AuthnService/Exchange
+          - /aisphere.hub.authn.v1.AuthnService/Refresh
+          - /aisphere.hub.authn.v1.AuthnService/LogoutURL
+          - /grpc.health.v1.Health/*
+        skip_operations: []
+      authz:
+        enabled: true
+        provider: spicedb
+        dev_allow_all: false
+        spicedb:
+          endpoint: "${SPICEDB_ENDPOINT}"
+          token: "${SPICEDB_TOKEN}"
+          transport: grpc
+          insecure: true
+          timeout: 5000000000
+          fully_consistent: true
+          metrics_enabled: true
+
+    audit:
+      enabled: true
+      store: memory
+
+    metrics:
+      enabled: true
+      addr: 0.0.0.0:19090
+      path: /metrics
+      pprof: false
+
+    dtm:
+      enabled: false
+
+    skill:
+      storage:
+        max_versions: 5
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aisphere-hub-env
+  namespace: aisphere
+data:
+  # Non-secret values referenced by ${...} placeholders in config.yaml.
+  HUB_REDIS_ADDR: redis.aisphere.svc.cluster.local:6379
+  HUB_S3_ENDPOINT: minio.aisphere.svc.cluster.local:9000
+  CASDOOR_ENDPOINT: http://casdoor.aisphere.svc.cluster.local:8000
+  CASDOOR_ISSUER: https://casdoor.example.com
+  CASDOOR_OWNER: aisphere
+  SPICEDB_ENDPOINT: spicedb.aisphere.svc.cluster.local:50051

@@ -1,0 +1,34 @@
+# NOT PART OF THE DEFAULT KUSTOMIZATION.
+#
+# Do not apply this file to the current aisphere-iam release. Envoy's gRPC
+# external authorization client calls:
+#
+#   envoy.service.auth.v3.Authorization/Check
+#
+# while aisphere-iam:19080 currently exposes iam.v1.* services only. Pointing
+# Envoy at the current service returns UNIMPLEMENTED and fails closed.
+#
+# After IAM implements the Envoy v3 Authorization service, merge this extAuth
+# block into each existing route SecurityPolicy instead of creating a second
+# policy for the same target.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: example-after-iam-envoy-authz-support
+  namespace: aisphere
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: REPLACE_WITH_A_DEDICATED_ROUTE
+  extAuth:
+    headersToExtAuth:
+      - authorization
+      - x-request-id
+      - traceparent
+    timeout: 3s
+    failOpen: false
+    grpc:
+      backendRefs:
+        - name: aisphere-iam
+          port: 19080

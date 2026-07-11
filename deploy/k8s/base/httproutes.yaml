@@ -1,0 +1,55 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: aisphere-hub-public
+  namespace: aisphere
+spec:
+  parentRefs:
+    - name: aisphere-gateway
+  hostnames:
+    - hub.example.com
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /healthz
+        - path:
+            type: Exact
+            value: /readyz
+      backendRefs:
+        - name: aisphere-hub
+          port: 18001
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: aisphere-hub-protected
+  namespace: aisphere
+spec:
+  parentRefs:
+    - name: aisphere-gateway
+  hostnames:
+    - hub.example.com
+  rules:
+    # The share picker uses IAM directory APIs under the same browser origin.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1/iam
+      backendRefs:
+        - name: aisphere-iam
+          port: 18080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1
+      backendRefs:
+        - name: aisphere-hub
+          port: 18001
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: aisphere-hub-frontend
+          port: 3000

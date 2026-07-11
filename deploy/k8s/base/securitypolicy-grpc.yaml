@@ -1,0 +1,23 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: aisphere-hub-grpc-security
+  namespace: aisphere
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: aisphere-hub-grpc
+  jwt:
+    optional: false
+    providers:
+      - name: casdoor
+        issuer: https://casdoor.example.com
+        audiences:
+          - CHANGE_ME_CASDOOR_CLIENT_ID
+        remoteJWKS:
+          uri: https://casdoor.example.com/.well-known/jwks
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "
