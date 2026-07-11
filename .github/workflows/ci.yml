@@ -5,69 +5,36 @@ on:
     branches:
       - main
       - 'feat/**'
+  push:
+    branches:
+      - main
+      - 'feat/**'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: hub-iam-grpc-final
+  group: hub-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout final repair branch
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: fix/hub-iam-grpc-final
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up patched Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.25.12'
           cache: true
 
-      - name: Apply authorization repairs
-        run: |
-          python3 .github/scripts/apply_iam_grpc_contract_fix.py
-          python3 .github/scripts/align_skill_iam_policy.py
-          python3 .github/scripts/fix_iam_runtime_readiness.py
-
-      - name: Pin repaired IAM runtime client
-        run: go get github.com/aisphereio/aisphere-iam@0d4ce5dffaf57cfaae3525491775cb359a5cc1eb
-
-      - name: Generate Skill API policies
-        run: |
-          make tools
-          make api
-          make proto-check
-
-      - name: Format and normalize modules
-        run: |
-          gofmt -w internal/data/authz_runtime.go internal/data/authz_runtime_test.go internal/data/data.go internal/data/authz.go internal/data/authz_bootstrap.go internal/data/authz_bootstrap_test.go internal/server/http.go cmd/aisphere-hub/main.go
-          go mod tidy
+      - name: Download dependencies
+        run: go mod download
 
       - name: Test
-        id: tests
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          go test ./... -count=1 -short 2>&1 | tee /tmp/hub-test.log
-
-      - name: Persist failing test diagnostics
-        if: steps.tests.outcome == 'failure'
-        run: |
-          cp /tmp/hub-test.log .github/hub-test-failure.log
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -f .github/hub-test-failure.log
-          git commit -m "chore: capture Hub test failure" || true
-          git push origin HEAD:fix/hub-iam-grpc-final
-          exit 1
+        run: go test ./... -count=1 -short
 
       - name: Build
         run: go build ./...
@@ -75,30 +42,5 @@ jobs:
       - name: Render Kubernetes manifests
         run: kubectl kustomize deploy/k8s/base > /tmp/aisphere-hub-k8s.yaml
 
-      - name: Verify authorization boundary
-        run: |
-          ! grep -R "provider: spicedb" deploy/config.yaml deploy/k8s/base/configmap.yaml
-          ! grep -R 'resource: "aihub:skill' api/skill/v1/skill.proto
-          ! grep -R "ReadSchema" internal/server/http.go
-          grep -R "provider: iam_grpc" deploy/config.yaml deploy/k8s/base/configmap.yaml
-          grep -R "aisphere-iam.aisphere.svc.cluster.local:19080" deploy/config.yaml deploy/k8s/base/configmap.yaml
-          grep -R "iam_authz" internal/server/http.go
-          grep -R "ARG GO_VERSION=1.25.12" Dockerfile
-
       - name: Build container image
         run: docker build --build-arg VERSION=${{ github.sha }} -t aisphere-hub:${{ github.sha }} .
-
-      - name: Commit validated Hub product changes
-        shell: bash
-        run: |
-          set -euxo pipefail
-          rm -f .github/scripts/apply_iam_grpc_contract_fix.py .github/scripts/align_skill_iam_policy.py .github/scripts/fix_iam_runtime_readiness.py .github/hub-test-failure.log
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git status --short
-          git diff --cached --stat
-          if ! git diff --cached --quiet; then
-            git commit -m "fix: complete Hub IAM authorization integration"
-          fi
-          git push origin HEAD:fix/hub-iam-grpc-final
