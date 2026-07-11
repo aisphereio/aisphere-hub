@@ -26,11 +26,13 @@ Schema:
 | --- | --- | --- |
 | `owner` | Owner | manage, edit, review, publish, view |
 | `editor` | Editor | edit and view |
-| `reviewer` | Reviewer / Publisher | review and publish |
+| `reviewer` + `viewer` | Reviewer / Publisher | view, review, and publish |
 | `viewer` | Viewer / Consumer | view and download |
 
-Only `skill.manage` may change visibility or create/delete shares. Editors cannot
-expand access. Group grants target `group:{id}#member`; membership remains owned by
+Only `skill.manage` may view authorization metadata, change visibility, or
+create/delete shares. Editors cannot expand access. Share creation has replacement
+semantics: a subject has one product role, while Reviewer/Publisher is stored as
+`reviewer + viewer` to match the current IAM-owned Schema. Group grants target `group:{id}#member`; membership remains owned by
 Casdoor and projected by IAM.
 
 ## Consistency and failure behavior

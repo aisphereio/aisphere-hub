@@ -48,6 +48,21 @@ func TestCanReadSkillByImplicitPolicy(t *testing.T) {
 	}
 }
 
+func TestCollapseSkillShareRelationships(t *testing.T) {
+	rels := []AuthzRelationship{
+		{Resource: AuthzObjectRef{Type: "skill", ID: "demo"}, Relation: "viewer", Subject: AuthzSubjectRef{Type: "user", ID: "reviewer"}},
+		{Resource: AuthzObjectRef{Type: "skill", ID: "demo"}, Relation: "reviewer", Subject: AuthzSubjectRef{Type: "user", ID: "reviewer"}},
+		{Resource: AuthzObjectRef{Type: "skill", ID: "demo"}, Relation: "editor", Subject: AuthzSubjectRef{Type: "group", ID: "dev", Relation: "member"}},
+	}
+	shares := CollapseSkillShareRelationships(rels)
+	if len(shares) != 2 {
+		t.Fatalf("len(shares) = %d, want 2", len(shares))
+	}
+	if shares[0].Relation != SkillShareRelationReviewer {
+		t.Fatalf("reviewer relation collapsed to %q", shares[0].Relation)
+	}
+}
+
 func TestNormalizeSkillShareRelation(t *testing.T) {
 	for _, relation := range []string{SkillShareRelationViewer, SkillShareRelationEditor, SkillShareRelationReviewer} {
 		if got, err := NormalizeSkillShareRelation(relation); err != nil || got != relation {

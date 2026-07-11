@@ -104,6 +104,68 @@ func NormalizeSkillVisibility(visibility string) (string, error) {
 	}
 }
 
+// SkillShareUnderlyingRelations translates one product role into the IAM-owned
+// SpiceDB relations needed to make it usable. The current shared Schema keeps
+// reviewer separate from view, so the reviewer product role is represented by
+// reviewer + viewer.
+func SkillShareUnderlyingRelations(role string) []string {
+	switch role {
+	case SkillShareRelationReviewer:
+		return []string{SkillShareRelationReviewer, SkillShareRelationViewer}
+	case SkillShareRelationEditor:
+		return []string{SkillShareRelationEditor}
+	default:
+		return []string{SkillShareRelationViewer}
+	}
+}
+
+// CollapseSkillShareRelationships converts the low-level relation set into one
+// product role per subject. Role precedence is owner > reviewer > editor > viewer.
+func CollapseSkillShareRelationships(rels []AuthzRelationship) []*SkillShare {
+	type entry struct {
+		share    *SkillShare
+		priority int
+	}
+	bySubject := make(map[string]entry, len(rels))
+	order := make([]string, 0, len(rels))
+	priority := map[string]int{
+		"owner":                    4,
+		SkillShareRelationReviewer: 3,
+		SkillShareRelationEditor:   2,
+		SkillShareRelationViewer:   1,
+	}
+	for _, rel := range rels {
+		p, ok := priority[rel.Relation]
+		if !ok {
+			continue
+		}
+		key := rel.Subject.Type + ":" + rel.Subject.ID + "#" + rel.Subject.Relation
+		current, exists := bySubject[key]
+		if exists && current.priority >= p {
+			continue
+		}
+		if !exists {
+			order = append(order, key)
+		}
+		bySubject[key] = entry{
+			priority: p,
+			share: &SkillShare{
+				ResourceType:    rel.Resource.Type,
+				ResourceID:      rel.Resource.ID,
+				Relation:        rel.Relation,
+				SubjectType:     rel.Subject.Type,
+				SubjectID:       rel.Subject.ID,
+				SubjectRelation: rel.Subject.Relation,
+			},
+		}
+	}
+	out := make([]*SkillShare, 0, len(order))
+	for _, key := range order {
+		out = append(out, bySubject[key].share)
+	}
+	return out
+}
+
 // CanReadSkillByImplicitPolicy evaluates the durable Hub-side fallbacks used
 // when IAM/SpiceDB has no explicit relation or is temporarily unavailable.
 // It never grants write, publish, share, visibility, or delete permissions.

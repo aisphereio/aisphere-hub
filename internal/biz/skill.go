@@ -891,7 +891,7 @@ type SkillShareInput struct {
 // --- Skill share (authz relationship management) ---
 
 // ListSkillShares lists all subjects that have any relation on the named
-// skill. Requires skill.read (with ownership + public fallback).
+// skill. Requires skill.manage because the subject list is authorization metadata.
 //
 // Returns owner / viewer / editor / reviewer relationships. The owner relation is
 // read-only — it can only be set at CreateSkill time and is not
@@ -900,7 +900,7 @@ func (uc *SkillUsecase) ListSkillShares(ctx context.Context, principal authn.Pri
 	if err := ValidateSkillName(name); err != nil {
 		return nil, err
 	}
-	if err := uc.requireSkillRead(ctx, principal, name); err != nil {
+	if err := uc.requireSkillPermission(ctx, principal, name, "manage"); err != nil {
 		return nil, err
 	}
 	if uc.authz == nil {
@@ -918,18 +918,7 @@ func (uc *SkillUsecase) ListSkillShares(ctx context.Context, principal authn.Pri
 		)
 		return nil, err
 	}
-	out := make([]*SkillShare, 0, len(rels))
-	for _, rel := range rels {
-		out = append(out, &SkillShare{
-			ResourceType:    rel.Resource.Type,
-			ResourceID:      rel.Resource.ID,
-			Relation:        rel.Relation,
-			SubjectType:     rel.Subject.Type,
-			SubjectID:       rel.Subject.ID,
-			SubjectRelation: rel.Subject.Relation,
-		})
-	}
-	return out, nil
+	return CollapseSkillShareRelationships(rels), nil
 }
 
 // CreateSkillShare grants a viewer, editor, or reviewer relation on the named
@@ -957,11 +946,40 @@ func (uc *SkillUsecase) CreateSkillShare(ctx context.Context, principal authn.Pr
 	if uc.authz == nil {
 		return nil, ErrSkillPermissionDenied // dev mode: no authz, no share
 	}
-	if err := uc.authz.GrantRole(ctx,
-		AuthzObjectRef{Type: "skill", ID: in.Name},
-		in.Relation,
-		AuthzSubjectRef{Type: in.SubjectType, ID: in.SubjectID, Relation: in.SubjectRelation},
-	); err != nil {
+	subject := AuthzSubjectRef{Type: in.SubjectType, ID: in.SubjectID, Relation: in.SubjectRelation}
+	resource := AuthzObjectRef{Type: "skill", ID: in.Name}
+	existing, _, err := uc.authz.ReadRelationships(ctx, AuthzRelationshipFilter{
+		ResourceType: resource.Type,
+		ResourceID:   resource.ID,
+		SubjectType:  subject.Type,
+		SubjectID:    subject.ID,
+	}, 0, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := uc.authz.RevokeAll(ctx, resource, subject); err != nil {
+		return nil, err
+	}
+	newRelationships := make([]AuthzRelationship, 0, 3)
+	for _, rel := range existing {
+		if rel.Relation == "owner" {
+			newRelationships = append(newRelationships, rel)
+		}
+	}
+	for _, relation := range SkillShareUnderlyingRelations(in.Relation) {
+		newRelationships = append(newRelationships, AuthzRelationship{
+			Resource: resource,
+			Relation: relation,
+			Subject:  subject,
+		})
+	}
+	if _, err := uc.authz.WriteRelationships(ctx, newRelationships...); err != nil {
+		// Best-effort compensation restores the previous relation set if role
+		// replacement fails after revoke.
+		if len(existing) > 0 {
+			_, _ = uc.authz.WriteRelationships(ctx, existing...)
+		}
+
 		uc.recordAudit(ctx, principal, "skill.share.create", auditx.ResultFailure, err.Error(), "skill", in.Name, map[string]any{
 			"subject_type": in.SubjectType,
 			"subject_id":   in.SubjectID,
