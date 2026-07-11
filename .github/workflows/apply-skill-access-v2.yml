@@ -1,0 +1,57 @@
+name: Apply Skill Access V2
+
+on:
+  push:
+    branches:
+      - feat/root-skill-iam-share
+    paths:
+      - .github/scripts/apply_skill_access_v2.py
+      - .github/workflows/apply-skill-access-v2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-skill-access-v2
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, 'feat: implement skill access policy v2') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/root-skill-iam-share
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Apply guarded source transformations
+        run: python3 .github/scripts/apply_skill_access_v2.py
+
+      - name: Format Go sources
+        run: gofmt -w internal/biz/skill.go internal/biz/skill_access_policy.go internal/biz/skill_root_catalog.go internal/biz/skill_access_policy_test.go
+
+      - name: Verify backend
+        run: |
+          go test ./... -count=1 -short
+          go build ./...
+
+      - name: Remove one-shot migration helpers
+        run: rm -f .github/scripts/apply_skill_access_v2.py .github/workflows/apply-skill-access-v2.yml
+
+      - name: Commit implementation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --stat
+          git commit -m "feat: implement skill access policy v2"
+          git push origin HEAD:feat/root-skill-iam-share
