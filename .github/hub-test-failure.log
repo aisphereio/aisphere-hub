@@ -4,20 +4,20 @@
 ?   	github.com/aisphereio/aisphere-hub/api/authn/v1	[no test files]
 ?   	github.com/aisphereio/aisphere-hub/api/authz/v1	[no test files]
 --- FAIL: TestSkillAuthzRulesUseIAMSchemaPermissions (0.00s)
-    skill_policy_test.go:22: /skill.v1.SkillService/UpdateSkillVisibility = visibility:update aihub:skill:{name}, want manage skill:{name}
     skill_policy_test.go:22: /skill.v1.SkillService/CreateSkillShare = share:create aihub:skill:{name}, want manage skill:{name}
     skill_policy_test.go:22: /skill.v1.SkillService/DeleteSkill = delete aihub:skill:{name}, want manage skill:{name}
     skill_policy_test.go:22: /skill.v1.SkillService/UpdateSkill = update aihub:skill:{name}, want edit skill:{name}
     skill_policy_test.go:22: /skill.v1.SkillService/PublishSkillVersion = publish aihub:skill:{name}:version:{version}, want publish skill:{name}
+    skill_policy_test.go:22: /skill.v1.SkillService/UpdateSkillVisibility = visibility:update aihub:skill:{name}, want manage skill:{name}
 FAIL
-FAIL	github.com/aisphereio/aisphere-hub/api/skill/v1	0.022s
+FAIL	github.com/aisphereio/aisphere-hub/api/skill/v1	0.018s
 # github.com/aisphereio/aisphere-iam/client/authzgrpc
 ../../../go/pkg/mod/github.com/aisphereio/aisphere-iam@v0.1.5-0.20260711142728-3322f35cfef0/client/authzgrpc/client.go:23:48: undefined: iamv1.BatchCheckPermissionsRequest
 ../../../go/pkg/mod/github.com/aisphereio/aisphere-iam@v0.1.5-0.20260711142728-3322f35cfef0/client/authzgrpc/client.go:23:106: undefined: iamv1.BatchCheckPermissionsReply
 ../../../go/pkg/mod/github.com/aisphereio/aisphere-iam@v0.1.5-0.20260711142728-3322f35cfef0/client/authzgrpc/client.go:58:22: cannot use iamv1.NewIAMPermissionServiceClient(conn) (value of interface type "github.com/aisphereio/aisphere-iam/api/iam/v1".IAMPermissionServiceClient) as permissionClient value in struct literal: "github.com/aisphereio/aisphere-iam/api/iam/v1".IAMPermissionServiceClient does not implement permissionClient (missing method BatchCheckPermissions)
 ../../../go/pkg/mod/github.com/aisphereio/aisphere-iam@v0.1.5-0.20260711142728-3322f35cfef0/client/authzgrpc/client.go:112:54: undefined: iamv1.BatchCheckPermissionsRequest
 FAIL	github.com/aisphereio/aisphere-hub/cmd/aisphere-hub [build failed]
-ok  	github.com/aisphereio/aisphere-hub/internal/biz	0.006s
+ok  	github.com/aisphereio/aisphere-hub/internal/biz	0.008s
 FAIL	github.com/aisphereio/aisphere-hub/internal/conf [build failed]
 FAIL	github.com/aisphereio/aisphere-hub/internal/data [build failed]
 ?   	github.com/aisphereio/aisphere-hub/internal/observability	[no test files]
