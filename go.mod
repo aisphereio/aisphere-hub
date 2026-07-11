@@ -3,7 +3,7 @@ module github.com/aisphereio/aisphere-hub
 go 1.25.8
 
 require (
-	github.com/aisphereio/aisphere-iam v0.0.0-00010101000000-000000000000
+	github.com/aisphereio/aisphere-iam v0.0.0
 	github.com/aisphereio/kernel v0.4.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	go.etcd.io/etcd/client/v3 v3.6.12
