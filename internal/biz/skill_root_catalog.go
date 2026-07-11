@@ -11,9 +11,10 @@ const rootSkillCatalogScanBatchSize = 100
 // CreateRootSkill creates a Skill in the global Hub root catalog.
 //
 // This is the public API-facing variant of CreateSkill. It intentionally
-// ignores client supplied owner_id/org_id/project_id and stamps ownership from
-// the authenticated principal. Hub does not support placing a Skill under a Hub
-// org/group/project; IAM/Casdoor groups are authorization subjects only.
+// ignores client supplied owner_id/org_id/project_id, stamps ownership from
+// the authenticated principal, and records principal.OrgID as a governance and
+// internal-visibility boundary. Hub does not place a Skill under a Hub
+// org/group/project; IAM/Casdoor groups remain authorization subjects only.
 func (uc *SkillUsecase) CreateRootSkill(ctx context.Context, principal authn.Principal, in *Skill) (*Skill, error) {
 	return uc.CreateSkill(ctx, principal, NormalizeRootSkillCreate(in, principal))
 }
