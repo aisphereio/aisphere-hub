@@ -140,15 +140,14 @@ data:
         skip_operations: []
       authz:
         enabled: true
-        provider: spicedb
+        provider: iam_grpc
         dev_allow_all: false
-        spicedb:
-          endpoint: "${SPICEDB_ENDPOINT}"
-          token: "${SPICEDB_TOKEN}"
-          transport: grpc
+        iam_grpc:
+          endpoint: "${IAM_GRPC_ENDPOINT}"
+          caller_service: aisphere-hub
           insecure: true
           timeout: 5000000000
-          fully_consistent: true
+          retry_max: 3
           metrics_enabled: true
 
     audit:
@@ -180,4 +179,4 @@ data:
   CASDOOR_ENDPOINT: http://casdoor.aisphere.svc.cluster.local:8000
   CASDOOR_ISSUER: https://casdoor.example.com
   CASDOOR_OWNER: aisphere
-  SPICEDB_ENDPOINT: spicedb.aisphere.svc.cluster.local:50051
+  IAM_GRPC_ENDPOINT: aisphere-iam.aisphere.svc.cluster.local:19080

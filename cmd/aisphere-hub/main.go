@@ -94,15 +94,7 @@ func main() {
 	skillUsecase := biz.NewSkillUsecase(skillRepo, authzUsecase, resources.Audit, logger, metrics)
 	skillService := service.NewSkillService(skillUsecase)
 
-	// Bootstrap SpiceDB schema on startup. Idempotent: only writes when the
-	// schema is empty. Skipped silently when authz is disabled.
-	if err := data.BootstrapAuthzSchema(bootstrapCtx, resources, logger); err != nil {
-		// Schema bootstrap failure is not fatal — the hub can still serve
-		// requests, but authz checks will fail with AUTHZ_BACKEND_FAILED
-		// until the operator fixes SpiceDB. Log and continue.
-		logger.Warn("authz schema bootstrap failed; authz checks will fail until fixed", logx.Err(err))
-	}
-
+	// Repair durable owner relationships through IAM's runtime authorization API.
 	if err := data.BootstrapAuthzRelationships(bootstrapCtx, resources, logger); err != nil {
 		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
 	}

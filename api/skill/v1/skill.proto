@@ -48,8 +48,7 @@ service SkillService {
       response_body: "skill"
     };
     option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "create" resource: "aihub:skill:*" audience: "aihub-service" mode: CHECK_ONLY }
+      exposure: AUTHENTICATED
       audit: { enabled: true event: "aihub.skill.create" risk: "medium" }
     };
   }
@@ -65,7 +64,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "update" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill.update" risk: "medium" }
     };
   }
@@ -81,7 +80,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "visibility:update" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill.visibility.update" risk: "high" }
     };
   }
@@ -120,7 +119,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "delete" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill.delete" risk: "high" }
     };
   }
@@ -136,8 +135,7 @@ service SkillService {
       response_body: "version"
     };
     option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "upload" resource: "aihub:skill:*" audience: "aihub-service" mode: CHECK_ONLY }
+      exposure: AUTHENTICATED
       audit: { enabled: true event: "aihub.skill.upload" risk: "medium" }
     };
   }
@@ -174,7 +172,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "submit" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_version.submit" risk: "medium" }
     };
   }
@@ -188,7 +186,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "publish" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "publish" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_version.publish" risk: "high" }
     };
   }
@@ -204,7 +202,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "online" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "publish" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_version.online" risk: "high" }
     };
   }
@@ -218,7 +216,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "offline" resource: "aihub:skill:{name}:version:{version}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "publish" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_version.offline" risk: "high" }
     };
   }
@@ -296,7 +294,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "draft:file:write" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_draft_file.write" risk: "medium" }
     };
   }
@@ -310,7 +308,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "draft:dir:write" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_draft_dir.write" risk: "medium" }
     };
   }
@@ -322,7 +320,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "draft:path:delete" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_draft_path.delete" risk: "medium" }
     };
   }
@@ -335,7 +333,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "draft:path:move" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_draft_path.move" risk: "medium" }
     };
   }
@@ -349,7 +347,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "draft:commit" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_draft.commit" risk: "medium" }
     };
   }
@@ -358,26 +356,26 @@ service SkillService {
   //
   // These RPCs wrap authz.WriteRelationships / ReadRelationships /
   // DeleteRelationships for the skill resource type. They require
-  // skill.edit on the named skill (only the owner / editor can share),
-  // and they only manage viewer / editor relations (NOT owner — owner
+  // skill.manage on the named skill (only the owner can manage shares),
+  // and they manage viewer / editor / reviewer relations (NOT owner — owner
   // is set at create time and is not transferable via these RPCs).
 
   // ListSkillShares lists subjects that have any relation on the named
-  // skill. Requires skill.read (with ownership + public fallback).
+  // skill. Requires skill.manage.
   rpc ListSkillShares(ListSkillSharesRequest) returns (ListSkillSharesResponse) {
     option (google.api.http) = {
       get: "/v1/skills/{name}/shares"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "share:list" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_share.list" risk: "medium" }
     };
   }
 
   // CreateSkillShare grants a viewer or editor relation on the named
-  // skill to a subject. Requires skill.edit. The relation field accepts
-  // "viewer" or "editor"; passing "owner" returns INVALID_ARGUMENT.
+  // skill to a subject. Requires skill.manage. The relation field accepts
+  // "viewer", "editor", or "reviewer"; passing "owner" returns INVALID_ARGUMENT.
   rpc CreateSkillShare(CreateSkillShareRequest) returns (SkillShare) {
     option (google.api.http) = {
       post: "/v1/skills/{name}/shares"
@@ -385,20 +383,20 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "share:create" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_share.create" risk: "high" }
     };
   }
 
   // DeleteSkillShare revokes ALL relations between the named skill and
-  // the named subject. Requires skill.edit.
+  // the named subject. Requires skill.manage.
   rpc DeleteSkillShare(DeleteSkillShareRequest) returns (DeleteSkillShareResponse) {
     option (google.api.http) = {
       delete: "/v1/skills/{name}/shares/{subject_type}/{subject_id}"
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "share:delete" resource: "aihub:skill:{name}" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill_share.delete" risk: "high" }
     };
   }

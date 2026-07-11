@@ -129,7 +129,8 @@
     },
     "/v1/authn/exchange": {
       "post": {
-        "summary": "Exchange exchanges an OAuth authorization code for IdP tokens.\r\n\r\nSupports PKCE via the optional `code_verifier` field for public clients\r\n(SPAs, mobile apps) that cannot safely store a client secret. When the\r\nauthorization request was made with a `code_challenge`, the same\r\n`code_verifier` MUST be supplied here.\r\n\r\nNOTE: kernel authn exposes CodeVerifier on AuthCodeExchangeRequest, but\r\nthe current Casdoor SDK adapter (kernel/authn/casdoor/token.go) does not\r\nyet forward it to GetOAuthToken. The field is accepted on the wire for\r\nforward compatibility; verify the kernel version before relying on PKCE\r\nenforcement server-side.",
+        "summary": "Exchange exchanges an OAuth authorization code for IdP tokens.",
+        "description": "Supports PKCE via the optional `code_verifier` field for public clients\n(SPAs, mobile apps) that cannot safely store a client secret. When the\nauthorization request was made with a `code_challenge`, the same\n`code_verifier` MUST be supplied here.\n\nNOTE: kernel authn exposes CodeVerifier on AuthCodeExchangeRequest, but\nthe current Casdoor SDK adapter (kernel/authn/casdoor/token.go) does not\nyet forward it to GetOAuthToken. The field is accepted on the wire for\nforward compatibility; verify the kernel version before relying on PKCE\nenforcement server-side.",
         "operationId": "AuthnService_Exchange",
         "responses": {
           "200": {
@@ -162,7 +163,8 @@
     },
     "/v1/authn/introspect": {
       "post": {
-        "summary": "Introspect validates a token and returns the principal it represents.\r\n\r\nUseful for debug tools, third-party integrations, and service-to-service\r\ncalls that need to verify a token's validity and identity without going\r\nthrough the full request middleware chain. Mirrors RFC 7662 token\r\nintrospection semantics (active=false when the token is invalid,\r\nexpired, or revoked).",
+        "summary": "Introspect validates a token and returns the principal it represents.",
+        "description": "Useful for debug tools, third-party integrations, and service-to-service\ncalls that need to verify a token's validity and identity without going\nthrough the full request middleware chain. Mirrors RFC 7662 token\nintrospection semantics (active=false when the token is invalid,\nexpired, or revoked).",
         "operationId": "AuthnService_Introspect",
         "responses": {
           "200": {
@@ -195,7 +197,8 @@
     },
     "/v1/authn/login-url": {
       "get": {
-        "summary": "LoginURL returns the IdP authorization URL as JSON for SPA/debug usage.\r\n\r\nBrowser users should prefer GET /v1/authn/login, which is registered as a\r\ndirect HTTP 302 route by the service implementation. See the service\r\ncomment above.",
+        "summary": "LoginURL returns the IdP authorization URL as JSON for SPA/debug usage.",
+        "description": "Browser users should prefer GET /v1/authn/login, which is registered as a\ndirect HTTP 302 route by the service implementation. See the service\ncomment above.",
         "operationId": "AuthnService_LoginURL",
         "responses": {
           "200": {
@@ -238,14 +241,14 @@
           },
           {
             "name": "orgId",
-            "description": "org_id optionally overrides the globally configured Casdoor organization\r\nfor this login URL. When unset, the global config organization is used.\r\nMaps to kernel authn.LoginURLRequest.OrgID.",
+            "description": "org_id optionally overrides the globally configured Casdoor organization\nfor this login URL. When unset, the global config organization is used.\nMaps to kernel authn.LoginURLRequest.OrgID.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "appId",
-            "description": "app_id optionally overrides the globally configured Casdoor application.\r\nMaps to kernel authn.LoginURLRequest.AppID.",
+            "description": "app_id optionally overrides the globally configured Casdoor application.\nMaps to kernel authn.LoginURLRequest.AppID.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -258,7 +261,8 @@
     },
     "/v1/authn/logout-url": {
       "get": {
-        "summary": "LogoutURL returns the IdP logout URL as JSON for SPA/debug usage.\r\n\r\nBrowser users can also call GET /v1/authn/logout for a direct HTTP 302.\r\n\r\nSide effect: token revocation. When the request carries an\r\n`Authorization: Bearer \u003caccess_token\u003e` header, OR an explicit\r\n`access_token` field is supplied in the request body, the implementation\r\ncalls Revoke on that access token before returning the IdP logout URL.\r\nThis adds the token to the local session blacklist so subsequent API\r\ncalls with the same token are rejected even before the IdP session\r\nexpires. The `access_token` field makes this previously-implicit side\r\neffect visible in the API contract.\r\n\r\nNOTE: kernel authn does not currently expose a LogoutURLBuilder\r\ninterface. The hub data layer must construct the Casdoor logout URL\r\nitself using the configured Casdoor endpoint, client_id and\r\npost_logout_redirect_uri. See legacy backend internal/data/auth.go for\r\nthe pattern (it built the URL via the old aisphere-kit authn adapter;\r\nthe new hub will need to call casdoor SDK directly or compose the URL\r\nfrom config).",
+        "summary": "LogoutURL returns the IdP logout URL as JSON for SPA/debug usage.",
+        "description": "Browser users can also call GET /v1/authn/logout for a direct HTTP 302.\n\nSide effect: token revocation. When the request carries an\n`Authorization: Bearer \u003caccess_token\u003e` header, OR an explicit\n`access_token` field is supplied in the request body, the implementation\ncalls Revoke on that access token before returning the IdP logout URL.\nThis adds the token to the local session blacklist so subsequent API\ncalls with the same token are rejected even before the IdP session\nexpires. The `access_token` field makes this previously-implicit side\neffect visible in the API contract.\n\n\nThe logout URL is built by kernel authn.LogoutService (implemented by\nthe Casdoor adapter in kernel/authn/casdoor). The hub data layer\ndelegates to Resources.LogoutService.BuildLogoutURL().",
         "operationId": "AuthnService_LogoutURL",
         "responses": {
           "200": {
@@ -295,7 +299,7 @@
           },
           {
             "name": "accessToken",
-            "description": "access_token explicitly identifies the token to revoke locally before\r\nreturning the IdP logout URL. When unset, the implementation falls back\r\nto the `Authorization: Bearer \u003caccess_token\u003e` request header.\r\n\r\nThis field makes the implicit revocation side effect of LogoutURL\r\nvisible in the API contract instead of being hidden in service code\r\n(legacy backend internal/biz/auth.go:LogoutURL).\r\n\r\nRevoke is best-effort. If the local session manager is unavailable the\r\nimplementation MUST still return the logout URL and log a warning.",
+            "description": "access_token explicitly identifies the token to revoke locally before\nreturning the IdP logout URL. When unset, the implementation falls back\nto the `Authorization: Bearer \u003caccess_token\u003e` request header.\n\nThis field makes the implicit revocation side effect of LogoutURL\nvisible in the API contract instead of being hidden in service code\n(legacy backend internal/biz/auth.go:LogoutURL).\n\nRevoke is best-effort. If the local session manager is unavailable the\nimplementation MUST still return the logout URL and log a warning.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -320,7 +324,8 @@
     },
     "/v1/authn/me": {
       "get": {
-        "summary": "Me returns the current authenticated principal.\r\n\r\nRequires `Authorization: Bearer \u003caccess_token\u003e`. The returned Principal\r\nincludes `expires_at` so frontends can schedule proactive token refreshes\r\nbefore the token expires, rather than waiting for a 401 to trigger a\r\nreactive refresh.",
+        "summary": "Me returns the current authenticated principal.",
+        "description": "Requires `Authorization: Bearer \u003caccess_token\u003e`. The returned Principal\nincludes `expires_at` so frontends can schedule proactive token refreshes\nbefore the token expires, rather than waiting for a 401 to trigger a\nreactive refresh.",
         "operationId": "AuthnService_Me",
         "responses": {
           "200": {
@@ -376,7 +381,8 @@
     },
     "/v1/authn/revoke": {
       "post": {
-        "summary": "Revoke explicitly revokes an access or refresh token.\r\n\r\nUse this for multi-device session management (e.g. \"sign out everywhere\"\r\nflows) where the caller wants to invalidate a token without navigating\r\nthe IdP logout page.\r\n\r\nIdP-side revocation is best-effort; the local session blacklist is\r\nalways updated so the token is rejected at the next API call regardless\r\nof whether the IdP actually revokes it.\r\n\r\nNOTE: the current Casdoor SDK adapter (kernel/authn/casdoor/token.go)\r\nreturns ErrIdentityBackendFailed(\"casdoor sdk does not expose token\r\nrevocation\"). Until the kernel adapter is updated, this RPC will only\r\nupdate the local blacklist and return a warning. Callers that need\r\nfull IdP-side revocation should use LogoutURL with id_token_hint.",
+        "summary": "Revoke explicitly revokes an access or refresh token.",
+        "description": "Use this for multi-device session management (e.g. \"sign out everywhere\"\nflows) where the caller wants to invalidate a token without navigating\nthe IdP logout page.\n\nIdP-side revocation is best-effort; the local session blacklist is\nalways updated so the token is rejected at the next API call regardless\nof whether the IdP actually revokes it.\n\nNOTE: the current Casdoor SDK adapter (kernel/authn/casdoor/token.go)\nreturns ErrIdentityBackendFailed(\"casdoor sdk does not expose token\nrevocation\"). Until the kernel adapter is updated, this RPC will only\nupdate the local blacklist and return a warning. Callers that need\nfull IdP-side revocation should use LogoutURL with id_token_hint.",
         "operationId": "AuthnService_Revoke",
         "responses": {
           "200": {
@@ -1350,7 +1356,7 @@
     },
     "/v1/skills/{name}/shares": {
       "get": {
-        "summary": "ListSkillShares lists subjects that have any relation on the named\nskill. Requires skill.read (with ownership + public fallback).",
+        "summary": "ListSkillShares lists subjects that have any relation on the named\nskill. Requires skill.manage.",
         "operationId": "SkillService_ListSkillShares",
         "responses": {
           "200": {
@@ -1379,7 +1385,7 @@
         ]
       },
       "post": {
-        "summary": "CreateSkillShare grants a viewer or editor relation on the named\nskill to a subject. Requires skill.edit. The relation field accepts\n\"viewer\" or \"editor\"; passing \"owner\" returns INVALID_ARGUMENT.",
+        "summary": "CreateSkillShare grants a viewer or editor relation on the named\nskill to a subject. Requires skill.manage. The relation field accepts\n\"viewer\", \"editor\", or \"reviewer\"; passing \"owner\" returns INVALID_ARGUMENT.",
         "operationId": "SkillService_CreateSkillShare",
         "responses": {
           "200": {
@@ -1418,7 +1424,7 @@
     },
     "/v1/skills/{name}/shares/{subjectType}/{subjectId}": {
       "delete": {
-        "summary": "DeleteSkillShare revokes ALL relations between the named skill and\nthe named subject. Requires skill.edit.",
+        "summary": "DeleteSkillShare revokes ALL relations between the named skill and\nthe named subject. Requires skill.manage.",
         "operationId": "SkillService_DeleteSkillShare",
         "responses": {
           "200": {
@@ -1932,7 +1938,7 @@
       "properties": {
         "relation": {
           "type": "string",
-          "title": "\"viewer\" | \"editor\""
+          "title": "\"viewer\" | \"editor\" | \"reviewer\""
         },
         "subjectType": {
           "type": "string"
@@ -2018,7 +2024,7 @@
       "properties": {
         "visibility": {
           "type": "string",
-          "title": "\"private\" | \"public\""
+          "title": "\"private\" | \"internal\" | \"public\""
         }
       },
       "required": [
@@ -2414,7 +2420,7 @@
         },
         "codeVerifier": {
           "type": "string",
-          "description": "code_verifier is the PKCE code verifier. Required when the authorization\r\nrequest was made with a code_challenge; recommended for all public\r\nclients (SPAs, mobile apps) that cannot store a client secret.\r\nMaps to kernel authn.AuthCodeExchangeRequest.CodeVerifier.\r\n\r\nNOTE: see Exchange RPC comment — the current Casdoor adapter does not\r\nyet forward this to the SDK. The field is accepted on the wire for\r\nforward compatibility."
+          "description": "code_verifier is the PKCE code verifier. Required when the authorization\nrequest was made with a code_challenge; recommended for all public\nclients (SPAs, mobile apps) that cannot store a client secret.\nMaps to kernel authn.AuthCodeExchangeRequest.CodeVerifier.\n\nNOTE: see Exchange RPC comment — the current Casdoor adapter does not\nyet forward this to the SDK. The field is accepted on the wire for\nforward compatibility."
         },
         "orgId": {
           "type": "string"
@@ -2494,18 +2500,18 @@
         },
         "tokenType": {
           "type": "string",
-          "description": "token_type hints which kind of token is being introspected. Accepted\r\nvalues: \"access_token\" (default), \"refresh_token\", \"id_token\".\r\nMaps to kernel authn.VerifyTokenRequest.TokenType."
+          "description": "token_type hints which kind of token is being introspected. Accepted\nvalues: \"access_token\" (default), \"refresh_token\", \"id_token\".\nMaps to kernel authn.VerifyTokenRequest.TokenType."
         },
         "issuer": {
           "type": "string",
-          "description": "issuer optionally restricts the accepted token issuer. When unset, the\r\nglobally configured IdP issuer is used."
+          "description": "issuer optionally restricts the accepted token issuer. When unset, the\nglobally configured IdP issuer is used."
         },
         "audience": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "audience optionally restricts the accepted token audience. When unset,\r\nthe audience check is skipped."
+          "description": "audience optionally restricts the accepted token audience. When unset,\nthe audience check is skipped."
         },
         "orgId": {
           "type": "string"
@@ -2523,7 +2529,7 @@
       "properties": {
         "active": {
           "type": "boolean",
-          "description": "active indicates whether the token is currently valid (not expired, not\r\nrevoked, signature OK, issuer/audience match if specified)."
+          "description": "active indicates whether the token is currently valid (not expired, not\nrevoked, signature OK, issuer/audience match if specified)."
         },
         "principal": {
           "$ref": "#/definitions/v1Principal"
@@ -2749,30 +2755,30 @@
         },
         "phone": {
           "type": "string",
-          "description": "phone is the user's phone number when available from the IdP.\r\nMaps to kernel authn.Principal.Phone."
+          "description": "phone is the user's phone number when available from the IdP.\nMaps to kernel authn.Principal.Phone."
         },
         "scopes": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "scopes are the OAuth/OIDC scopes attached to the current access token.\r\nFrontends can use this to gate UI affordances (e.g. hide \"write\"\r\nbuttons when the token lacks the write scope).\r\nMaps to kernel authn.Principal.Scopes."
+          "description": "scopes are the OAuth/OIDC scopes attached to the current access token.\nFrontends can use this to gate UI affordances (e.g. hide \"write\"\nbuttons when the token lacks the write scope).\nMaps to kernel authn.Principal.Scopes."
         },
         "authMethod": {
           "type": "string",
-          "description": "auth_method records how the subject authenticated. Common values match\r\nthe kernel authn.AuthMethod* constants: \"oauth\", \"oidc\", \"jwt\",\r\n\"api_key\", \"mtls\", \"session\", \"dev_token\", \"none\".\r\nMaps to kernel authn.Principal.AuthMethod."
+          "description": "auth_method records how the subject authenticated. Common values match\nthe kernel authn.AuthMethod* constants: \"oauth\", \"oidc\", \"jwt\",\n\"api_key\", \"mtls\", \"session\", \"dev_token\", \"none\".\nMaps to kernel authn.Principal.AuthMethod."
         },
         "expiresAt": {
           "type": "string",
           "format": "date-time",
-          "description": "expires_at is when the current access token expires. Frontends should\r\nuse this to schedule proactive token refreshes before the token\r\nexpires, rather than waiting for a 401 to trigger a reactive refresh.\r\nZero value means the expiry is unknown (e.g. the IdP did not return\r\nan exp claim).\r\nMaps to kernel authn.Principal.ExpiresAt."
+          "description": "expires_at is when the current access token expires. Frontends should\nuse this to schedule proactive token refreshes before the token\nexpires, rather than waiting for a 401 to trigger a reactive refresh.\nZero value means the expiry is unknown (e.g. the IdP did not return\nan exp claim).\nMaps to kernel authn.Principal.ExpiresAt."
         },
         "attributes": {
           "type": "object",
-          "description": "attributes carries provider-specific claims (e.g. Casdoor owner/name,\r\nexternal ID, signin method, custom fields) that are not part of the\r\ncanonical Principal schema. Values must be JSON-serializable.\r\nMaps to kernel authn.Principal.Attributes.\r\n\r\nNOTE: some attributes (such as `access_token`) are sensitive and\r\nSHOULD be filtered out by the service layer before returning to\r\nfrontend clients. See kernel/authn/casdoor/token.go:principalFromClaims\r\nfor the list of attributes currently set by the Casdoor adapter."
+          "description": "attributes carries provider-specific claims (e.g. Casdoor owner/name,\nexternal ID, signin method, custom fields) that are not part of the\ncanonical Principal schema. Values must be JSON-serializable.\nMaps to kernel authn.Principal.Attributes.\n\nNOTE: some attributes (such as `access_token`) are sensitive and\nSHOULD be filtered out by the service layer before returning to\nfrontend clients. See kernel/authn/casdoor/token.go:principalFromClaims\nfor the list of attributes currently set by the Casdoor adapter."
         }
       },
-      "description": "Principal is the normalized identity of the current caller.\r\n\r\nField set is aligned with kernel authn.Principal (github.com/aisphereio/\r\nkernel/authn.Principal). The kernel type has additional internal fields\r\n(Provider, ExternalID, Issuer, Audience, TenantID, AppID, IssuedAt) that\r\nare not exposed here because they are not useful to typical frontend\r\nconsumers; if a future use case needs them, add fields rather than\r\nexposing the kernel struct verbatim."
+      "description": "Principal is the normalized identity of the current caller.\n\nField set is aligned with kernel authn.Principal (github.com/aisphereio/\nkernel/authn.Principal). The kernel type has additional internal fields\n(Provider, ExternalID, Issuer, Audience, TenantID, AppID, IssuedAt) that\nare not exposed here because they are not useful to typical frontend\nconsumers; if a future use case needs them, add fields rather than\nexposing the kernel struct verbatim."
     },
     "v1PublishSkillVersionResponse": {
       "type": "object",
@@ -2932,7 +2938,7 @@
         },
         "tokenType": {
           "type": "string",
-          "description": "token_type hints which kind of token is being revoked. Accepted values:\r\n  \"access_token\"  (default)\r\n  \"refresh_token\"\r\n  \"id_token\"\r\nMaps to kernel authn.RevokeTokenRequest.TokenType."
+          "description": "token_type hints which kind of token is being revoked. Accepted values:\n  \"access_token\"  (default)\n  \"refresh_token\"\n  \"id_token\"\nMaps to kernel authn.RevokeTokenRequest.TokenType."
         },
         "orgId": {
           "type": "string"
@@ -2951,18 +2957,18 @@
       "properties": {
         "revoked": {
           "type": "boolean",
-          "description": "revoked is true when the token was successfully revoked (either IdP-side\r\nor local blacklist)."
+          "description": "revoked is true when the token was successfully revoked (either IdP-side\nor local blacklist)."
         },
         "idpRevoked": {
           "type": "boolean",
-          "description": "idp_revoked is true when the IdP itself confirmed revocation. False\r\nmeans only the local session blacklist was updated; the token may still\r\nbe valid against other Resource Servers until it expires."
+          "description": "idp_revoked is true when the IdP itself confirmed revocation. False\nmeans only the local session blacklist was updated; the token may still\nbe valid against other Resource Servers until it expires."
         },
         "message": {
           "type": "string",
-          "description": "message carries a human-readable note, e.g. \"casdoor sdk does not expose\r\ntoken revocation; only local blacklist updated\"."
+          "description": "message carries a human-readable note, e.g. \"casdoor sdk does not expose\ntoken revocation; only local blacklist updated\"."
         }
       },
-      "description": "RevokeResponse returns the outcome of a Revoke call.\r\n\r\nWe do not use google.protobuf.Empty so callers can distinguish\r\n\"IdP-side revoked\" from \"only local blacklist updated\" — important for\r\nsecurity-sensitive flows where the caller needs to know whether the token\r\nmay still be valid against other Resource Servers."
+      "description": "RevokeResponse returns the outcome of a Revoke call.\n\nWe do not use google.protobuf.Empty so callers can distinguish\n\"IdP-side revoked\" from \"only local blacklist updated\" — important for\nsecurity-sensitive flows where the caller needs to know whether the token\nmay still be valid against other Resource Servers."
     },
     "v1Skill": {
       "type": "object",
@@ -3104,7 +3110,7 @@
         },
         "relation": {
           "type": "string",
-          "title": "\"viewer\" | \"editor\" | \"owner\""
+          "title": "\"viewer\" | \"editor\" | \"reviewer\" | \"owner\""
         },
         "subjectType": {
           "type": "string",

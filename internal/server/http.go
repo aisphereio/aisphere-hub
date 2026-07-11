@@ -9,6 +9,7 @@ import (
 	"github.com/aisphereio/aisphere-hub/internal/data"
 	"github.com/aisphereio/aisphere-hub/internal/service"
 
+	"github.com/aisphereio/kernel/authz"
 	"github.com/aisphereio/kernel/logx"
 	khttp "github.com/aisphereio/kernel/transportx/http"
 )
@@ -130,18 +131,22 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 			}
 		}
 
-		// SpiceDB check (when authz enabled). We call ReadSchema as the
-		// liveness probe — it's a lightweight gRPC call that exercises
-		// the full authz stack (connection, auth, schema service). A
-		// failure here means either SpiceDB is down or the configured
-		// token is wrong; either way the hub cannot serve authz-protected
-		// requests.
+		// IAM authorization runtime check. Hub deliberately has no schema
+		// administration capability, so readiness uses a side-effect-free
+		// permission check instead of ReadSchema. A deny decision is healthy:
+		// only transport/provider failures return an error. This exercises the
+		// complete Hub -> IAM gRPC -> authorization provider path.
 		if resources.AuthzService != nil {
-			if _, err := resources.AuthzService.ReadSchema(r.Context()); err != nil {
-				checks["spicedb"] = "fail: " + err.Error()
+			_, err := resources.AuthzService.Check(r.Context(), authz.CheckRequest{
+				Subject:    authz.SubjectRef{Type: authz.SubjectTypeService, ID: "aisphere-hub"},
+				Resource:   authz.ObjectRef{Type: "iam_authz", ID: "global"},
+				Permission: "view_schema",
+			})
+			if err != nil {
+				checks["iam_authz"] = "fail: " + err.Error()
 				allReady = false
 			} else {
-				checks["spicedb"] = "ok"
+				checks["iam_authz"] = "ok"
 			}
 		}
 
