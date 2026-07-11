@@ -35,6 +35,13 @@ semantics: a subject has one product role, while Reviewer/Publisher is stored as
 `reviewer + viewer` to match the current IAM-owned Schema. Group grants target `group:{id}#member`; membership remains owned by
 Casdoor and projected by IAM.
 
+## Existing data migration
+
+Older root Skills may have an empty `org_id` because the previous creation helper
+cleared all placement fields. They continue to work as Private/Public resources,
+but the backend rejects switching them to Internal until an administrator backfills
+the governing organization from the stable owner identity/IAM directory.
+
 ## Consistency and failure behavior
 
 - Durable `owner_id`, `org_id`, and visibility are read-only fallbacks.

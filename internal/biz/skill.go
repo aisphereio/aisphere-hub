@@ -449,6 +449,15 @@ func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, principal aut
 	if err := uc.requireSkillPermission(ctx, principal, name, "manage"); err != nil {
 		return nil, err
 	}
+	if visibility == SkillVisibilityInternal {
+		current, getErr := uc.repo.GetSkill(ctx, name)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if strings.TrimSpace(current.OrgID) == "" {
+			return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("internal visibility requires a governing org_id; backfill the Skill owner organization first"))
+		}
+	}
 	out, err = uc.repo.UpdateSkillVisibility(ctx, name, visibility)
 	if err != nil {
 		uc.recordAudit(ctx, principal, "skill.visibility.update", auditx.ResultFailure, err.Error(), "skill", name, map[string]any{
