@@ -17,7 +17,7 @@ require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 // indirect
 	buf.build/go/protovalidate v1.2.0 // indirect
 	cel.dev/expr v0.25.2 // indirect
-	github.com/aisphereio/aisphere-iam v0.1.4 // indirect
+	github.com/aisphereio/aisphere-iam v0.1.5 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/authzed/authzed-go v1.10.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
