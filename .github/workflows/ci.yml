@@ -5,17 +5,12 @@ on:
     branches:
       - main
       - 'feat/**'
-  push:
-    branches:
-      - main
-      - 'feat/**'
-      - 'fix/**'
 
 permissions:
   contents: write
 
 concurrency:
-  group: hub-ci-${{ github.ref }}
+  group: hub-iam-grpc-repair
   cancel-in-progress: true
 
 jobs:
