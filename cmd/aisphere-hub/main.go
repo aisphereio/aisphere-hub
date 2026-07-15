@@ -94,12 +94,18 @@ func main() {
 	skillUsecase := biz.NewSkillUsecase(skillRepo, authzUsecase, resources.Audit, logger, metrics)
 	skillService := service.NewSkillService(skillUsecase)
 
+	// Wire the lightweight SkillSet module. A SkillSet stores only ordered
+	// references to Skills; Skill versions and releases remain independent.
+	skillSetRepo := data.NewSkillSetRepo(resources)
+	skillSetUsecase := biz.NewSkillSetUsecase(skillSetRepo, authzUsecase, logger)
+	skillSetService := service.NewSkillSetService(skillSetUsecase)
+
 	// Repair durable owner relationships through IAM's runtime authorization API.
 	if err := data.BootstrapAuthzRelationships(bootstrapCtx, resources, logger); err != nil {
 		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
 	}
 
-	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService)
+	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService, skillSetService)
 	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService)
 
 	opts := []kernel.Option{
