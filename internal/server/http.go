@@ -89,6 +89,9 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	if skillSvc != nil {
 		skillSvc.RegisterHTTPServer(srv)
 	}
+	// SkillSet is intentionally a lightweight HTTP resource. It stores only
+	// ordered references to canonical Skills; version/release/runtime remain on Skill.
+	registerSkillSetHTTP(srv, resources)
 	if resources != nil && resources.DTM != nil {
 		dtmSkill := data.NewSkillDTMBranchHandler(resources)
 		srv.HandleFunc("/internal/dtm/skill/package/promote", dtmSkill.PromotePackage)
