@@ -34,21 +34,7 @@ jobs:
         run: go mod download
 
       - name: Test
-        shell: bash
-        run: |
-          set +e
-          go test ./... -count=1 -short > /tmp/go-test.log 2>&1
-          status=$?
-          cat /tmp/go-test.log
-          exit "$status"
-
-      - name: Upload Go test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-test-log
-          path: /tmp/go-test.log
-          if-no-files-found: warn
+        run: go test ./... -count=1 -short
 
       - name: Build
         run: go build ./...
