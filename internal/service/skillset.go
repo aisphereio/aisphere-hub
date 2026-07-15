@@ -60,12 +60,12 @@ type createSkillSetRequest struct {
 }
 
 type updateSkillSetRequest struct {
-	DisplayName *string               `json:"displayName"`
-	Description *string               `json:"description"`
-	Visibility  *string               `json:"visibility"`
-	Scope       *string               `json:"scope"`
-	Labels      *map[string]string    `json:"labels"`
-	Members     *[]skillSetMemberDTO  `json:"members"`
+	DisplayName *string              `json:"displayName"`
+	Description *string              `json:"description"`
+	Visibility  *string              `json:"visibility"`
+	Scope       *string              `json:"scope"`
+	Labels      *map[string]string   `json:"labels"`
+	Members     *[]skillSetMemberDTO `json:"members"`
 }
 
 func (s *SkillSetService) create(ctx khttp.Context) error {
@@ -73,7 +73,7 @@ func (s *SkillSetService) create(ctx khttp.Context) error {
 	if err := ctx.Bind(&req); err != nil {
 		return err
 	}
-	visibility := firstNonEmpty(req.Visibility, req.Scope)
+	visibility := firstNonEmptySkillSetValue(req.Visibility, req.Scope)
 	out, err := s.uc.Create(ctx, skillSetPrincipal(ctx), &biz.SkillSet{
 		Name:        req.Name,
 		DisplayName: req.DisplayName,
@@ -203,7 +203,7 @@ func parsePositiveInt(value string, fallback int) int {
 	return parsed
 }
 
-func firstNonEmpty(values ...string) string {
+func firstNonEmptySkillSetValue(values ...string) string {
 	for _, value := range values {
 		if strings.TrimSpace(value) != "" {
 			return value
