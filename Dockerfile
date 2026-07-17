@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 
 FROM alpine:3.22
 
-RUN apk add --no-cache ca-certificates tzdata wget git \
+RUN apk add --no-cache ca-certificates tzdata wget git bash \
     && addgroup -S app \
     && adduser -S -G app app
 
