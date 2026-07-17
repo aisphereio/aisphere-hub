@@ -1,7 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: aisphere-system
+# Resources carry their own namespace: aisphere (the Hub backend Service
+# namespace). Do not set a blanket `namespace:` here — it would rewrite the
+# SecurityPolicy and route namespaces away from the backend namespace and
+# break targetRef resolution.
+#
+# Only the hand-written, actually-applied routing + security are listed here.
+# The auto-generated per-RPC HTTPRoutes under deploy/generated/gateway/ are
+# tracked separately as a contract/drift gate (`make deploy` /
+# `make generated-check`) and are NOT applied to the cluster: their PathPrefix
+# paths carry proto path templates (e.g. /v1/skills/{name}) that cannot route
+# parameterized requests, so request routing relies on the aggregate `hub-http`
+# route below. This mirrors aisphere-iam, which tracks generated routes as a
+# contract source while applying a hand-written aggregate route (iam-console).
 
 resources:
   - hub-http-route.yaml

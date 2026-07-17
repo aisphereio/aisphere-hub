@@ -20,7 +20,8 @@ metadata:
 spec:
   parentRefs:
     - name: aisphere-gateway
-      namespace: aisphere-system
+      namespace: aisphere
+      sectionName: https
   hostnames:
     - "api.weagent.cc"
   rules:

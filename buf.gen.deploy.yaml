@@ -1,0 +1,17 @@
+version: v2
+
+inputs:
+  - directory: api
+
+plugins:
+  - local: protoc-gen-go-deploy
+    out: .
+    strategy: all
+    opt:
+      - service=aisphere-hub
+      - namespace=aisphere
+      - backend_port=18001
+      - parent_namespace=aisphere
+      - public_gateway=aisphere-gateway
+      - authenticated_gateway=aisphere-gateway
+      - internal_gateway=aisphere-gateway

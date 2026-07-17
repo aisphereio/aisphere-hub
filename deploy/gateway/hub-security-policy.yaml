@@ -1,30 +1,30 @@
-# Hub SecurityPolicy — OIDC authentication + JWT verification for hub API routes.
+# Hub SecurityPolicy — OIDC authentication + JWT verification for the hub API.
 #
-# This policy is applied to the hub-api-protected-route HTTPRoute. It:
-#   1. Terminates OIDC at the Envoy Gateway layer (redirects unauthenticated
-#      users to Casdoor login).
+# Targets the aggregate HTTPRoute `hub-http` (see hub-http-route.yaml), which
+# fronts all Hub /v1 endpoints. Envoy Gateway:
+#   1. Terminates OIDC at the gateway layer (redirects unauthenticated browser
+#      requests to Casdoor login).
 #   2. Verifies the JWT access token against Casdoor's JWKS endpoint.
-#   3. Injects x-aisphere-* headers with user claims for the backend.
+#   3. Injects x-aisphere-external-* headers with user claims for the backend.
 #
-# Public routes (login, exchange, refresh) are in hub-api-public-route and
-# do NOT have OIDC protection — they are matched first by Envoy Gateway
-# and bypass this SecurityPolicy.
-#
-# The hub runs in gateway_trusted mode, meaning it trusts the headers
-# injected by Envoy Gateway and does not re-verify the JWT on every request.
+# The hub runs in gateway_trusted mode, trusting these injected headers
+# without re-verifying the JWT on every request.
 #
 # Casdoor application: aisphere (client_id: bbdcfc272e2b990cb923)
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: hub-oidc-policy
-  namespace: aisphere-system
+  name: hub-oidc
+  namespace: aisphere
+  labels:
+    app.kubernetes.io/name: aisphere-hub
+    app.kubernetes.io/component: gateway-security
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: hub-api-protected-route
+      name: hub-http
   oidc:
     provider:
       issuer: "https://casdoor.weagent.cc:30723"
@@ -40,7 +40,6 @@ spec:
     refreshToken: true
     forwardAccessToken: true
     passThroughAuthHeader: true
-    disableTokenEncryption: false
   jwt:
     providers:
       - name: casdoor

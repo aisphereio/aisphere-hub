@@ -1,81 +1,78 @@
-# Hub API HTTPRoute — routes /v1/authn/*, /v1/authz/*, /v1/skills/*,
-# /v1/audit/*, /v1/users/* to aisphere-hub:18001.
+# Hub API HTTPRoute — the actually-applied aggregate route that fronts all
+# Hub /v1 endpoints behind the Envoy Gateway at api.weagent.cc.
 #
-# Public routes (login, exchange, refresh) are in hub-api-public-route and
-# do NOT have OIDC protection. Protected routes are in hub-api-protected-route
-# and require OIDC authentication (see hub-security-policy.yaml).
+# This is a hand-written aggregate HTTPRoute (PathPrefix matching), NOT the
+# auto-generated per-RPC routes. The auto-generated routes live under
+# deploy/generated/gateway/ and are tracked as a contract/drift gate
+# (`make deploy` / `make generated-check`); they are not applied to the
+# cluster because their PathPrefix paths carry proto path templates
+# (e.g. /v1/skills/{name}) that cannot route parameterized requests.
+# This mirrors aisphere-iam, which likewise tracks generated routes as a
+# contract source while applying a hand-written aggregate route (iam-console).
 #
-# After OIDC authentication, Envoy injects x-aisphere-* headers that the hub
-# trusts (authn mode: gateway_trusted).
+# The OIDC SecurityPolicy (hub-oidc, see hub-security-policy.yaml) targets
+# this route. Envoy performs browser OIDC against Casdoor, verifies the JWT
+# via JWKS, and injects x-aisphere-external-* identity headers. The hub runs
+# in gateway_trusted mode and trusts those headers without re-verifying the
+# JWT on every request.
+#
+# Public authn endpoints (login-url, exchange, refresh, logout-url) also flow
+# through this route; OIDC treats unauthenticated requests as browser login
+# flows (302 redirect). XHR calls from the logged-in browser carry the OIDC
+# session cookie and pass through.
 ---
-# Public routes — no OIDC required
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: hub-api-public-route
+  name: hub-http
   namespace: aisphere
   labels:
     app.kubernetes.io/name: aisphere-hub
     app.kubernetes.io/component: gateway-route
-    aisphere.io/exposure-bucket: public
 spec:
   parentRefs:
     - name: aisphere-gateway
-      namespace: aisphere-system
+      namespace: aisphere
+      sectionName: https
   hostnames:
     - "api.weagent.cc"
   rules:
     - matches:
         - path:
             type: PathPrefix
-            value: /v1/authn/login
-        - path:
-            type: PathPrefix
-            value: /v1/authn/logout
-        - path:
-            type: PathPrefix
-            value: /v1/authn/exchange
-        - path:
-            type: PathPrefix
-            value: /v1/authn/refresh
+            value: /v1/authn
       backendRefs:
         - name: aisphere-hub
           namespace: aisphere
           port: 18001
----
-# Protected routes — OIDC required
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: hub-api-protected-route
-  namespace: aisphere
-  labels:
-    app.kubernetes.io/name: aisphere-hub
-    app.kubernetes.io/component: gateway-route
-    aisphere.io/exposure-bucket: authenticated
-spec:
-  parentRefs:
-    - name: aisphere-gateway
-      namespace: aisphere-system
-  hostnames:
-    - "api.weagent.cc"
-  rules:
     - matches:
         - path:
             type: PathPrefix
-            value: /v1/authn/
+            value: /v1/authz
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 18001
+    - matches:
         - path:
             type: PathPrefix
-            value: /v1/authz/
+            value: /v1/skills
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 18001
+    - matches:
         - path:
             type: PathPrefix
-            value: /v1/skills/
+            value: /v1/audit
+      backendRefs:
+        - name: aisphere-hub
+          namespace: aisphere
+          port: 18001
+    - matches:
         - path:
             type: PathPrefix
-            value: /v1/audit/
-        - path:
-            type: PathPrefix
-            value: /v1/users/
+            value: /v1/users
       backendRefs:
         - name: aisphere-hub
           namespace: aisphere
