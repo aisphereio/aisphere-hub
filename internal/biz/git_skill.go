@@ -2,13 +2,18 @@ package biz
 
 import (
 	"context"
-	"errors"
 	"time"
+
+	"github.com/aisphereio/kernel/errorx"
 )
 
 const (
 	SkillDefaultBranch      = "main"
+	SkillVisibilityPrivate  = "private"
+	SkillVisibilityInternal = "internal"
+	SkillVisibilityPublic   = "public"
 	SkillStatusProvisioning = "provisioning"
+	SkillStatusActive       = "active"
 	SkillStatusDeleting     = "deleting"
 
 	PullRequestStateOpen   = "open"
@@ -20,36 +25,28 @@ const (
 )
 
 var (
-	ErrPullRequestNotFound     = errors.New("pull request not found")
-	ErrPullRequestNotOpen      = errors.New("pull request is not open")
-	ErrPullRequestStale        = errors.New("pull request target changed")
-	ErrPullRequestReviewExists = errors.New("pull request review already exists")
+	ErrSkillAlreadyExists      = errorx.Conflict(errorx.Code("SKILL_ALREADY_EXISTS"), "skill already exists")
+	ErrSkillNotFound           = errorx.NotFound(errorx.Code("SKILL_NOT_FOUND"), "skill not found")
+	ErrSkillInvalidArgument    = errorx.BadRequest(errorx.Code("SKILL_INVALID_ARGUMENT"), "invalid skill argument")
+	ErrSkillDependencyFailed   = errorx.Unavailable(errorx.Code("SKILL_DEPENDENCY_FAILED"), "skill dependency failed")
+	ErrPullRequestNotFound     = errorx.NotFound(errorx.Code("PULL_REQUEST_NOT_FOUND"), "pull request not found")
+	ErrPullRequestNotOpen      = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_OPEN"), "pull request is not open")
+	ErrPullRequestStale        = errorx.Conflict(errorx.Code("PULL_REQUEST_STALE"), "pull request target changed")
+	ErrPullRequestNotApproved  = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_APPROVED"), "pull request is not approved")
+	ErrPullRequestReviewExists = errorx.Conflict(errorx.Code("PULL_REQUEST_REVIEW_EXISTS"), "pull request review already exists")
 )
 
-// GitSkill contains only management metadata. Git refs and objects are owned
-// by the embedded Git engine and are never duplicated in PostgreSQL.
 type GitSkill struct {
-	Name          string
-	DisplayName   string
-	Description   string
-	Visibility    string
-	OwnerID       string
-	OrgID         string
-	ProjectID     string
-	DefaultBranch string
-	Status        string
-	CreateTime    time.Time
-	UpdateTime    time.Time
+	Name, DisplayName, Description, Visibility string
+	OwnerID, OrgID, ProjectID                  string
+	DefaultBranch, Status                      string
+	CreateTime, UpdateTime                     time.Time
 }
 
 type GitSkillListOptions struct {
-	Limit      int
-	Offset     int
-	Query      string
-	Visibility string
-	Status     string
+	Limit, Offset             int
+	Query, Visibility, Status string
 }
-
 type GitSkillListResult struct {
 	Items      []*GitSkill
 	NextOffset int
@@ -67,38 +64,20 @@ type GitSkillRepository interface {
 }
 
 type SkillPullRequest struct {
-	ID          string
-	SkillName   string
-	SourceRef   string
-	TargetRef   string
-	SourceSHA   string
-	TargetSHA   string
-	Title       string
-	Description string
-	State       string
-	AuthorID    string
-	MergedBy    string
-	MergedSHA   string
-	CreateTime  time.Time
-	UpdateTime  time.Time
-	MergedTime  time.Time
+	ID, SkillName, SourceRef, TargetRef, SourceSHA, TargetSHA string
+	Title, Description, State, AuthorID, MergedBy, MergedSHA  string
+	CreateTime, UpdateTime, MergedTime                        time.Time
 }
 
 type SkillPullRequestReview struct {
-	ID            string
-	PullRequestID string
-	ReviewerID    string
-	Verdict       string
-	Comment       string
-	CreateTime    time.Time
+	ID, PullRequestID, ReviewerID, Verdict, Comment string
+	CreateTime                                      time.Time
 }
 
 type PullRequestListOptions struct {
-	State  string
-	Limit  int
-	Offset int
+	State         string
+	Limit, Offset int
 }
-
 type PullRequestListResult struct {
 	Items      []*SkillPullRequest
 	NextOffset int
@@ -114,3 +93,9 @@ type PullRequestRepository interface {
 	ClosePullRequest(context.Context, string, string) (*SkillPullRequest, error)
 	MergePullRequest(context.Context, string, string, string, string, string) (*SkillPullRequest, error)
 }
+
+type SkillRelease struct {
+	Tag, CommitSHA, ManifestSHA256 string
+	CreateTime                     time.Time
+}
+type SkillShare struct{ SkillName, Relation, SubjectType, SubjectID, SubjectRelation string }
