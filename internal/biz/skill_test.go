@@ -15,7 +15,7 @@ func TestSkillUsecaseCreateActivatesRepositoryAndOwner(t *testing.T) {
 	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), git, rels)
 	principal := authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}
 
-	created, err := uc.CreateSkill(context.Background(), principal, &GitSkill{Name: "search", ProjectID: "project-1"})
+	created, err := uc.CreateSkill(context.Background(), principal, &GitSkill{Name: "search", OrgID: "org-1", ProjectID: "project-1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestSkillUsecaseCreateCompensatesAfterOwnerProjectionFailure(t *testing.T) 
 	rels := &fakeSkillRelationships{grantOwnerErr: errors.New("iam unavailable")}
 	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), git, rels)
 
-	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser}, &GitSkill{Name: "search", ProjectID: "project-1"})
+	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}, &GitSkill{Name: "search", OrgID: "org-1", ProjectID: "project-1"})
 	if err == nil {
 		t.Fatal("expected IAM failure")
 	}
@@ -51,6 +51,14 @@ func TestSkillUsecaseCreateCompensatesAfterOwnerProjectionFailure(t *testing.T) 
 func TestSkillUsecaseCreateRequiresProject(t *testing.T) {
 	uc := NewSkillUsecase(newMemoryGitSkillRepo(), newMemoryPullRequestRepo(), &fakeSkillGitEngine{}, &fakeSkillRelationships{})
 	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser}, &GitSkill{Name: "search"})
+	if !errors.Is(err, ErrSkillInvalidArgument) {
+		t.Fatalf("CreateSkill() error = %v, want ErrSkillInvalidArgument", err)
+	}
+}
+
+func TestSkillUsecaseCreateRejectsPrincipalOrgMismatch(t *testing.T) {
+	uc := NewSkillUsecase(newMemoryGitSkillRepo(), newMemoryPullRequestRepo(), &fakeSkillGitEngine{}, &fakeSkillRelationships{})
+	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}, &GitSkill{Name: "search", OrgID: "org-2", ProjectID: "project-1"})
 	if !errors.Is(err, ErrSkillInvalidArgument) {
 		t.Fatalf("CreateSkill() error = %v, want ErrSkillInvalidArgument", err)
 	}

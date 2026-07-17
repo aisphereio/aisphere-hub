@@ -30,7 +30,7 @@ var SkillServiceKernelAuthzRules = authz.Rules{
 		Method:     "CreateSkill",
 		FullMethod: "/skill.v1.SkillService/CreateSkill",
 		Action:     "write",
-		Resource:   "project:{project_id}",
+		Resource:   "project:{org_id}/{project_id}",
 		Audience:   "hub-service",
 		Mode:       authz.RuleMode("CHECK_ONLY"),
 		AuditEvent: "hub.skill.create",
@@ -215,7 +215,7 @@ func SkillServiceKernelRequestInfoResolver(ctx context.Context, operation string
 			Operation:     "/skill.v1.SkillService/CreateSkill",
 			Exposure:      v1.Exposure_AUTHORIZED,
 			Action:        "write",
-			Resource:      "project:{project_id}",
+			Resource:      "project:{org_id}/{project_id}",
 			TargetService: "hub-service",
 			Labels:        map[string]string{},
 		}

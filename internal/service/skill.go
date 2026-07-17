@@ -25,7 +25,7 @@ func (s *SkillService) RegisterHTTPServer(server *khttp.Server) {
 }
 
 func (s *SkillService) CreateSkill(ctx context.Context, req *skillv1.CreateSkillRequest) (*skillv1.CreateSkillResponse, error) {
-	out, err := s.uc.CreateSkill(ctx, principalFromContext(ctx), &biz.GitSkill{Name: req.GetName(), DisplayName: req.GetDisplayName(), Description: req.GetDescription(), Visibility: req.GetVisibility(), ProjectID: req.GetProjectId()})
+	out, err := s.uc.CreateSkill(ctx, principalFromContext(ctx), &biz.GitSkill{Name: req.GetName(), DisplayName: req.GetDisplayName(), Description: req.GetDescription(), Visibility: req.GetVisibility(), OrgID: req.GetOrgId(), ProjectID: req.GetProjectId()})
 	if err != nil {
 		return nil, err
 	}

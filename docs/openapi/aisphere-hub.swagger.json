@@ -1857,11 +1857,15 @@
         },
         "projectId": {
           "type": "string"
+        },
+        "orgId": {
+          "type": "string"
         }
       },
       "required": [
         "name",
-        "projectId"
+        "projectId",
+        "orgId"
       ]
     },
     "v1CreateSkillResponse": {

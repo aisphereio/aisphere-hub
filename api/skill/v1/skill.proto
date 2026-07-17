@@ -17,7 +17,7 @@ service SkillService {
     option (google.api.http) = { post: "/v1/skills" body: "*" response_body: "skill" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "write" resource: "project:{project_id}" audience: "hub-service" mode: CHECK_ONLY }
+      authz: { action: "write" resource: "project:{org_id}/{project_id}" audience: "hub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "hub.skill.create" risk: "high" }
     };
   }
@@ -178,6 +178,7 @@ message CreateSkillRequest {
   string description = 3;
   string visibility = 4;
   string project_id = 5 [(google.api.field_behavior) = REQUIRED];
+  string org_id = 6 [(google.api.field_behavior) = REQUIRED];
 }
 message CreateSkillResponse { Skill skill = 1; }
 

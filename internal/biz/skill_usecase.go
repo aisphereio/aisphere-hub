@@ -42,7 +42,7 @@ func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Princip
 	if err := requirePrincipal(principal); err != nil {
 		return nil, err
 	}
-	if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) || strings.TrimSpace(in.ProjectID) == "" {
+	if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) || strings.TrimSpace(in.OrgID) == "" || strings.TrimSpace(in.OrgID) != strings.TrimSpace(principal.OrgID) || strings.TrimSpace(in.ProjectID) == "" {
 		return nil, ErrSkillInvalidArgument
 	}
 	if uc.skills == nil || uc.git == nil || uc.rels == nil {
@@ -50,8 +50,8 @@ func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Princip
 	}
 	item := *in
 	item.Name = strings.TrimSpace(item.Name)
+	item.OrgID = strings.TrimSpace(item.OrgID)
 	item.OwnerID = principal.SubjectID
-	item.OrgID = principal.OrgID
 	item.DefaultBranch = SkillDefaultBranch
 	item.Status = SkillStatusProvisioning
 	if item.Visibility == "" {

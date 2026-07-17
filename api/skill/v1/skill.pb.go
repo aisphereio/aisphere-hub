@@ -155,6 +155,7 @@ type CreateSkillRequest struct {
 	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	Visibility    string                 `protobuf:"bytes,4,opt,name=visibility,proto3" json:"visibility,omitempty"`
 	ProjectId     string                 `protobuf:"bytes,5,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	OrgId         string                 `protobuf:"bytes,6,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -220,6 +221,13 @@ func (x *CreateSkillRequest) GetVisibility() string {
 func (x *CreateSkillRequest) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CreateSkillRequest) GetOrgId() string {
+	if x != nil {
+		return x.OrgId
 	}
 	return ""
 }
@@ -2210,7 +2218,7 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xb6\x01\n" +
+	"updateTime\"\xd2\x01\n" +
 	"\x12CreateSkillRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
@@ -2219,7 +2227,8 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"visibility\x18\x04 \x01(\tR\n" +
 	"visibility\x12\"\n" +
 	"\n" +
-	"project_id\x18\x05 \x01(\tB\x03\xe0A\x02R\tprojectId\"<\n" +
+	"project_id\x18\x05 \x01(\tB\x03\xe0A\x02R\tprojectId\x12\x1a\n" +
+	"\x06org_id\x18\x06 \x01(\tB\x03\xe0A\x02R\x05orgId\"<\n" +
 	"\x13CreateSkillResponse\x12%\n" +
 	"\x05skill\x18\x01 \x01(\v2\x0f.skill.v1.SkillR\x05skill\"\x85\x01\n" +
 	"\x11ListSkillsRequest\x12\x1b\n" +
@@ -2369,10 +2378,10 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\x18ListSkillReleasesRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"O\n" +
 	"\x19ListSkillReleasesResponse\x122\n" +
-	"\breleases\x18\x01 \x03(\v2\x16.skill.v1.SkillReleaseR\breleases2\xe0\x1a\n" +
-	"\fSkillService\x12\xb8\x01\n" +
-	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"l\x92\xf4\x18L\b\x03\x12,\n" +
-	"\x05write\x12\x14project:{project_id}\x1a\vhub-service \x01\x1a\x1a\b\x01\x12\x10hub.skill.create\x1a\x04high\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
+	"\breleases\x18\x01 \x03(\v2\x16.skill.v1.SkillReleaseR\breleases2\xe9\x1a\n" +
+	"\fSkillService\x12\xc1\x01\n" +
+	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"u\x92\xf4\x18U\b\x03\x125\n" +
+	"\x05write\x12\x1dproject:{org_id}/{project_id}\x1a\vhub-service \x01\x1a\x1a\b\x01\x12\x10hub.skill.create\x1a\x04high\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
 	"/v1/skills\x12\x9a\x01\n" +
 	"\n" +
 	"ListSkills\x12\x1b.skill.v1.ListSkillsRequest\x1a\x1c.skill.v1.ListSkillsResponse\"Q\x92\xf4\x18;\b\x03\x12\x1e\n" +
