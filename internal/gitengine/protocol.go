@@ -61,7 +61,13 @@ func ResolveProtocolAccess(_ context.Context, operation string, request any) (ac
 	case softweb.ActionRead:
 		permission = "view"
 	case softweb.ActionWrite:
+		// receive-pack is refined per ref by the server-side update hook.
+		// The transport check only proves the caller can discover the Skill;
+		// branch/tag updates then require edit, publish, or manage exactly once.
 		permission = "edit"
+		if payload.Protocol == softweb.ProtocolGit {
+			permission = "view"
+		}
 	default:
 		return accessx.Check{}, false, fmt.Errorf("gitengine: unsupported action %q", payload.Action)
 	}

@@ -24,6 +24,9 @@ spec:
         - name: config
           configMap:
             name: aisphere-hub-config
+        - name: git-data
+          persistentVolumeClaim:
+            claimName: aisphere-hub-git
       initContainers:
         - name: sysctl
           image: alpine:3.20
@@ -54,6 +57,8 @@ spec:
               mountPath: /app/configs/config.yaml
               subPath: config.yaml
               readOnly: true
+            - name: git-data
+              mountPath: /var/lib/aisphere-hub/git
           livenessProbe:
             httpGet:
               path: /healthz

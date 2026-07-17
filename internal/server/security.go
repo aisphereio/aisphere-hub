@@ -2,13 +2,16 @@ package server
 
 import (
 	"context"
+	"strings"
 
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
+	"github.com/aisphereio/aisphere-hub/internal/gitengine"
 	"github.com/aisphereio/kernel/accessx"
 	"github.com/aisphereio/kernel/auditx"
 	"github.com/aisphereio/kernel/authz"
 	"github.com/aisphereio/kernel/middleware"
+	mwaccess "github.com/aisphereio/kernel/middleware/access"
 	"github.com/aisphereio/kernel/securityx"
 	"github.com/aisphereio/kernel/serverx"
 )
@@ -25,9 +28,18 @@ func hubServerMiddlewares(resources *data.Resources, cfg conf.SecurityConfig) []
 	return serverx.ServerMiddlewareFromProviders(context.Background(), serverx.RuntimeProviders{
 		Security:            securityRuntime,
 		AccessGuard:         &guard,
-		AccessResolver:      catalog.AccessResolver,
+		AccessResolver:      hubAccessResolver(catalog),
 		RequestInfoResolver: catalog.RequestInfoResolver,
 	})
+}
+
+func hubAccessResolver(catalog serverx.ServiceCatalog) mwaccess.Resolver {
+	return func(ctx context.Context, operation string, request any) (accessx.Check, bool, error) {
+		if strings.HasPrefix(operation, "git.") {
+			return gitengine.ResolveProtocolAccess(ctx, operation, request)
+		}
+		return catalog.AccessResolver(ctx, operation, request)
+	}
 }
 
 func mustHubSecurityRuntime(cfg conf.SecurityConfig) *securityx.Runtime {

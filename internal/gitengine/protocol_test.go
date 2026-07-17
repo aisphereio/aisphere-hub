@@ -19,7 +19,7 @@ func TestDescribeProtocolRequestMapsOperationsAndPermissions(t *testing.T) {
 		permission string
 	}{
 		{name: "fetch", method: http.MethodGet, path: "/git/search.git/info/refs", query: "service=git-upload-pack", operation: "git.fetch", permission: "view"},
-		{name: "push", method: http.MethodPost, path: "/git/search.git/git-receive-pack", operation: "git.push", permission: "edit"},
+		{name: "push", method: http.MethodPost, path: "/git/search.git/git-receive-pack", operation: "git.push", permission: "view"},
 		{name: "lfs read", method: http.MethodPost, path: "/git/search.git/info/lfs/objects/batch", body: `{"operation":"download"}`, operation: "git.lfs.read", permission: "view"},
 		{name: "lfs write", method: http.MethodPost, path: "/git/search.git/info/lfs/objects/batch", body: `{"operation":"upload"}`, operation: "git.lfs.write", permission: "edit"},
 	}

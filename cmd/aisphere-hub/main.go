@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 	"time"
 
 	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
+	"github.com/aisphereio/aisphere-hub/internal/gitengine"
 	"github.com/aisphereio/aisphere-hub/internal/observability"
 	"github.com/aisphereio/aisphere-hub/internal/server"
 	"github.com/aisphereio/aisphere-hub/internal/service"
@@ -31,6 +33,9 @@ func init() {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "hook" {
+		os.Exit(gitengine.RunHook(context.Background(), os.Args[2:], os.Stdin, os.Stderr))
+	}
 	flag.Parse()
 
 	cfg := configx.New(configx.WithSource(file.NewSource(flagconf), configenv.NewSource()))
@@ -90,8 +95,21 @@ func main() {
 	auditService := service.NewAuditService(auditUsecase)
 
 	// Wire the skill module.
+	gitEngine, err := gitengine.New(bootstrapCtx, gitengine.Config{
+		DataPath:      bc.Skill.Git.DataPath,
+		IAMEndpoint:   bc.Security.Authz.IAMGRPC.Endpoint,
+		IAMInsecure:   bc.Security.Authz.IAMGRPC.Insecure,
+		IAMCaller:     bc.Security.Authz.IAMGRPC.CallerService,
+		DefaultBranch: biz.SkillDefaultBranch,
+	})
+	if err != nil {
+		logger.Error("embedded git engine initialization failed", logx.Err(err))
+		panic(err)
+	}
+	defer gitEngine.Close()
 	skillRepo := data.NewSkillRepo(resources)
-	skillUsecase := biz.NewSkillUsecase(skillRepo, authzUsecase, resources.Audit, logger, metrics)
+	pullRequestRepo := data.NewPullRequestRepo(resources)
+	skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
 	skillService := service.NewSkillService(skillUsecase)
 
 	// Repair durable owner relationships through IAM's runtime authorization API.
@@ -99,7 +117,7 @@ func main() {
 		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
 	}
 
-	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService)
+	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, gitEngine, authnService, authzService, auditService, skillService)
 	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService)
 
 	opts := []kernel.Option{

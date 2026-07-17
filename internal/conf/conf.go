@@ -156,15 +156,11 @@ type MetricsConfig struct {
 	Pprof   bool   `json:"pprof" yaml:"pprof"`
 }
 
-// SkillConfig controls skill package storage behavior.
+// SkillConfig controls the embedded Git service used by native Skill repos.
 type SkillConfig struct {
-	Storage SkillStorageConfig `json:"storage" yaml:"storage"`
+	Git SkillGitConfig `json:"git" yaml:"git"`
 }
 
-// SkillStorageConfig controls S3-first skill package persistence.
-type SkillStorageConfig struct {
-	// MaxVersions is the maximum number of versions to keep per skill.
-	// Zero means keep all versions. Cleanup is best-effort and runs after a
-	// successful PG metadata commit.
-	MaxVersions int `json:"max_versions" yaml:"max_versions"`
+type SkillGitConfig struct {
+	DataPath string `json:"data_path" yaml:"data_path"`
 }

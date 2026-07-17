@@ -181,5 +181,5 @@ dtm:
   enabled: false
 
 skill:
-  storage:
-    max_versions: 5
+  git:
+    data_path: ./data/git

@@ -164,8 +164,8 @@ data:
       enabled: false
 
     skill:
-      storage:
-        max_versions: 5
+      git:
+        data_path: /var/lib/aisphere-hub/git
 ---
 apiVersion: v1
 kind: ConfigMap
