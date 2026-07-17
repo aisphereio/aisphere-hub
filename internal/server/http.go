@@ -136,13 +136,19 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 		// failure here means either SpiceDB is down or the configured
 		// token is wrong; either way the hub cannot serve authz-protected
 		// requests.
-		if resources.AuthzService != nil {
-			if _, err := resources.AuthzService.ReadSchema(r.Context()); err != nil {
+		if resources.AuthzSchemaManager != nil {
+			if _, err := resources.AuthzSchemaManager.ReadSchema(r.Context()); err != nil {
 				checks["spicedb"] = "fail: " + err.Error()
 				allReady = false
 			} else {
 				checks["spicedb"] = "ok"
 			}
+		} else if resources.AuthzService != nil {
+			// provider=iam_grpc: schema is owned by IAM (no SchemaManager),
+			// so the SpiceDB schema probe does not apply. The IAM gRPC
+			// client itself is lazily connected; a cheap Check is not safe
+			// here, so we only report that the authz service is configured.
+			checks["authz"] = "ok"
 		}
 
 		// Object store check is intentionally skipped — it's only used

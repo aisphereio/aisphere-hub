@@ -54,13 +54,23 @@ type Resources struct {
 	Authz      authz.Authorizer
 	Access     accessx.Guard
 
-	// AuthzService exposes the full authz.Service surface (Check,
-	// BatchCheck, WriteRelationships, ReadRelationships,
-	// LookupResources, LookupSubjects, ReadSchema, WriteSchema) when the
-	// configured authorizer implements it. May be nil when authz is
-	// disabled or the configured provider only implements Authorizer
-	// (e.g. memory / noop). Business layers MUST nil-check before use.
-	AuthzService authz.Service
+	// AuthzService exposes the runtime authz surface (Check, BatchCheck,
+	// WriteRelationships, DeleteRelationships, ReadRelationships,
+	// LookupResources, LookupSubjects) when the configured authorizer
+	// implements authz.RuntimeService. This intentionally excludes schema
+	// management: with provider=iam_grpc the IAM client implements
+	// RuntimeService but NOT SchemaManager (IAM owns the schema), so
+	// AuthzService is set while AuthzSchemaManager stays nil. With
+	// provider=spicedb the SpiceDB client implements both. May be nil when
+	// authz is disabled or dev_allow_all is on. Business layers MUST
+	// nil-check before use.
+	AuthzService authz.RuntimeService
+	// AuthzSchemaManager exposes ReadSchema/WriteSchema when the configured
+	// authorizer implements authz.SchemaManager (spicedb). nil with
+	// provider=iam_grpc — schema is owned and published by IAM. Hub's
+	// ReadSchema/WriteSchema repo methods MUST nil-check and return an
+	// "IAM-managed schema" error when nil.
+	AuthzSchemaManager authz.SchemaManager
 
 	// LoginService builds IdP login URLs. Always the raw casdoor.Client —
 	// login URL construction is cheap and includes a per-request state
@@ -285,13 +295,17 @@ observability.ComponentConfigured(metrics, "authn", cfg.Security.Authn.Enabled)
 		}
 		logger.Info("authz initialized", logx.String("provider", authzCfg.Provider))
 		r.Authz = authorizer
-		// If the authorizer also implements authz.Service (full ReBAC
-		// surface), preserve the typed reference so business layers can
-		// call WriteRelationships / LookupResources / etc. without
-		// re-constructing the client. spicedb.Client implements Service;
-		// memory / noop do not.
-		if svc, ok := authorizer.(authz.Service); ok {
+		// If the authorizer implements authz.RuntimeService (the data-plane
+		// surface: Check/Write/Read/Lookup without schema management),
+		// preserve the typed reference so business layers can call
+		// WriteRelationships / LookupResources / etc. The IAM gRPC client
+		// implements RuntimeService but not SchemaManager; SpiceDB
+		// implements both.
+		if svc, ok := authorizer.(authz.RuntimeService); ok {
 			r.AuthzService = svc
+		}
+		if sm, ok := authorizer.(authz.SchemaManager); ok {
+			r.AuthzSchemaManager = sm
 		}
 		if closeFn != nil {
 			r.closers = append(r.closers, closeFn)

@@ -54,15 +54,26 @@ func (r *authzRepo) metrics() metricsx.Manager {
 	return metricsx.Noop()
 }
 
-// service returns the kernel authz.Service, or an error if it is not
-// configured. Callers MUST handle the error before using the returned
-// service.
-func (r *authzRepo) service() (authz.Service, error) {
+// service returns the kernel authz.RuntimeService (data-plane surface:
+// Check/BatchCheck/Write/Read/Lookup), or an error if it is not configured.
+// Callers MUST handle the error before using the returned service.
+func (r *authzRepo) service() (authz.RuntimeService, error) {
 	if r == nil || r.resources == nil || r.resources.AuthzService == nil {
 		return nil, errorx.BadRequest(errorx.Code("AUTHZ_UNSUPPORTED_CAPABILITY"),
-			"authz service is not configured; set security.authz.enabled=true and provider=spicedb in config")
+			"authz service is not configured; set security.authz.enabled=true and provider=iam_grpc|spicedb in config")
 	}
 	return r.resources.AuthzService, nil
+}
+
+// schemaManager returns the kernel authz.SchemaManager when the configured
+// authorizer implements it (spicedb). nil with provider=iam_grpc — IAM owns
+// the schema, so Hub cannot read/write it directly.
+func (r *authzRepo) schemaManager() (authz.SchemaManager, error) {
+	if r == nil || r.resources == nil || r.resources.AuthzSchemaManager == nil {
+		return nil, errorx.BadRequest(errorx.Code("AUTHZ_SCHEMA_IAM_MANAGED"),
+			"authz schema is managed by aisphere-iam; Hub cannot read/write the schema directly (provider=iam_grpc)")
+	}
+	return r.resources.AuthzSchemaManager, nil
 }
 
 // --- Check ---
@@ -284,7 +295,7 @@ func (r *authzRepo) ReadSchema(ctx context.Context) (out biz.AuthzSchema, err er
 	defer func() {
 		observability.End(ctx, logger, r.metrics(), "authz.repo", "read_schema", started, err, logx.Int("schema_size", len(out.Text)))
 	}()
-	svc, err := r.service()
+	svc, err := r.schemaManager()
 	if err != nil {
 		return biz.AuthzSchema{}, err
 	}
@@ -298,7 +309,7 @@ func (r *authzRepo) ReadSchema(ctx context.Context) (out biz.AuthzSchema, err er
 func (r *authzRepo) WriteSchema(ctx context.Context, schema biz.AuthzSchema) (err error) {
 	ctx, logger, started := observability.Begin(ctx, r.logger(), "authz.repo", "write_schema", logx.Int("schema_size", len(schema.Text)))
 	defer func() { observability.End(ctx, logger, r.metrics(), "authz.repo", "write_schema", started, err) }()
-	svc, err := r.service()
+	svc, err := r.schemaManager()
 	if err != nil {
 		return err
 	}

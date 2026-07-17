@@ -33,11 +33,13 @@ const HubAuthzSchema = `definition skill_version {
 
 // BootstrapAuthzSchema writes the minimal Hub development schema only when
 // SpiceDB has no schema. Existing schemas are always treated as externally
-// managed and are never replaced by Hub.
+// managed and are never replaced by Hub. With provider=iam_grpc the schema is
+// owned by aisphere-iam (AuthzSchemaManager is nil), so this bootstrap is
+// skipped entirely.
 func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Logger) error {
-	if resources == nil || resources.AuthzService == nil {
+	if resources == nil || resources.AuthzSchemaManager == nil {
 		if log != nil {
-			log.WithContext(ctx).Info("authz schema bootstrap skipped: authz not configured")
+			log.WithContext(ctx).Info("authz schema bootstrap skipped: schema managed by aisphere-iam (provider=iam_grpc) or authz not configured")
 		}
 		return nil
 	}
@@ -46,7 +48,7 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 	}
 	log = log.Named("authz.bootstrap")
 
-	schema, err := resources.AuthzService.ReadSchema(ctx)
+	schema, err := resources.AuthzSchemaManager.ReadSchema(ctx)
 	if err != nil {
 		// An empty development SpiceDB may report schema-not-found. Attempt the
 		// minimal bootstrap; a real connectivity/permission problem will surface
@@ -65,7 +67,7 @@ func BootstrapAuthzSchema(ctx context.Context, resources *Resources, log logx.Lo
 		return nil
 	}
 
-	if err := resources.AuthzService.WriteSchema(ctx, authz.Schema{Text: HubAuthzSchema}); err != nil {
+	if err := resources.AuthzSchemaManager.WriteSchema(ctx, authz.Schema{Text: HubAuthzSchema}); err != nil {
 		log.WithContext(ctx).Error("minimal authz schema bootstrap failed", logx.Err(err))
 		return err
 	}
