@@ -141,16 +141,23 @@ data:
           - /grpc.health.v1.Health/*
         skip_operations: []
       authz:
+        # Hub delegates authorization to aisphere-iam via gRPC. IAM owns the
+        # single SpiceDB instance and the shared schema (skill/skill_space are
+        # Hub-owned resources declared in IAM's aisphere.schema.zed). CreateSkill
+        # writes skill:{name}#owner@user:{sub} through IAM; DeleteSkill revokes
+        # all relationships on skill:{name}. dev_allow_all MUST stay false in
+        # production so the IAM client is constructed and permission checks are
+        # enforced (dev_allow_all=true short-circuits authz to allow-all and
+        # leaves the IAM client unconstructed).
         enabled: true
-        provider: spicedb
+        provider: iam_grpc
         dev_allow_all: false
-        spicedb:
-          endpoint: "${SPICEDB_ENDPOINT}"
-          token: "${SPICEDB_TOKEN}"
-          transport: grpc
+        iam_grpc:
+          endpoint: "aisphere-iam.aisphere.svc.cluster.local:19080"
+          caller_service: aisphere-hub
           insecure: true
           timeout: 5000000000
-          fully_consistent: true
+          retry_max: 2
           metrics_enabled: true
 
     audit:
