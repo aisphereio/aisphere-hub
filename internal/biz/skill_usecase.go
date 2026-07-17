@@ -42,7 +42,7 @@ func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Princip
 	if err := requirePrincipal(principal); err != nil {
 		return nil, err
 	}
-	if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) {
+	if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) || strings.TrimSpace(in.ProjectID) == "" {
 		return nil, ErrSkillInvalidArgument
 	}
 	if uc.skills == nil || uc.git == nil || uc.rels == nil {

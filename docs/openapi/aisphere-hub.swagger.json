@@ -1860,7 +1860,8 @@
         }
       },
       "required": [
-        "name"
+        "name",
+        "projectId"
       ]
     },
     "v1CreateSkillResponse": {

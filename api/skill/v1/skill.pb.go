@@ -2210,16 +2210,16 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xb1\x01\n" +
+	"updateTime\"\xb6\x01\n" +
 	"\x12CreateSkillRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1e\n" +
 	"\n" +
 	"visibility\x18\x04 \x01(\tR\n" +
-	"visibility\x12\x1d\n" +
+	"visibility\x12\"\n" +
 	"\n" +
-	"project_id\x18\x05 \x01(\tR\tprojectId\"<\n" +
+	"project_id\x18\x05 \x01(\tB\x03\xe0A\x02R\tprojectId\"<\n" +
 	"\x13CreateSkillResponse\x12%\n" +
 	"\x05skill\x18\x01 \x01(\v2\x0f.skill.v1.SkillR\x05skill\"\x85\x01\n" +
 	"\x11ListSkillsRequest\x12\x1b\n" +

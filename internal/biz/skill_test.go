@@ -36,7 +36,7 @@ func TestSkillUsecaseCreateCompensatesAfterOwnerProjectionFailure(t *testing.T) 
 	rels := &fakeSkillRelationships{grantOwnerErr: errors.New("iam unavailable")}
 	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), git, rels)
 
-	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser}, &GitSkill{Name: "search"})
+	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser}, &GitSkill{Name: "search", ProjectID: "project-1"})
 	if err == nil {
 		t.Fatal("expected IAM failure")
 	}
@@ -45,6 +45,14 @@ func TestSkillUsecaseCreateCompensatesAfterOwnerProjectionFailure(t *testing.T) 
 	}
 	if _, ok := skills.items["search"]; ok {
 		t.Fatal("metadata compensation was not executed")
+	}
+}
+
+func TestSkillUsecaseCreateRequiresProject(t *testing.T) {
+	uc := NewSkillUsecase(newMemoryGitSkillRepo(), newMemoryPullRequestRepo(), &fakeSkillGitEngine{}, &fakeSkillRelationships{})
+	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser}, &GitSkill{Name: "search"})
+	if !errors.Is(err, ErrSkillInvalidArgument) {
+		t.Fatalf("CreateSkill() error = %v, want ErrSkillInvalidArgument", err)
 	}
 }
 
