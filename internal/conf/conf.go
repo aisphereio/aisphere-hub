@@ -1,6 +1,8 @@
 package conf
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aisphereio/aisphere-iam/client/authzgrpc"
@@ -8,7 +10,6 @@ import (
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authn/casdoor"
 	"github.com/aisphereio/kernel/authn/oidcx"
-	"github.com/aisphereio/kernel/authz/spicedb"
 	"github.com/aisphereio/kernel/cachex"
 	"github.com/aisphereio/kernel/dbx"
 	"github.com/aisphereio/kernel/dtmx"
@@ -92,20 +93,43 @@ type SecurityConfig struct {
 }
 
 type AuthnConfig struct {
-	Enabled  bool           `json:"enabled" yaml:"enabled"`
-	Provider string         `json:"provider" yaml:"provider"`
-	Mode     string         `json:"mode" yaml:"mode"` // casdoor_jwt or gateway_trusted
-	OIDC     oidcx.Config   `json:"oidc" yaml:"oidc"`
-	Casdoor  casdoor.Config `json:"casdoor" yaml:"casdoor"`
-	CacheTTL time.Duration  `json:"cache_ttl_ns" yaml:"cache_ttl_ns"`
+	Enabled      bool                     `json:"enabled" yaml:"enabled"`
+	Provider     string                   `json:"provider" yaml:"provider"`
+	Mode         string                   `json:"mode" yaml:"mode"`
+	PrincipalJWT authn.PrincipalJWTConfig `json:"principal_jwt" yaml:"principal_jwt"`
+	OIDC         oidcx.Config             `json:"oidc" yaml:"oidc"`
+	Casdoor      casdoor.Config           `json:"casdoor" yaml:"casdoor"`
+	CacheTTL     time.Duration            `json:"cache_ttl_ns" yaml:"cache_ttl_ns"`
 }
 
 type AuthzConfig struct {
-	Enabled     bool              `json:"enabled" yaml:"enabled"`
-	Provider    string            `json:"provider" yaml:"provider"`
-	DevAllowAll bool              `json:"dev_allow_all" yaml:"dev_allow_all"`
-	SpiceDB     spicedb.Config    `json:"spicedb" yaml:"spicedb"`
+	Enabled     bool             `json:"enabled" yaml:"enabled"`
+	Provider    string           `json:"provider" yaml:"provider"`
+	DevAllowAll bool             `json:"dev_allow_all" yaml:"dev_allow_all"`
 	IAMGRPC     authzgrpc.Config `json:"iam_grpc" yaml:"iam_grpc"`
+}
+
+func ValidateProductionSecurity(service ServiceConfig, security SecurityConfig) error {
+	env := strings.ToLower(strings.TrimSpace(service.Env))
+	if env != "production" && env != "prod" {
+		return nil
+	}
+	if !security.Authn.Enabled {
+		return fmt.Errorf("production security requires authn")
+	}
+	if strings.ToLower(strings.TrimSpace(security.Authn.Mode)) != "principal_jwt" {
+		return fmt.Errorf("production security requires authn mode principal_jwt")
+	}
+	if strings.TrimSpace(security.Authn.PrincipalJWT.Secret) == "" {
+		return fmt.Errorf("production security requires principal_jwt secret")
+	}
+	if !security.Authz.Enabled || security.Authz.DevAllowAll {
+		return fmt.Errorf("production security requires fail-closed authz")
+	}
+	if strings.ToLower(strings.TrimSpace(security.Authz.Provider)) != "iam_grpc" {
+		return fmt.Errorf("production security requires IAM gRPC authz provider")
+	}
+	return nil
 }
 
 type GatewayConfig struct {

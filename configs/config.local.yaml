@@ -96,8 +96,16 @@ security:
   authn:
     enabled: true
     provider: casdoor
-    mode: gateway_trusted
+    mode: principal_jwt
     cache_ttl_ns: 300000000000
+    principal_jwt:
+      enabled: true
+      header: X-Aisphere-Principal-JWT
+      secret: "${AISPHERE_PRINCIPAL_JWT_SECRET}"
+      issuer: aisphere-iam
+      audience: [aisphere-internal]
+      ttl_ns: 300000000000
+      clock_skew_ns: 30000000000
     oidc:
       provider: casdoor
       issuer: http://36.137.200.194:30082
@@ -117,10 +125,6 @@ security:
       jwt_certificate_file: ../aisphere-iam/configs/casdoor.pub
       timeout: 10000000000
       metrics_enabled: true
-  internal_call:
-    enabled: true
-    header: X-Aisphere-Internal-Token
-    token: "aisphere-internal-token-2026"
   access:
     # Public operations bypass authn/authz but are still audited by accessx.
     # All other operations are authenticated here; fine-grained authz remains
@@ -145,15 +149,14 @@ security:
     skip_operations: []
   authz:
     enabled: true
-    provider: spicedb
+    provider: iam_grpc
     dev_allow_all: false
-    spicedb:
-      endpoint: 36.137.200.194:30084
-      token: "keykeykey"
-      transport: grpc
+    iam_grpc:
+      endpoint: 127.0.0.1:19080
+      caller_service: aisphere-hub
       insecure: true
       timeout: 5000000000
-      fully_consistent: true
+      retry_max: 2
       metrics_enabled: true
 
 gateway:
