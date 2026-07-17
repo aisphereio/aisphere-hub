@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS skill_pull_request_reviews (
     CONSTRAINT chk_skill_pr_review_verdict CHECK (verdict IN ('approve', 'request_changes'))
 );
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION hub_set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -60,6 +61,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 DROP TRIGGER IF EXISTS trg_skills_updated_at ON skills;
 CREATE TRIGGER trg_skills_updated_at
