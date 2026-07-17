@@ -7,11 +7,11 @@ func TestSkillAuthzRulesUseIAMSchemaPermissions(t *testing.T) {
 		permission string
 		resource   string
 	}{
-		"/skill.v1.SkillService/UpdateSkill":           {permission: "edit", resource: "skill:{name}"},
-		"/skill.v1.SkillService/PublishSkillVersion":   {permission: "publish", resource: "skill:{name}"},
-		"/skill.v1.SkillService/UpdateSkillVisibility": {permission: "manage", resource: "skill:{name}"},
-		"/skill.v1.SkillService/CreateSkillShare":      {permission: "manage", resource: "skill:{name}"},
-		"/skill.v1.SkillService/DeleteSkill":           {permission: "manage", resource: "skill:{name}"},
+		"/skill.v1.SkillService/UpdateSkill":           {permission: "update", resource: "aihub:skill:{name}"},
+		"/skill.v1.SkillService/PublishSkillVersion":   {permission: "publish", resource: "aihub:skill:{name}:version:{version}"},
+		"/skill.v1.SkillService/UpdateSkillVisibility": {permission: "visibility:update", resource: "aihub:skill:{name}"},
+		"/skill.v1.SkillService/CreateSkillShare":      {permission: "share:create", resource: "aihub:skill:{name}"},
+		"/skill.v1.SkillService/DeleteSkill":           {permission: "delete", resource: "aihub:skill:{name}"},
 	}
 	for operation, want := range tests {
 		rule, ok := SkillServiceAuthzRules[operation]

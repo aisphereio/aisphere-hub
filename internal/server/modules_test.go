@@ -12,7 +12,10 @@ func TestHubCatalogResolvesSkillIAMPermission(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("resolve = (%+v, %v, %v)", check, ok, err)
 	}
-	if check.Permission != "edit" || check.Resource.Type != "skill" || check.Resource.ID != "demo" {
+	// The catalog resolver surfaces the proto-declared authz action ("update")
+	// and the resource template resolved against the request. ObjectRef splits
+	// "aihub:skill:demo" into Type="aihub", ID="skill:demo".
+	if check.Permission != "update" || check.Resource.Type != "aihub" || check.Resource.ID != "skill:demo" {
 		t.Fatalf("check = %+v", check)
 	}
 }
