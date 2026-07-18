@@ -41,7 +41,9 @@ CREATE INDEX IF NOT EXISTS idx_aihub_skillset_items_skill
 CREATE INDEX IF NOT EXISTS idx_aihub_skillset_items_order
     ON aihub_skillset_items(skillset_name, sort_order, skill_name);
 
+-- +goose StatementBegin
 COMMENT ON TABLE aihub_skillsets IS
     'Lightweight collections of Skills; Skill lifecycle and versions remain independent.';
 COMMENT ON COLUMN aihub_skillset_items.skill_name IS
     'Reference to a canonical Skill only; no version is persisted by design.';
+-- +goose StatementEnd

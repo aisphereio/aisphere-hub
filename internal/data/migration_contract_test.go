@@ -36,3 +36,19 @@ func TestSkillSetMigrationReferencesGitNativeSkills(t *testing.T) {
 		t.Fatal("SkillSet migration must not depend on the removed package-lifecycle table")
 	}
 }
+
+func TestSkillSetMigrationGuardsQuotedSemicolonComments(t *testing.T) {
+	path := filepath.Join("..", "..", "migrations", "postgres", "202607150001_create_aihub_skillsets.sql")
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(body)
+	commentStart := strings.Index(sql, "COMMENT ON TABLE aihub_skillsets")
+	if commentStart < 0 {
+		t.Fatal("SkillSet table comment is missing")
+	}
+	if strings.LastIndex(sql[:commentStart], "-- +goose StatementBegin") < 0 || strings.Index(sql[commentStart:], "-- +goose StatementEnd") < 0 {
+		t.Fatal("quoted comments containing semicolons must be guarded from statement splitting")
+	}
+}
