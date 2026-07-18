@@ -33,7 +33,7 @@ spec:
               - name: X-Aisphere-Authz-Action
                 value: "write"
               - name: X-Aisphere-Authz-Resource
-                value: "project:{project_id}"
+                value: "project:{org_id}/{project_id}"
       backendRefs:
         - name: "aisphere-hub"
           namespace: "aisphere"

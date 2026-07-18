@@ -272,9 +272,6 @@ func NewResources(ctx context.Context, cfg conf.Bootstrap) (*Resources, func(), 
 	if cfg.Security.Authz.Enabled && !cfg.Security.Authz.DevAllowAll {
 		start := time.Now()
 		authzCfg := cfg.Security.Authz
-		authzCfg.SpiceDB.Logger = logger.Named("authz.spicedb")
-		authzCfg.SpiceDB.Metrics = metrics
-		authzCfg.SpiceDB.MetricsEnabled = cfg.Metrics.Enabled || authzCfg.SpiceDB.MetricsEnabled
 		authorizer, closeFn, err := newAuthorizer(authzCfg)
 		observability.ComponentInit(ctx, metrics, "authz", start, err)
 		if err != nil {
@@ -301,6 +298,8 @@ func NewData(resources *Resources) *Data {
 func newAuthenticator(cfg conf.AuthnConfig, logger logx.Logger) (authn.Authenticator, error) {
 	// Mode-based authenticator selection.
 	switch strings.ToLower(strings.TrimSpace(cfg.Mode)) {
+	case "principal_jwt":
+		return authn.PrincipalJWTAuthenticator{Config: cfg.PrincipalJWT}, nil
 	case "gateway_trusted":
 		return authn.TrustedHeaderAuthenticator{}, nil
 	case "", "casdoor_jwt", "jwt_verify":
