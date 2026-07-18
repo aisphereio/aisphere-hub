@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS aihub_skillset_items (
     CONSTRAINT fk_aihub_skillset_items_set
         FOREIGN KEY (skillset_name) REFERENCES aihub_skillsets(name) ON DELETE CASCADE,
     CONSTRAINT fk_aihub_skillset_items_skill
-        FOREIGN KEY (skill_name) REFERENCES aihub_skills(name) ON DELETE CASCADE
+        FOREIGN KEY (skill_name) REFERENCES skills(name) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_aihub_skillset_items_skill
