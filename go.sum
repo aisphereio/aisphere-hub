@@ -23,8 +23,8 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/aisphereio/aisphere-iam v0.1.7 h1:oy3y2AsIdt31eZID28bP6uwThSpBNHOB6RLCD50KDZg=
-github.com/aisphereio/aisphere-iam v0.1.7/go.mod h1:RnB1MMmTUKXs/ObLshNP+FIi6GRYG8YWlXD5WTElriE=
+github.com/aisphereio/aisphere-iam v0.1.9 h1:SYR2Rx0eL4eEEq6llMSDxmBPeRu4koOaoqvXfBgcLKI=
+github.com/aisphereio/aisphere-iam v0.1.9/go.mod h1:RnB1MMmTUKXs/ObLshNP+FIi6GRYG8YWlXD5WTElriE=
 github.com/aisphereio/kernel v0.4.16-0.20260717114133-50a0d6ce1d92 h1:CR6vGSNBM6ozN8GwkiL1MQ0tW5QyuP87gJnemMIxhgc=
 github.com/aisphereio/kernel v0.4.16-0.20260717114133-50a0d6ce1d92/go.mod h1:q9OWv0BtDyfWIGxBgiNPM1MUI479Y6o9W8Sjo16p5II=
 github.com/aisphereio/soft-serve v0.0.0-20260717135647-bbbe77ccb2ac h1:NBPeajxTnlViScQiUtQPLmexbd/WAYwjANmWTvWrKmU=

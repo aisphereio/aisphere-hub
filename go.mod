@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/aisphereio/aisphere-iam v0.1.7
+	github.com/aisphereio/aisphere-iam v0.1.9
 	github.com/glebarez/sqlite v1.11.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
