@@ -353,14 +353,26 @@ func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Princip
 	if err := ValidateSkillName(in.Name); err != nil {
 		return nil, err
 	}
-	skill := normalizeSkillForCreate(in)
-	// Stamp the owner from the authenticated principal when the request
-	// did not supply one. This makes owner_id the authoritative source
-	// of truth for "who created this skill" even when authz is disabled.
-	if strings.TrimSpace(skill.OwnerID) == "" && principal.IsAuthenticated() {
-		skill.OwnerID = principal.SubjectID
-		skill.OrgID = firstNonEmptyString(skill.OrgID, principal.OrgID)
-	}
+skill := normalizeSkillForCreate(in)
+		// Stamp the owner from the authenticated principal when the request
+		// did not supply one. This makes owner_id the authoritative source
+		// of truth for "who created this skill" even when authz is disabled.
+		if strings.TrimSpace(skill.OwnerID) == "" && principal.IsAuthenticated() {
+			skill.OwnerID = principal.SubjectID
+			skill.OrgID = firstNonEmptyString(skill.OrgID, principal.OrgID)
+		}
+		// Validate org_id and project_id — both are required for skill creation.
+		// The authz check (create_skill on project:{org}/{project}) will fail
+		// without them, but we fail fast with a clear 400 rather than a 403.
+		if strings.TrimSpace(skill.OrgID) == "" {
+			return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("org_id is required"))
+		}
+		if strings.TrimSpace(skill.ProjectID) == "" {
+			return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("project_id is required"))
+		}
+		if principal.IsAuthenticated() && skill.OrgID != principal.OrgID {
+			return nil, errorx.From(ErrSkillInvalidArgument, errorx.WithMessage("org_id must match the authenticated principal's org"))
+		}
 	out, err = uc.repo.CreateSkill(ctx, skill)
 	if err != nil {
 		uc.recordAudit(ctx, principal, "skill.create", auditx.ResultFailure, err.Error(), "skill", skill.Name, nil)

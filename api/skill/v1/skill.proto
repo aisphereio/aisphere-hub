@@ -49,7 +49,7 @@ service SkillService {
     };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "create" resource: "aihub:skill:*" audience: "aihub-service" mode: CHECK_ONLY }
+      authz: { action: "create_skill" resource: "project:{org_id}/{project_id}" audience: "aihub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "aihub.skill.create" risk: "medium" }
     };
   }
