@@ -889,7 +889,6 @@
     },
     "/v1/skills": {
       "get": {
-        "summary": "ListSkills lists canonical skills visible to the caller. Visibility\nrules: caller sees (a) skills they own, (b) skills shared with them\nvia accessx grants, (c) skills with visibility=public.",
         "operationId": "SkillService_ListSkills",
         "responses": {
           "200": {
@@ -920,13 +919,7 @@
             "type": "string"
           },
           {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "status",
+            "name": "query",
             "in": "query",
             "required": false,
             "type": "string"
@@ -943,7 +936,6 @@
         ]
       },
       "post": {
-        "summary": "CreateSkill creates one canonical skill. The caller becomes the owner.",
         "operationId": "SkillService_CreateSkill",
         "responses": {
           "200": {
@@ -976,7 +968,6 @@
     },
     "/v1/skills/{name}": {
       "get": {
-        "summary": "GetSkill returns one canonical skill by name.",
         "operationId": "SkillService_GetSkill",
         "responses": {
           "200": {
@@ -1005,7 +996,6 @@
         ]
       },
       "delete": {
-        "summary": "DeleteSkill soft-deletes one canonical skill by name. Cascades to\nversions and files. S3 objects are purged best-effort after the DB\ntransaction commits.",
         "operationId": "SkillService_DeleteSkill",
         "responses": {
           "200": {
@@ -1034,7 +1024,6 @@
         ]
       },
       "put": {
-        "summary": "UpdateSkill updates mutable fields of one canonical skill. owner_id /\nvisibility / status are NOT updated by this RPC — they require\nseparate lifecycle endpoints.",
         "operationId": "SkillService_UpdateSkill",
         "responses": {
           "200": {
@@ -1071,54 +1060,14 @@
         ]
       }
     },
-    "/v1/skills/{name}/draft/dir": {
-      "post": {
-        "summary": "UpsertSkillDraftDirectory creates a directory in the draft workspace.",
-        "operationId": "SkillService_UpsertSkillDraftDirectory",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillFile"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SkillServiceUpsertSkillDraftDirectoryBody"
-            }
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/draft/file": {
+    "/v1/skills/{name}/pull-requests": {
       "get": {
-        "summary": "GetSkillDraftFile returns one draft file's metadata and content.",
-        "operationId": "SkillService_GetSkillDraftFile",
+        "operationId": "SkillService_ListPullRequests",
         "responses": {
           "200": {
-            "description": "",
+            "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1SkillFile"
+              "$ref": "#/definitions/v1ListPullRequestsResponse"
             }
           },
           "default": {
@@ -1136,15 +1085,22 @@
             "type": "string"
           },
           {
-            "name": "version",
+            "name": "state",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
-            "name": "path",
+            "name": "pageSize",
             "in": "query",
-            "required": true,
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
             "type": "string"
           }
         ],
@@ -1152,14 +1108,13 @@
           "SkillService"
         ]
       },
-      "put": {
-        "summary": "UpsertSkillDraftFile creates or updates a draft file.",
-        "operationId": "SkillService_UpsertSkillDraftFile",
+      "post": {
+        "operationId": "SkillService_CreatePullRequest",
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/v1SkillFile"
+              "$ref": "#/definitions/v1PullRequest"
             }
           },
           "default": {
@@ -1181,7 +1136,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/SkillServiceUpsertSkillDraftFileBody"
+              "$ref": "#/definitions/SkillServiceCreatePullRequestBody"
             }
           }
         ],
@@ -1190,140 +1145,14 @@
         ]
       }
     },
-    "/v1/skills/{name}/draft/files": {
+    "/v1/skills/{name}/pull-requests/{id}": {
       "get": {
-        "summary": "ListSkillDraftFiles lists the editable draft workspace tree.",
-        "operationId": "SkillService_ListSkillDraftFiles",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListSkillDraftFilesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/draft/path": {
-      "delete": {
-        "summary": "DeleteSkillDraftPath deletes a file or directory from the draft workspace.",
-        "operationId": "SkillService_DeleteSkillDraftPath",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteSkillDraftPathResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "path",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "recursive",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/draft/path:move": {
-      "post": {
-        "summary": "MoveSkillDraftPath renames or moves a draft workspace path.",
-        "operationId": "SkillService_MoveSkillDraftPath",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1MoveSkillDraftPathResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SkillServiceMoveSkillDraftPathBody"
-            }
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/draft:commit": {
-      "post": {
-        "summary": "CommitSkillDraft materializes the draft workspace into a SkillVersion.",
-        "operationId": "SkillService_CommitSkillDraft",
+        "operationId": "SkillService_GetPullRequest",
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/v1SkillVersion"
+              "$ref": "#/definitions/v1PullRequest"
             }
           },
           "default": {
@@ -1341,12 +1170,172 @@
             "type": "string"
           },
           {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/pull-requests/{id}:close": {
+      "post": {
+        "operationId": "SkillService_ClosePullRequest",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1PullRequest"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/SkillServiceCommitSkillDraftBody"
+              "$ref": "#/definitions/SkillServiceClosePullRequestBody"
             }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/pull-requests/{id}:merge": {
+      "post": {
+        "operationId": "SkillService_MergePullRequest",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1PullRequest"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceMergePullRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/pull-requests/{id}:review": {
+      "post": {
+        "operationId": "SkillService_ReviewPullRequest",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1PullRequestReview"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillServiceReviewPullRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/releases": {
+      "get": {
+        "operationId": "SkillService_ListSkillReleases",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillReleasesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1356,7 +1345,6 @@
     },
     "/v1/skills/{name}/shares": {
       "get": {
-        "summary": "ListSkillShares lists subjects that have any relation on the named\nskill. Requires skill.manage.",
         "operationId": "SkillService_ListSkillShares",
         "responses": {
           "200": {
@@ -1385,11 +1373,10 @@
         ]
       },
       "post": {
-        "summary": "CreateSkillShare grants a viewer or editor relation on the named\nskill to a subject. Requires skill.manage. The relation field accepts\n\"viewer\", \"editor\", or \"reviewer\"; passing \"owner\" returns INVALID_ARGUMENT.",
         "operationId": "SkillService_CreateSkillShare",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/v1SkillShare"
             }
@@ -1422,9 +1409,8 @@
         ]
       }
     },
-    "/v1/skills/{name}/shares/{subjectType}/{subjectId}": {
+    "/v1/skills/{name}/shares/{relation}/{subjectType}/{subjectId}": {
       "delete": {
-        "summary": "DeleteSkillShare revokes ALL relations between the named skill and\nthe named subject. Requires skill.manage.",
         "operationId": "SkillService_DeleteSkillShare",
         "responses": {
           "200": {
@@ -1448,6 +1434,12 @@
             "type": "string"
           },
           {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "subjectType",
             "in": "path",
             "required": true,
@@ -1465,380 +1457,8 @@
         ]
       }
     },
-    "/v1/skills/{name}/versions": {
-      "get": {
-        "summary": "ListSkillVersions lists versions of one canonical skill, oldest first.",
-        "operationId": "SkillService_ListSkillVersions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListSkillVersionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}": {
-      "get": {
-        "summary": "GetSkillVersion returns one version metadata record.",
-        "operationId": "SkillService_GetSkillVersion",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillVersion"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}/download": {
-      "get": {
-        "summary": "DownloadSkillVersion returns the version package bytes. Use\nif_none_match to leverage ETag-based 304 Not Modified.",
-        "operationId": "SkillService_DownloadSkillVersion",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SkillPackageDownload"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "ifNoneMatch",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}/file": {
-      "get": {
-        "summary": "GetSkillVersionFile returns one text or base64-encoded file content.",
-        "operationId": "SkillService_GetSkillVersionFile",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillFile"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "path",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}/files": {
-      "get": {
-        "summary": "ListSkillVersionFiles lists files stored for one skill version.",
-        "operationId": "SkillService_ListSkillVersionFiles",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListSkillVersionFilesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}:offline": {
-      "post": {
-        "summary": "OfflineSkillVersion removes one online version from catalog/runtime use.",
-        "operationId": "SkillService_OfflineSkillVersion",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillVersion"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SkillServiceOfflineSkillVersionBody"
-            }
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}:online": {
-      "post": {
-        "summary": "OnlineSkillVersion makes one published version consumable by\ncatalog/runtime. Any previously-online version of the same skill is\nautomatically demoted to published.",
-        "operationId": "SkillService_OnlineSkillVersion",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillVersion"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SkillServiceOnlineSkillVersionBody"
-            }
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}:publish": {
-      "post": {
-        "summary": "PublishSkillVersion marks a submitted version as published.",
-        "operationId": "SkillService_PublishSkillVersion",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillVersion"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SkillServicePublishSkillVersionBody"
-            }
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
-    "/v1/skills/{name}/versions/{version}:submit": {
-      "post": {
-        "summary": "SubmitSkillVersion marks a draft version ready for publish.",
-        "operationId": "SkillService_SubmitSkillVersion",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillVersion"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SkillServiceSubmitSkillVersionBody"
-            }
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
-    },
     "/v1/skills/{name}:visibility": {
       "post": {
-        "summary": "UpdateSkillVisibility changes the access visibility of one canonical\nskill. This endpoint is the contract-backed path for public/private\ntoggles; subject-specific sharing remains under Skill share RPCs.",
         "operationId": "SkillService_UpdateSkillVisibility",
         "responses": {
           "200": {
@@ -1874,71 +1494,35 @@
           "SkillService"
         ]
       }
-    },
-    "/v1/skills:upload": {
-      "post": {
-        "summary": "UploadSkillPackage imports a zipped Skill package into a new or\nexisting version. The zip must contain SKILL.md with YAML front-matter\ndeclaring name, description, version. Other files become version\nfiles; binary files are base64-encoded in the DB content column.",
-        "operationId": "SkillService_UploadSkillPackage",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SkillVersion"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1UploadSkillPackageRequest"
-            }
-          }
-        ],
-        "tags": [
-          "SkillService"
-        ]
-      }
     }
   },
   "definitions": {
-    "SkillServiceCommitSkillDraftBody": {
+    "SkillServiceClosePullRequestBody": {
+      "type": "object"
+    },
+    "SkillServiceCreatePullRequestBody": {
       "type": "object",
       "properties": {
-        "version": {
+        "sourceRef": {
           "type": "string"
         },
-        "commitMsg": {
+        "title": {
           "type": "string"
         },
-        "overwrite": {
-          "type": "boolean"
-        },
-        "submit": {
-          "type": "boolean"
-        },
-        "publish": {
-          "type": "boolean"
-        },
-        "online": {
-          "type": "boolean"
+        "description": {
+          "type": "string"
         }
-      }
+      },
+      "required": [
+        "sourceRef",
+        "title"
+      ]
     },
     "SkillServiceCreateSkillShareBody": {
       "type": "object",
       "properties": {
         "relation": {
-          "type": "string",
-          "title": "\"viewer\" | \"editor\" | \"reviewer\""
+          "type": "string"
         },
         "subjectType": {
           "type": "string"
@@ -1947,8 +1531,7 @@
           "type": "string"
         },
         "subjectRelation": {
-          "type": "string",
-          "title": "optional, for group#member subjects"
+          "type": "string"
         }
       },
       "required": [
@@ -1957,38 +1540,30 @@
         "subjectId"
       ]
     },
-    "SkillServiceMoveSkillDraftPathBody": {
+    "SkillServiceMergePullRequestBody": {
       "type": "object",
       "properties": {
-        "version": {
+        "expectedTargetSha": {
           "type": "string"
-        },
-        "oldPath": {
-          "type": "string"
-        },
-        "newPath": {
-          "type": "string"
-        },
-        "overwrite": {
-          "type": "boolean"
         }
       },
       "required": [
-        "oldPath",
-        "newPath"
+        "expectedTargetSha"
       ]
     },
-    "SkillServiceOfflineSkillVersionBody": {
-      "type": "object"
-    },
-    "SkillServiceOnlineSkillVersionBody": {
-      "type": "object"
-    },
-    "SkillServicePublishSkillVersionBody": {
-      "type": "object"
-    },
-    "SkillServiceSubmitSkillVersionBody": {
-      "type": "object"
+    "SkillServiceReviewPullRequestBody": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict"
+      ]
     },
     "SkillServiceUpdateSkillBody": {
       "type": "object",
@@ -1998,24 +1573,6 @@
         },
         "description": {
           "type": "string"
-        },
-        "version": {
-          "type": "string"
-        },
-        "sourceType": {
-          "type": "string"
-        },
-        "sourceUri": {
-          "type": "string"
-        },
-        "manifestJson": {
-          "type": "string"
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },
@@ -2023,52 +1580,11 @@
       "type": "object",
       "properties": {
         "visibility": {
-          "type": "string",
-          "title": "\"private\" | \"internal\" | \"public\""
+          "type": "string"
         }
       },
       "required": [
         "visibility"
-      ]
-    },
-    "SkillServiceUpsertSkillDraftDirectoryBody": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "path"
-      ]
-    },
-    "SkillServiceUpsertSkillDraftFileBody": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "content": {
-          "type": "string"
-        },
-        "binary": {
-          "type": "boolean"
-        },
-        "createParents": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "path"
       ]
     },
     "protobufAny": {
@@ -2308,11 +1824,19 @@
         }
       }
     },
-    "v1CommitSkillDraftResponse": {
+    "v1ClosePullRequestResponse": {
       "type": "object",
       "properties": {
-        "version": {
-          "$ref": "#/definitions/v1SkillVersion"
+        "pullRequest": {
+          "$ref": "#/definitions/v1PullRequest"
+        }
+      }
+    },
+    "v1CreatePullRequestResponse": {
+      "type": "object",
+      "properties": {
+        "pullRequest": {
+          "$ref": "#/definitions/v1PullRequest"
         }
       }
     },
@@ -2328,42 +1852,20 @@
         "description": {
           "type": "string"
         },
-        "version": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
         "visibility": {
-          "type": "string"
-        },
-        "ownerId": {
-          "type": "string"
-        },
-        "orgId": {
           "type": "string"
         },
         "projectId": {
           "type": "string"
         },
-        "sourceType": {
+        "orgId": {
           "type": "string"
-        },
-        "sourceUri": {
-          "type": "string"
-        },
-        "manifestJson": {
-          "type": "string"
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       },
       "required": [
-        "name"
+        "name",
+        "projectId",
+        "orgId"
       ]
     },
     "v1CreateSkillResponse": {
@@ -2371,6 +1873,14 @@
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
+        }
+      }
+    },
+    "v1CreateSkillShareResponse": {
+      "type": "object",
+      "properties": {
+        "share": {
+          "$ref": "#/definitions/v1SkillShare"
         }
       }
     },
@@ -2396,9 +1906,6 @@
           "format": "int32"
         }
       }
-    },
-    "v1DeleteSkillDraftPathResponse": {
-      "type": "object"
     },
     "v1DeleteSkillResponse": {
       "type": "object"
@@ -2459,11 +1966,18 @@
       },
       "description": "ExchangeResponse is the OAuth2/OIDC token set returned by Exchange.\n\n`expires_in` is seconds from issue time to expiry (OAuth2 standard). For a\nwall-clock expiry, callers can compute issued_at + expires_in, or use the\n`expires_at` field on Principal returned by Me/Introspect."
     },
-    "v1GetSkillDraftFileResponse": {
+    "v1GetPullRequestResponse": {
       "type": "object",
       "properties": {
-        "file": {
-          "$ref": "#/definitions/v1SkillFile"
+        "pullRequest": {
+          "$ref": "#/definitions/v1PullRequest"
+        },
+        "reviews": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PullRequestReview"
+          }
         }
       }
     },
@@ -2472,22 +1986,6 @@
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
-        }
-      }
-    },
-    "v1GetSkillVersionFileResponse": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "$ref": "#/definitions/v1SkillFile"
-        }
-      }
-    },
-    "v1GetSkillVersionResponse": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "$ref": "#/definitions/v1SkillVersion"
         }
       }
     },
@@ -2551,14 +2049,29 @@
       },
       "description": "IntrospectResponse mirrors RFC 7662 token introspection."
     },
-    "v1ListSkillDraftFilesResponse": {
+    "v1ListPullRequestsResponse": {
       "type": "object",
       "properties": {
-        "files": {
+        "pullRequests": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1SkillFile"
+            "$ref": "#/definitions/v1PullRequest"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListSkillReleasesResponse": {
+      "type": "object",
+      "properties": {
+        "releases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkillRelease"
           }
         }
       }
@@ -2571,30 +2084,6 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1SkillShare"
-          }
-        }
-      }
-    },
-    "v1ListSkillVersionFilesResponse": {
-      "type": "object",
-      "properties": {
-        "files": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1SkillFile"
-          }
-        }
-      }
-    },
-    "v1ListSkillVersionsResponse": {
-      "type": "object",
-      "properties": {
-        "versions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1SkillVersion"
           }
         }
       }
@@ -2674,8 +2163,13 @@
         }
       }
     },
-    "v1MoveSkillDraftPathResponse": {
-      "type": "object"
+    "v1MergePullRequestResponse": {
+      "type": "object",
+      "properties": {
+        "pullRequest": {
+          "$ref": "#/definitions/v1PullRequest"
+        }
+      }
     },
     "v1ObjectRef": {
       "type": "object",
@@ -2691,22 +2185,6 @@
         "type",
         "id"
       ]
-    },
-    "v1OfflineSkillVersionResponse": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "$ref": "#/definitions/v1SkillVersion"
-        }
-      }
-    },
-    "v1OnlineSkillVersionResponse": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "$ref": "#/definitions/v1SkillVersion"
-        }
-      }
     },
     "v1Principal": {
       "type": "object",
@@ -2780,11 +2258,77 @@
       },
       "description": "Principal is the normalized identity of the current caller.\n\nField set is aligned with kernel authn.Principal (github.com/aisphereio/\nkernel/authn.Principal). The kernel type has additional internal fields\n(Provider, ExternalID, Issuer, Audience, TenantID, AppID, IssuedAt) that\nare not exposed here because they are not useful to typical frontend\nconsumers; if a future use case needs them, add fields rather than\nexposing the kernel struct verbatim."
     },
-    "v1PublishSkillVersionResponse": {
+    "v1PullRequest": {
       "type": "object",
       "properties": {
-        "version": {
-          "$ref": "#/definitions/v1SkillVersion"
+        "id": {
+          "type": "string"
+        },
+        "skillName": {
+          "type": "string"
+        },
+        "sourceRef": {
+          "type": "string"
+        },
+        "targetRef": {
+          "type": "string"
+        },
+        "sourceSha": {
+          "type": "string"
+        },
+        "targetSha": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "mergedSha": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mergedTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1PullRequestReview": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "pullRequestId": {
+          "type": "string"
+        },
+        "reviewerId": {
+          "type": "string"
+        },
+        "verdict": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -2929,6 +2473,14 @@
         }
       }
     },
+    "v1ReviewPullRequestResponse": {
+      "type": "object",
+      "properties": {
+        "review": {
+          "$ref": "#/definitions/v1PullRequestReview"
+        }
+      }
+    },
     "v1RevokeRequest": {
       "type": "object",
       "properties": {
@@ -2973,10 +2525,6 @@
     "v1Skill": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "int64"
-        },
         "name": {
           "type": "string"
         },
@@ -2984,12 +2532,6 @@
           "type": "string"
         },
         "description": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        },
-        "status": {
           "type": "string"
         },
         "visibility": {
@@ -3004,61 +2546,10 @@
         "projectId": {
           "type": "string"
         },
-        "sourceType": {
+        "defaultBranch": {
           "type": "string"
         },
-        "sourceUri": {
-          "type": "string"
-        },
-        "manifestJson": {
-          "type": "string"
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "v1SkillFile": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "int64"
-        },
-        "skillName": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "size": {
-          "type": "string",
-          "format": "int64"
-        },
-        "binary": {
-          "type": "boolean"
-        },
-        "content": {
+        "status": {
           "type": "string"
         },
         "createTime": {
@@ -3071,110 +2562,43 @@
         }
       }
     },
-    "v1SkillPackageDownload": {
+    "v1SkillRelease": {
       "type": "object",
       "properties": {
-        "skillName": {
+        "tag": {
           "type": "string"
         },
-        "version": {
+        "commitSha": {
           "type": "string"
         },
-        "etag": {
+        "manifestSha256": {
           "type": "string"
         },
-        "md5": {
-          "type": "string"
-        },
-        "sha256": {
-          "type": "string"
-        },
-        "notModified": {
-          "type": "boolean"
-        },
-        "packageBytes": {
+        "createTime": {
           "type": "string",
-          "format": "byte"
+          "format": "date-time"
         }
       }
     },
     "v1SkillShare": {
       "type": "object",
       "properties": {
-        "resourceType": {
-          "type": "string",
-          "description": "resource is always \"skill:{name}\" — echoed for client convenience."
-        },
-        "resourceId": {
+        "skillName": {
           "type": "string"
         },
         "relation": {
-          "type": "string",
-          "title": "\"viewer\" | \"editor\" | \"reviewer\" | \"owner\""
+          "type": "string"
         },
         "subjectType": {
-          "type": "string",
-          "title": "\"user\" | \"service\" | \"group\""
+          "type": "string"
         },
         "subjectId": {
           "type": "string"
         },
         "subjectRelation": {
-          "type": "string",
-          "title": "optional, e.g. \"member\" for group subjects"
-        }
-      }
-    },
-    "v1SkillVersion": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "int64"
-        },
-        "skillName": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "author": {
-          "type": "string"
-        },
-        "commitMsg": {
-          "type": "string"
-        },
-        "publishPipelineInfo": {
-          "type": "string"
-        },
-        "downloadCount": {
-          "type": "string",
-          "format": "int64"
-        },
-        "md5": {
-          "type": "string"
-        },
-        "sha256": {
-          "type": "string"
-        },
-        "revision": {
-          "type": "string"
-        },
-        "sizeBytes": {
-          "type": "string",
-          "format": "int64"
-        },
-        "manifestJson": {
           "type": "string"
         },
         "createTime": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updateTime": {
           "type": "string",
           "format": "date-time"
         }
@@ -3199,14 +2623,6 @@
         "id"
       ]
     },
-    "v1SubmitSkillVersionResponse": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "$ref": "#/definitions/v1SkillVersion"
-        }
-      }
-    },
     "v1UpdateSkillResponse": {
       "type": "object",
       "properties": {
@@ -3220,51 +2636,6 @@
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
-        }
-      }
-    },
-    "v1UploadSkillPackageRequest": {
-      "type": "object",
-      "properties": {
-        "packageBytes": {
-          "type": "string",
-          "format": "byte"
-        },
-        "overwrite": {
-          "type": "boolean"
-        },
-        "targetVersion": {
-          "type": "string"
-        },
-        "commitMsg": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "packageBytes"
-      ]
-    },
-    "v1UploadSkillPackageResponse": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "$ref": "#/definitions/v1SkillVersion"
-        }
-      }
-    },
-    "v1UpsertSkillDraftDirectoryResponse": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "$ref": "#/definitions/v1SkillFile"
-        }
-      }
-    },
-    "v1UpsertSkillDraftFileResponse": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "$ref": "#/definitions/v1SkillFile"
         }
       }
     },

@@ -9,736 +9,320 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 
-// SkillService exposes the canonical AIHub Skill API.
-//
-// This is the first real business module migrated from the legacy backend
-// into the new kernel-based Hub. It manages canonical Skills and their
-// versioned packages.
-//
-// ## Resource model
-//
-//   Skill           /v1/skills/{name}
-//   SkillVersion    /v1/skills/{name}/versions/{version}
-//   SkillFile       /v1/skills/{name}/versions/{version}/files/{path}
-//
-// Skill names match `^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$` and are globally
-// unique. Version strings are arbitrary but should follow semver when
-// possible (`0.1.0`, `1.0.0-rc.1`).
-//
-// ## Authz
-//
-// Access policy is declared at the proto layer and consumed by Kernel/Gateway
-// generators. Resource-level ownership/public/share fallbacks remain in the
-// Hub biz layer.
-//
-// ## Status machine (SkillVersion)
-//
-//   draft → submitted → published → online → offline
-//                                       ↑________|
-//
-// Each transition is an idempotent CAS (compare-and-set on the status
-// column) so concurrent transition calls on the same version cannot both
-// succeed.
+// SkillService is the Git-native SkillHub management plane. Skill content,
+// branches and release tags remain native Git/LFS data and are intentionally
+// not represented by protobuf upload or draft-file RPCs.
 service SkillService {
-  // CreateSkill creates one canonical skill. The caller becomes the owner.
   rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills"
-      body: "*"
-      response_body: "skill"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill.create" risk: "medium" }
-    };
-  }
-
-  // UpdateSkill updates mutable fields of one canonical skill. owner_id /
-  // visibility / status are NOT updated by this RPC — they require
-  // separate lifecycle endpoints.
-  rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse) {
-    option (google.api.http) = {
-      put: "/v1/skills/{name}"
-      body: "*"
-      response_body: "skill"
-    };
+    option (google.api.http) = { post: "/v1/skills" body: "*" response_body: "skill" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill.update" risk: "medium" }
+      authz: { action: "write" resource: "project:{org_id}/{project_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.create" risk: "high" }
     };
   }
 
-  // UpdateSkillVisibility changes the access visibility of one canonical
-  // skill. This endpoint is the contract-backed path for public/private
-  // toggles; subject-specific sharing remains under Skill share RPCs.
-  rpc UpdateSkillVisibility(UpdateSkillVisibilityRequest) returns (UpdateSkillVisibilityResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}:visibility"
-      body: "*"
-      response_body: "skill"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill.visibility.update" risk: "high" }
-    };
-  }
-
-  // ListSkills lists canonical skills visible to the caller. Visibility
-  // rules: caller sees (a) skills they own, (b) skills shared with them
-  // via accessx grants, (c) skills with visibility=public.
   rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills"
-    };
+    option (google.api.http) = { get: "/v1/skills" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill.list" risk: "low" }
+      gateway: { upstream_service: "hub-service" }
+      audit: { enabled: true event: "hub.skill.list" risk: "low" }
+      reason: "handler batch-checks view permission for every concrete skill"
     };
   }
 
-  // GetSkill returns one canonical skill by name.
   rpc GetSkill(GetSkillRequest) returns (GetSkillResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}"
-      response_body: "skill"
-    };
+    option (google.api.http) = { get: "/v1/skills/{name}" response_body: "skill" };
     option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill.get" risk: "low" }
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.get" risk: "low" }
     };
   }
 
-  // DeleteSkill soft-deletes one canonical skill by name. Cascades to
-  // versions and files. S3 objects are purged best-effort after the DB
-  // transaction commits.
+  rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse) {
+    option (google.api.http) = { put: "/v1/skills/{name}" body: "*" response_body: "skill" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.update" risk: "medium" }
+    };
+  }
+
+  rpc UpdateSkillVisibility(UpdateSkillVisibilityRequest) returns (UpdateSkillVisibilityResponse) {
+    option (google.api.http) = { post: "/v1/skills/{name}:visibility" body: "*" response_body: "skill" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.visibility.update" risk: "high" }
+    };
+  }
+
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse) {
-    option (google.api.http) = {
-      delete: "/v1/skills/{name}"
-    };
+    option (google.api.http) = { delete: "/v1/skills/{name}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill.delete" risk: "high" }
+      authz: { action: "manage" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.delete" risk: "high" }
     };
   }
 
-  // UploadSkillPackage imports a zipped Skill package into a new or
-  // existing version. The zip must contain SKILL.md with YAML front-matter
-  // declaring name, description, version. Other files become version
-  // files; binary files are base64-encoded in the DB content column.
-  rpc UploadSkillPackage(UploadSkillPackageRequest) returns (UploadSkillPackageResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills:upload"
-      body: "*"
-      response_body: "version"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill.upload" risk: "medium" }
-    };
-  }
-
-  // ListSkillVersions lists versions of one canonical skill, oldest first.
-  rpc ListSkillVersions(ListSkillVersionsRequest) returns (ListSkillVersionsResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/versions"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill_version.list" risk: "low" }
-    };
-  }
-
-  // GetSkillVersion returns one version metadata record.
-  rpc GetSkillVersion(GetSkillVersionRequest) returns (GetSkillVersionResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/versions/{version}"
-      response_body: "version"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill_version.get" risk: "low" }
-    };
-  }
-
-  // SubmitSkillVersion marks a draft version ready for publish.
-  rpc SubmitSkillVersion(SubmitSkillVersionRequest) returns (SubmitSkillVersionResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/versions/{version}:submit"
-      body: "*"
-      response_body: "version"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_version.submit" risk: "medium" }
-    };
-  }
-
-  // PublishSkillVersion marks a submitted version as published.
-  rpc PublishSkillVersion(PublishSkillVersionRequest) returns (PublishSkillVersionResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/versions/{version}:publish"
-      body: "*"
-      response_body: "version"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "publish" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_version.publish" risk: "high" }
-    };
-  }
-
-  // OnlineSkillVersion makes one published version consumable by
-  // catalog/runtime. Any previously-online version of the same skill is
-  // automatically demoted to published.
-  rpc OnlineSkillVersion(OnlineSkillVersionRequest) returns (OnlineSkillVersionResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/versions/{version}:online"
-      body: "*"
-      response_body: "version"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "publish" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_version.online" risk: "high" }
-    };
-  }
-
-  // OfflineSkillVersion removes one online version from catalog/runtime use.
-  rpc OfflineSkillVersion(OfflineSkillVersionRequest) returns (OfflineSkillVersionResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/versions/{version}:offline"
-      body: "*"
-      response_body: "version"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "publish" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_version.offline" risk: "high" }
-    };
-  }
-
-  // DownloadSkillVersion returns the version package bytes. Use
-  // if_none_match to leverage ETag-based 304 Not Modified.
-  rpc DownloadSkillVersion(DownloadSkillVersionRequest) returns (SkillPackageDownload) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/versions/{version}/download"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill_version.download" risk: "low" }
-    };
-  }
-
-  // ListSkillVersionFiles lists files stored for one skill version.
-  rpc ListSkillVersionFiles(ListSkillVersionFilesRequest) returns (ListSkillVersionFilesResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/versions/{version}/files"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill_file.list" risk: "low" }
-    };
-  }
-
-  // GetSkillVersionFile returns one text or base64-encoded file content.
-  rpc GetSkillVersionFile(GetSkillVersionFileRequest) returns (GetSkillVersionFileResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/versions/{version}/file"
-      response_body: "file"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill_file.get" risk: "low" }
-    };
-  }
-
-  // --- Skill draft workspace ---
-  //
-  // Draft workspace endpoints are contract-backed and registered through
-  // generated Kernel HTTP/gRPC bindings. Service implementations MUST NOT
-  // hand-register duplicate HTTP routes for these paths.
-
-  // ListSkillDraftFiles lists the editable draft workspace tree.
-  rpc ListSkillDraftFiles(ListSkillDraftFilesRequest) returns (ListSkillDraftFilesResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/draft/files"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill_draft_file.list" risk: "low" }
-    };
-  }
-
-  // GetSkillDraftFile returns one draft file's metadata and content.
-  rpc GetSkillDraftFile(GetSkillDraftFileRequest) returns (GetSkillDraftFileResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/draft/file"
-      response_body: "file"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHENTICATED
-      audit: { enabled: true event: "aihub.skill_draft_file.get" risk: "low" }
-    };
-  }
-
-  // UpsertSkillDraftFile creates or updates a draft file.
-  rpc UpsertSkillDraftFile(UpsertSkillDraftFileRequest) returns (UpsertSkillDraftFileResponse) {
-    option (google.api.http) = {
-      put: "/v1/skills/{name}/draft/file"
-      body: "*"
-      response_body: "file"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_draft_file.write" risk: "medium" }
-    };
-  }
-
-  // UpsertSkillDraftDirectory creates a directory in the draft workspace.
-  rpc UpsertSkillDraftDirectory(UpsertSkillDraftDirectoryRequest) returns (UpsertSkillDraftDirectoryResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/draft/dir"
-      body: "*"
-      response_body: "file"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_draft_dir.write" risk: "medium" }
-    };
-  }
-
-  // DeleteSkillDraftPath deletes a file or directory from the draft workspace.
-  rpc DeleteSkillDraftPath(DeleteSkillDraftPathRequest) returns (DeleteSkillDraftPathResponse) {
-    option (google.api.http) = {
-      delete: "/v1/skills/{name}/draft/path"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_draft_path.delete" risk: "medium" }
-    };
-  }
-
-  // MoveSkillDraftPath renames or moves a draft workspace path.
-  rpc MoveSkillDraftPath(MoveSkillDraftPathRequest) returns (MoveSkillDraftPathResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/draft/path:move"
-      body: "*"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_draft_path.move" risk: "medium" }
-    };
-  }
-
-  // CommitSkillDraft materializes the draft workspace into a SkillVersion.
-  rpc CommitSkillDraft(CommitSkillDraftRequest) returns (CommitSkillDraftResponse) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/draft:commit"
-      body: "*"
-      response_body: "version"
-    };
-    option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "edit" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_draft.commit" risk: "medium" }
-    };
-  }
-
-  // --- Skill share (authz relationship management) ---
-  //
-  // These RPCs wrap authz.WriteRelationships / ReadRelationships /
-  // DeleteRelationships for the skill resource type. They require
-  // skill.manage on the named skill (only the owner can manage shares),
-  // and they manage viewer / editor / reviewer relations (NOT owner — owner
-  // is set at create time and is not transferable via these RPCs).
-
-  // ListSkillShares lists subjects that have any relation on the named
-  // skill. Requires skill.manage.
   rpc ListSkillShares(ListSkillSharesRequest) returns (ListSkillSharesResponse) {
-    option (google.api.http) = {
-      get: "/v1/skills/{name}/shares"
-    };
+    option (google.api.http) = { get: "/v1/skills/{name}/shares" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_share.list" risk: "medium" }
+      authz: { action: "manage" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.share.list" risk: "medium" }
     };
   }
 
-  // CreateSkillShare grants a viewer or editor relation on the named
-  // skill to a subject. Requires skill.manage. The relation field accepts
-  // "viewer", "editor", or "reviewer"; passing "owner" returns INVALID_ARGUMENT.
-  rpc CreateSkillShare(CreateSkillShareRequest) returns (SkillShare) {
-    option (google.api.http) = {
-      post: "/v1/skills/{name}/shares"
-      body: "*"
-    };
+  rpc CreateSkillShare(CreateSkillShareRequest) returns (CreateSkillShareResponse) {
+    option (google.api.http) = { post: "/v1/skills/{name}/shares" body: "*" response_body: "share" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_share.create" risk: "high" }
+      authz: { action: "manage" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.share.create" risk: "high" }
     };
   }
 
-  // DeleteSkillShare revokes ALL relations between the named skill and
-  // the named subject. Requires skill.manage.
   rpc DeleteSkillShare(DeleteSkillShareRequest) returns (DeleteSkillShareResponse) {
-    option (google.api.http) = {
-      delete: "/v1/skills/{name}/shares/{subject_type}/{subject_id}"
-    };
+    option (google.api.http) = { delete: "/v1/skills/{name}/shares/{relation}/{subject_type}/{subject_id}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "skill:{name}" audience: "iam-service" mode: CHECK_ONLY }
-      audit: { enabled: true event: "aihub.skill_share.delete" risk: "high" }
+      authz: { action: "manage" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.share.delete" risk: "high" }
+    };
+  }
+
+  rpc CreatePullRequest(CreatePullRequestRequest) returns (CreatePullRequestResponse) {
+    option (google.api.http) = { post: "/v1/skills/{name}/pull-requests" body: "*" response_body: "pull_request" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.pull_request.create" risk: "medium" }
+    };
+  }
+
+  rpc ListPullRequests(ListPullRequestsRequest) returns (ListPullRequestsResponse) {
+    option (google.api.http) = { get: "/v1/skills/{name}/pull-requests" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.pull_request.list" risk: "low" }
+    };
+  }
+
+  rpc GetPullRequest(GetPullRequestRequest) returns (GetPullRequestResponse) {
+    option (google.api.http) = { get: "/v1/skills/{name}/pull-requests/{id}" response_body: "pull_request" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.pull_request.get" risk: "low" }
+    };
+  }
+
+  rpc ReviewPullRequest(ReviewPullRequestRequest) returns (ReviewPullRequestResponse) {
+    option (google.api.http) = { post: "/v1/skills/{name}/pull-requests/{id}:review" body: "*" response_body: "review" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "review" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.pull_request.review" risk: "medium" }
+    };
+  }
+
+  rpc ClosePullRequest(ClosePullRequestRequest) returns (ClosePullRequestResponse) {
+    option (google.api.http) = { post: "/v1/skills/{name}/pull-requests/{id}:close" body: "*" response_body: "pull_request" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.pull_request.close" risk: "medium" }
+    };
+  }
+
+  rpc MergePullRequest(MergePullRequestRequest) returns (MergePullRequestResponse) {
+    option (google.api.http) = { post: "/v1/skills/{name}/pull-requests/{id}:merge" body: "*" response_body: "pull_request" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "publish" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.pull_request.merge" risk: "high" }
+    };
+  }
+
+  rpc ListSkillReleases(ListSkillReleasesRequest) returns (ListSkillReleasesResponse) {
+    option (google.api.http) = { get: "/v1/skills/{name}/releases" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.release.list" risk: "low" }
     };
   }
 }
 
-// --- Skill ---
-
 message Skill {
-  int64 id = 1;
-  string name = 2;
-  string display_name = 3;
-  string description = 4;
-  string version = 5;
-  string status = 6;
-  string visibility = 7;
-  string owner_id = 8;
-  string org_id = 9;
-  string project_id = 10;
-  string source_type = 11;
-  string source_uri = 12;
-  string manifest_json = 13;
-  repeated string tags = 14;
-  google.protobuf.Timestamp create_time = 15;
-  google.protobuf.Timestamp update_time = 16;
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  string visibility = 4;
+  string owner_id = 5;
+  string org_id = 6;
+  string project_id = 7;
+  string default_branch = 8;
+  string status = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp update_time = 11;
 }
 
 message CreateSkillRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
   string display_name = 2;
   string description = 3;
-  string version = 4;
-  string status = 5;
-  string visibility = 6;
-  string owner_id = 7;
-  string org_id = 8;
-  string project_id = 9;
-  string source_type = 10;
-  string source_uri = 11;
-  string manifest_json = 12;
-  repeated string tags = 13;
+  string visibility = 4;
+  string project_id = 5 [(google.api.field_behavior) = REQUIRED];
+  string org_id = 6 [(google.api.field_behavior) = REQUIRED];
 }
-
-message CreateSkillResponse {
-  Skill skill = 1;
-}
-
-message UpdateSkillRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string display_name = 2;
-  string description = 3;
-  string version = 4;
-  string source_type = 5;
-  string source_uri = 6;
-  string manifest_json = 7;
-  repeated string tags = 8;
-}
-
-message UpdateSkillResponse {
-  Skill skill = 1;
-}
-
-message UpdateSkillVisibilityRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string visibility = 2 [(google.api.field_behavior) = REQUIRED]; // "private" | "internal" | "public"
-}
-
-message UpdateSkillVisibilityResponse {
-  Skill skill = 1;
-}
+message CreateSkillResponse { Skill skill = 1; }
 
 message ListSkillsRequest {
   int32 page_size = 1;
   string page_token = 2;
-  string q = 3;
-  string status = 4;
-  string visibility = 5;
+  string query = 3;
+  string visibility = 4;
 }
-
 message ListSkillsResponse {
   repeated Skill skills = 1;
   string next_page_token = 2;
 }
 
-message GetSkillRequest {
+message GetSkillRequest { string name = 1 [(google.api.field_behavior) = REQUIRED]; }
+message GetSkillResponse { Skill skill = 1; }
+
+message UpdateSkillRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2;
+  string description = 3;
 }
+message UpdateSkillResponse { Skill skill = 1; }
 
-message GetSkillResponse {
-  Skill skill = 1;
-}
-
-message DeleteSkillRequest {
+message UpdateSkillVisibilityRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string visibility = 2 [(google.api.field_behavior) = REQUIRED];
 }
+message UpdateSkillVisibilityResponse { Skill skill = 1; }
 
+message DeleteSkillRequest { string name = 1 [(google.api.field_behavior) = REQUIRED]; }
 message DeleteSkillResponse {}
 
-// --- SkillVersion ---
-
-message SkillVersion {
-  int64 id = 1;
-  string skill_name = 2;
-  string version = 3;
-  string status = 4;
-  string author = 5;
-  string commit_msg = 6;
-  string publish_pipeline_info = 7;
-  int64 download_count = 8;
-  string md5 = 9;
-  string sha256 = 10;
-  string revision = 11;
-  int64 size_bytes = 12;
-  string manifest_json = 13;
-  google.protobuf.Timestamp create_time = 14;
-  google.protobuf.Timestamp update_time = 15;
-}
-
-message UploadSkillPackageRequest {
-  bytes package_bytes = 1 [(google.api.field_behavior) = REQUIRED];
-  bool overwrite = 2;
-  string target_version = 3;
-  string commit_msg = 4;
-}
-
-message UploadSkillPackageResponse {
-  SkillVersion version = 1;
-}
-
-message ListSkillVersionsRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-message ListSkillVersionsResponse {
-  repeated SkillVersion versions = 1;
-}
-
-message GetSkillVersionRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message GetSkillVersionResponse {
-  SkillVersion version = 1;
-}
-
-message SubmitSkillVersionRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message SubmitSkillVersionResponse {
-  SkillVersion version = 1;
-}
-
-message PublishSkillVersionRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message PublishSkillVersionResponse {
-  SkillVersion version = 1;
-}
-
-message OnlineSkillVersionRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message OnlineSkillVersionResponse {
-  SkillVersion version = 1;
-}
-
-message OfflineSkillVersionRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message OfflineSkillVersionResponse {
-  SkillVersion version = 1;
-}
-
-message DownloadSkillVersionRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-  string if_none_match = 3;
-}
-
-message SkillPackageDownload {
-  string skill_name = 1;
-  string version = 2;
-  string etag = 3;
-  string md5 = 4;
-  string sha256 = 5;
-  bool not_modified = 6;
-  bytes package_bytes = 7;
-}
-
-// --- SkillFile ---
-
-message SkillFile {
-  int64 id = 1;
-  string skill_name = 2;
-  string version = 3;
-  string path = 4;
-  string name = 5;
-  string type = 6;
-  int64 size = 7;
-  bool binary = 8;
-  string content = 9;
-  google.protobuf.Timestamp create_time = 10;
-  google.protobuf.Timestamp update_time = 11;
-}
-
-message ListSkillVersionFilesRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message ListSkillVersionFilesResponse {
-  repeated SkillFile files = 1;
-}
-
-message GetSkillVersionFileRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2 [(google.api.field_behavior) = REQUIRED];
-  string path = 3 [(google.api.field_behavior) = REQUIRED];
-}
-
-message GetSkillVersionFileResponse {
-  SkillFile file = 1;
-}
-
-// --- Skill draft workspace ---
-
-message ListSkillDraftFilesRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2;
-}
-
-message ListSkillDraftFilesResponse {
-  repeated SkillFile files = 1;
-}
-
-message GetSkillDraftFileRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2;
-  string path = 3 [(google.api.field_behavior) = REQUIRED];
-}
-
-message GetSkillDraftFileResponse {
-  SkillFile file = 1;
-}
-
-message UpsertSkillDraftFileRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2;
-  string path = 3 [(google.api.field_behavior) = REQUIRED];
-  string type = 4;
-  string content = 5;
-  bool binary = 6;
-  bool create_parents = 7;
-}
-
-message UpsertSkillDraftFileResponse {
-  SkillFile file = 1;
-}
-
-message UpsertSkillDraftDirectoryRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2;
-  string path = 3 [(google.api.field_behavior) = REQUIRED];
-}
-
-message UpsertSkillDraftDirectoryResponse {
-  SkillFile file = 1;
-}
-
-message DeleteSkillDraftPathRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2;
-  string path = 3 [(google.api.field_behavior) = REQUIRED];
-  bool recursive = 4;
-}
-
-message DeleteSkillDraftPathResponse {}
-
-message MoveSkillDraftPathRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2;
-  string old_path = 3 [(google.api.field_behavior) = REQUIRED];
-  string new_path = 4 [(google.api.field_behavior) = REQUIRED];
-  bool overwrite = 5;
-}
-
-message MoveSkillDraftPathResponse {}
-
-message CommitSkillDraftRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string version = 2;
-  string commit_msg = 3;
-  bool overwrite = 4;
-  bool submit = 5;
-  bool publish = 6;
-  bool online = 7;
-}
-
-message CommitSkillDraftResponse {
-  SkillVersion version = 1;
-}
-
-// --- Skill share ---
-
 message SkillShare {
-  // resource is always "skill:{name}" — echoed for client convenience.
-  string resource_type = 1;
-  string resource_id = 2;
-  string relation = 3;        // "viewer" | "editor" | "reviewer" | "owner"
-  string subject_type = 4;    // "user" | "service" | "group"
-  string subject_id = 5;
-  string subject_relation = 6; // optional, e.g. "member" for group subjects
+  string skill_name = 1;
+  string relation = 2;
+  string subject_type = 3;
+  string subject_id = 4;
+  string subject_relation = 5;
+  google.protobuf.Timestamp create_time = 6;
 }
 
-message ListSkillSharesRequest {
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-message ListSkillSharesResponse {
-  repeated SkillShare shares = 1;
-}
+message ListSkillSharesRequest { string name = 1 [(google.api.field_behavior) = REQUIRED]; }
+message ListSkillSharesResponse { repeated SkillShare shares = 1; }
 
 message CreateSkillShareRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string relation = 2 [(google.api.field_behavior) = REQUIRED];  // "viewer" | "editor" | "reviewer"
+  string relation = 2 [(google.api.field_behavior) = REQUIRED];
   string subject_type = 3 [(google.api.field_behavior) = REQUIRED];
   string subject_id = 4 [(google.api.field_behavior) = REQUIRED];
-  string subject_relation = 5; // optional, for group#member subjects
+  string subject_relation = 5;
 }
+message CreateSkillShareResponse { SkillShare share = 1; }
 
 message DeleteSkillShareRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
-  string subject_type = 2 [(google.api.field_behavior) = REQUIRED];
-  string subject_id = 3 [(google.api.field_behavior) = REQUIRED];
+  string relation = 2 [(google.api.field_behavior) = REQUIRED];
+  string subject_type = 3 [(google.api.field_behavior) = REQUIRED];
+  string subject_id = 4 [(google.api.field_behavior) = REQUIRED];
+}
+message DeleteSkillShareResponse {}
+
+message PullRequest {
+  string id = 1;
+  string skill_name = 2;
+  string source_ref = 3;
+  string target_ref = 4;
+  string source_sha = 5;
+  string target_sha = 6;
+  string title = 7;
+  string description = 8;
+  string state = 9;
+  string author_id = 10;
+  string merged_sha = 11;
+  google.protobuf.Timestamp create_time = 12;
+  google.protobuf.Timestamp update_time = 13;
+  google.protobuf.Timestamp merged_time = 14;
 }
 
-message DeleteSkillShareResponse {}
+message PullRequestReview {
+  string id = 1;
+  string pull_request_id = 2;
+  string reviewer_id = 3;
+  string verdict = 4;
+  string comment = 5;
+  google.protobuf.Timestamp create_time = 6;
+}
+
+message CreatePullRequestRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string source_ref = 2 [(google.api.field_behavior) = REQUIRED];
+  string title = 3 [(google.api.field_behavior) = REQUIRED];
+  string description = 4;
+}
+message CreatePullRequestResponse { PullRequest pull_request = 1; }
+
+message ListPullRequestsRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string state = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+message ListPullRequestsResponse {
+  repeated PullRequest pull_requests = 1;
+  string next_page_token = 2;
+}
+
+message GetPullRequestRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+message GetPullRequestResponse {
+  PullRequest pull_request = 1;
+  repeated PullRequestReview reviews = 2;
+}
+
+message ReviewPullRequestRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string verdict = 3 [(google.api.field_behavior) = REQUIRED];
+  string comment = 4;
+}
+message ReviewPullRequestResponse { PullRequestReview review = 1; }
+
+message ClosePullRequestRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+message ClosePullRequestResponse { PullRequest pull_request = 1; }
+
+message MergePullRequestRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string expected_target_sha = 3 [(google.api.field_behavior) = REQUIRED];
+}
+message MergePullRequestResponse { PullRequest pull_request = 1; }
+
+message SkillRelease {
+  string tag = 1;
+  string commit_sha = 2;
+  string manifest_sha256 = 3;
+  google.protobuf.Timestamp create_time = 4;
+}
+
+message ListSkillReleasesRequest { string name = 1 [(google.api.field_behavior) = REQUIRED]; }
+message ListSkillReleasesResponse { repeated SkillRelease releases = 1; }

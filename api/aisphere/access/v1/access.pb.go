@@ -275,12 +275,14 @@ func (x *AccessPolicy) GetGateway() *Gateway {
 }
 
 type Gateway struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Publish       GatewayPublish         `protobuf:"varint,1,opt,name=publish,proto3,enum=aisphere.access.v1.GatewayPublish" json:"publish,omitempty"`
-	Profiles      []string               `protobuf:"bytes,2,rep,name=profiles,proto3" json:"profiles,omitempty"`
-	Tags          []string               `protobuf:"bytes,3,rep,name=tags,proto3" json:"tags,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Publish  GatewayPublish         `protobuf:"varint,1,opt,name=publish,proto3,enum=aisphere.access.v1.GatewayPublish" json:"publish,omitempty"`
+	Profiles []string               `protobuf:"bytes,2,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	Tags     []string               `protobuf:"bytes,3,rep,name=tags,proto3" json:"tags,omitempty"`
+	// Routing hint only; this field never grants authorization.
+	UpstreamService string `protobuf:"bytes,4,opt,name=upstream_service,json=upstreamService,proto3" json:"upstream_service,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Gateway) Reset() {
@@ -332,6 +334,13 @@ func (x *Gateway) GetTags() []string {
 		return x.Tags
 	}
 	return nil
+}
+
+func (x *Gateway) GetUpstreamService() string {
+	if x != nil {
+		return x.UpstreamService
+	}
+	return ""
 }
 
 type Authz struct {
@@ -620,11 +629,12 @@ const file_aisphere_access_v1_access_proto_rawDesc = "" +
 	"rate_limit\x18\x04 \x01(\v2\x1d.aisphere.access.v1.RateLimitR\trateLimit\x125\n" +
 	"\abreaker\x18\x05 \x01(\v2\x1b.aisphere.access.v1.BreakerR\abreaker\x12\x16\n" +
 	"\x06reason\x18\x06 \x01(\tR\x06reason\x125\n" +
-	"\agateway\x18\a \x01(\v2\x1b.aisphere.access.v1.GatewayR\agateway\"w\n" +
+	"\agateway\x18\a \x01(\v2\x1b.aisphere.access.v1.GatewayR\agateway\"\xa2\x01\n" +
 	"\aGateway\x12<\n" +
 	"\apublish\x18\x01 \x01(\x0e2\".aisphere.access.v1.GatewayPublishR\apublish\x12\x1a\n" +
 	"\bprofiles\x18\x02 \x03(\tR\bprofiles\x12\x12\n" +
-	"\x04tags\x18\x03 \x03(\tR\x04tags\"\x8b\x01\n" +
+	"\x04tags\x18\x03 \x03(\tR\x04tags\x12)\n" +
+	"\x10upstream_service\x18\x04 \x01(\tR\x0fupstreamService\"\x8b\x01\n" +
 	"\x05Authz\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12\x1a\n" +
 	"\bresource\x18\x02 \x01(\tR\bresource\x12\x1a\n" +

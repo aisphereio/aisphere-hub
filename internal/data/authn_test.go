@@ -5,12 +5,14 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authn/casdoor"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type captureLoginService struct {
@@ -102,6 +104,50 @@ func TestAuthnRepoLogoutURLBuildsFromCasdoorConfig(t *testing.T) {
 	}
 	if q.Get("state") != "app-test" {
 		t.Fatalf("state = %q", q.Get("state"))
+	}
+}
+
+func TestNewAuthenticatorPrincipalJWTValidExpiredAndBadSignature(t *testing.T) {
+	cfg := authn.PrincipalJWTConfig{
+		Enabled: true, Secret: "hub-test-secret", Issuer: "aisphere-iam",
+		Audience: []string{"aisphere-internal"}, ClockSkew: time.Nanosecond,
+	}
+	authenticator, err := newAuthenticator(conf.AuthnConfig{Mode: "principal_jwt", PrincipalJWT: cfg}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal := authn.Principal{SubjectID: "user-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}
+	valid, err := authn.SignPrincipalJWT(principal, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := authenticator.Authenticate(context.Background(), authn.Credential{Token: valid}); err != nil || got.SubjectID != "user-1" {
+		t.Fatalf("valid token = principal %+v, err %v", got, err)
+	}
+
+	bad, err := authn.SignPrincipalJWT(principal, authn.PrincipalJWTConfig{Secret: "other-secret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := authenticator.Authenticate(context.Background(), authn.Credential{Token: bad}); err == nil {
+		t.Fatal("bad signature must be rejected")
+	}
+
+	now := time.Now().UTC()
+	claims := authn.PrincipalJWTClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer: cfg.Issuer, Subject: "user-1", Audience: jwt.ClaimStrings(cfg.Audience),
+			IssuedAt:  jwt.NewNumericDate(now.Add(-2 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(-time.Minute)),
+		},
+		Type: authn.PrincipalJWTType, SubjectType: authn.SubjectTypeUser,
+	}
+	expired, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(cfg.Secret))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := authenticator.Authenticate(context.Background(), authn.Credential{Token: expired}); err == nil {
+		t.Fatal("expired token must be rejected")
 	}
 }
 

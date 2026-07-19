@@ -49,6 +49,13 @@ spec:
     - matches:
         - path:
             type: PathPrefix
+            value: /git
+      backendRefs:
+        - name: aisphere-hub
+          port: 18001
+    - matches:
+        - path:
+            type: PathPrefix
             value: /
       backendRefs:
         - name: aisphere-hub-frontend

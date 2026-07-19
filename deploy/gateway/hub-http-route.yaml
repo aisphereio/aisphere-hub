@@ -63,6 +63,9 @@ spec:
     - matches:
         - path:
             type: PathPrefix
+            value: /git
+        - path:
+            type: PathPrefix
             value: /v1/authn/
         - path:
             type: PathPrefix

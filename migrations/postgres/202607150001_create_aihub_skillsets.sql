@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS aihub_skillset_items (
     CONSTRAINT fk_aihub_skillset_items_set
         FOREIGN KEY (skillset_name) REFERENCES aihub_skillsets(name) ON DELETE CASCADE,
     CONSTRAINT fk_aihub_skillset_items_skill
-        FOREIGN KEY (skill_name) REFERENCES aihub_skills(name) ON DELETE CASCADE
+        FOREIGN KEY (skill_name) REFERENCES skills(name) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_aihub_skillset_items_skill
@@ -41,7 +41,9 @@ CREATE INDEX IF NOT EXISTS idx_aihub_skillset_items_skill
 CREATE INDEX IF NOT EXISTS idx_aihub_skillset_items_order
     ON aihub_skillset_items(skillset_name, sort_order, skill_name);
 
+-- +goose StatementBegin
 COMMENT ON TABLE aihub_skillsets IS
     'Lightweight collections of Skills; Skill lifecycle and versions remain independent.';
 COMMENT ON COLUMN aihub_skillset_items.skill_name IS
     'Reference to a canonical Skill only; no version is persisted by design.';
+-- +goose StatementEnd

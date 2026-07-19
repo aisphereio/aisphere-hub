@@ -34,6 +34,8 @@ message Gateway {
   GatewayPublish publish = 1;
   repeated string profiles = 2;
   repeated string tags = 3;
+  // Routing hint only; this field never grants authorization.
+  string upstream_service = 4;
 }
 
 enum GatewayPublish {

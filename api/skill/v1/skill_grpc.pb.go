@@ -19,139 +19,48 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SkillService_CreateSkill_FullMethodName               = "/skill.v1.SkillService/CreateSkill"
-	SkillService_UpdateSkill_FullMethodName               = "/skill.v1.SkillService/UpdateSkill"
-	SkillService_UpdateSkillVisibility_FullMethodName     = "/skill.v1.SkillService/UpdateSkillVisibility"
-	SkillService_ListSkills_FullMethodName                = "/skill.v1.SkillService/ListSkills"
-	SkillService_GetSkill_FullMethodName                  = "/skill.v1.SkillService/GetSkill"
-	SkillService_DeleteSkill_FullMethodName               = "/skill.v1.SkillService/DeleteSkill"
-	SkillService_UploadSkillPackage_FullMethodName        = "/skill.v1.SkillService/UploadSkillPackage"
-	SkillService_ListSkillVersions_FullMethodName         = "/skill.v1.SkillService/ListSkillVersions"
-	SkillService_GetSkillVersion_FullMethodName           = "/skill.v1.SkillService/GetSkillVersion"
-	SkillService_SubmitSkillVersion_FullMethodName        = "/skill.v1.SkillService/SubmitSkillVersion"
-	SkillService_PublishSkillVersion_FullMethodName       = "/skill.v1.SkillService/PublishSkillVersion"
-	SkillService_OnlineSkillVersion_FullMethodName        = "/skill.v1.SkillService/OnlineSkillVersion"
-	SkillService_OfflineSkillVersion_FullMethodName       = "/skill.v1.SkillService/OfflineSkillVersion"
-	SkillService_DownloadSkillVersion_FullMethodName      = "/skill.v1.SkillService/DownloadSkillVersion"
-	SkillService_ListSkillVersionFiles_FullMethodName     = "/skill.v1.SkillService/ListSkillVersionFiles"
-	SkillService_GetSkillVersionFile_FullMethodName       = "/skill.v1.SkillService/GetSkillVersionFile"
-	SkillService_ListSkillDraftFiles_FullMethodName       = "/skill.v1.SkillService/ListSkillDraftFiles"
-	SkillService_GetSkillDraftFile_FullMethodName         = "/skill.v1.SkillService/GetSkillDraftFile"
-	SkillService_UpsertSkillDraftFile_FullMethodName      = "/skill.v1.SkillService/UpsertSkillDraftFile"
-	SkillService_UpsertSkillDraftDirectory_FullMethodName = "/skill.v1.SkillService/UpsertSkillDraftDirectory"
-	SkillService_DeleteSkillDraftPath_FullMethodName      = "/skill.v1.SkillService/DeleteSkillDraftPath"
-	SkillService_MoveSkillDraftPath_FullMethodName        = "/skill.v1.SkillService/MoveSkillDraftPath"
-	SkillService_CommitSkillDraft_FullMethodName          = "/skill.v1.SkillService/CommitSkillDraft"
-	SkillService_ListSkillShares_FullMethodName           = "/skill.v1.SkillService/ListSkillShares"
-	SkillService_CreateSkillShare_FullMethodName          = "/skill.v1.SkillService/CreateSkillShare"
-	SkillService_DeleteSkillShare_FullMethodName          = "/skill.v1.SkillService/DeleteSkillShare"
+	SkillService_CreateSkill_FullMethodName           = "/skill.v1.SkillService/CreateSkill"
+	SkillService_ListSkills_FullMethodName            = "/skill.v1.SkillService/ListSkills"
+	SkillService_GetSkill_FullMethodName              = "/skill.v1.SkillService/GetSkill"
+	SkillService_UpdateSkill_FullMethodName           = "/skill.v1.SkillService/UpdateSkill"
+	SkillService_UpdateSkillVisibility_FullMethodName = "/skill.v1.SkillService/UpdateSkillVisibility"
+	SkillService_DeleteSkill_FullMethodName           = "/skill.v1.SkillService/DeleteSkill"
+	SkillService_ListSkillShares_FullMethodName       = "/skill.v1.SkillService/ListSkillShares"
+	SkillService_CreateSkillShare_FullMethodName      = "/skill.v1.SkillService/CreateSkillShare"
+	SkillService_DeleteSkillShare_FullMethodName      = "/skill.v1.SkillService/DeleteSkillShare"
+	SkillService_CreatePullRequest_FullMethodName     = "/skill.v1.SkillService/CreatePullRequest"
+	SkillService_ListPullRequests_FullMethodName      = "/skill.v1.SkillService/ListPullRequests"
+	SkillService_GetPullRequest_FullMethodName        = "/skill.v1.SkillService/GetPullRequest"
+	SkillService_ReviewPullRequest_FullMethodName     = "/skill.v1.SkillService/ReviewPullRequest"
+	SkillService_ClosePullRequest_FullMethodName      = "/skill.v1.SkillService/ClosePullRequest"
+	SkillService_MergePullRequest_FullMethodName      = "/skill.v1.SkillService/MergePullRequest"
+	SkillService_ListSkillReleases_FullMethodName     = "/skill.v1.SkillService/ListSkillReleases"
 )
 
 // SkillServiceClient is the client API for SkillService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// SkillService exposes the canonical AIHub Skill API.
-//
-// This is the first real business module migrated from the legacy backend
-// into the new kernel-based Hub. It manages canonical Skills and their
-// versioned packages.
-//
-// ## Resource model
-//
-//	Skill           /v1/skills/{name}
-//	SkillVersion    /v1/skills/{name}/versions/{version}
-//	SkillFile       /v1/skills/{name}/versions/{version}/files/{path}
-//
-// Skill names match `^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$` and are globally
-// unique. Version strings are arbitrary but should follow semver when
-// possible (`0.1.0`, `1.0.0-rc.1`).
-//
-// ## Authz
-//
-// Access policy is declared at the proto layer and consumed by Kernel/Gateway
-// generators. Resource-level ownership/public/share fallbacks remain in the
-// Hub biz layer.
-//
-// ## Status machine (SkillVersion)
-//
-//	draft → submitted → published → online → offline
-//	                                    ↑________|
-//
-// Each transition is an idempotent CAS (compare-and-set on the status
-// column) so concurrent transition calls on the same version cannot both
-// succeed.
+// SkillService is the Git-native SkillHub management plane. Skill content,
+// branches and release tags remain native Git/LFS data and are intentionally
+// not represented by protobuf upload or draft-file RPCs.
 type SkillServiceClient interface {
-	// CreateSkill creates one canonical skill. The caller becomes the owner.
 	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error)
-	// UpdateSkill updates mutable fields of one canonical skill. owner_id /
-	// visibility / status are NOT updated by this RPC — they require
-	// separate lifecycle endpoints.
-	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
-	// UpdateSkillVisibility changes the access visibility of one canonical
-	// skill. This endpoint is the contract-backed path for public/private
-	// toggles; subject-specific sharing remains under Skill share RPCs.
-	UpdateSkillVisibility(ctx context.Context, in *UpdateSkillVisibilityRequest, opts ...grpc.CallOption) (*UpdateSkillVisibilityResponse, error)
-	// ListSkills lists canonical skills visible to the caller. Visibility
-	// rules: caller sees (a) skills they own, (b) skills shared with them
-	// via accessx grants, (c) skills with visibility=public.
 	ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error)
-	// GetSkill returns one canonical skill by name.
 	GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*GetSkillResponse, error)
-	// DeleteSkill soft-deletes one canonical skill by name. Cascades to
-	// versions and files. S3 objects are purged best-effort after the DB
-	// transaction commits.
+	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
+	UpdateSkillVisibility(ctx context.Context, in *UpdateSkillVisibilityRequest, opts ...grpc.CallOption) (*UpdateSkillVisibilityResponse, error)
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error)
-	// UploadSkillPackage imports a zipped Skill package into a new or
-	// existing version. The zip must contain SKILL.md with YAML front-matter
-	// declaring name, description, version. Other files become version
-	// files; binary files are base64-encoded in the DB content column.
-	UploadSkillPackage(ctx context.Context, in *UploadSkillPackageRequest, opts ...grpc.CallOption) (*UploadSkillPackageResponse, error)
-	// ListSkillVersions lists versions of one canonical skill, oldest first.
-	ListSkillVersions(ctx context.Context, in *ListSkillVersionsRequest, opts ...grpc.CallOption) (*ListSkillVersionsResponse, error)
-	// GetSkillVersion returns one version metadata record.
-	GetSkillVersion(ctx context.Context, in *GetSkillVersionRequest, opts ...grpc.CallOption) (*GetSkillVersionResponse, error)
-	// SubmitSkillVersion marks a draft version ready for publish.
-	SubmitSkillVersion(ctx context.Context, in *SubmitSkillVersionRequest, opts ...grpc.CallOption) (*SubmitSkillVersionResponse, error)
-	// PublishSkillVersion marks a submitted version as published.
-	PublishSkillVersion(ctx context.Context, in *PublishSkillVersionRequest, opts ...grpc.CallOption) (*PublishSkillVersionResponse, error)
-	// OnlineSkillVersion makes one published version consumable by
-	// catalog/runtime. Any previously-online version of the same skill is
-	// automatically demoted to published.
-	OnlineSkillVersion(ctx context.Context, in *OnlineSkillVersionRequest, opts ...grpc.CallOption) (*OnlineSkillVersionResponse, error)
-	// OfflineSkillVersion removes one online version from catalog/runtime use.
-	OfflineSkillVersion(ctx context.Context, in *OfflineSkillVersionRequest, opts ...grpc.CallOption) (*OfflineSkillVersionResponse, error)
-	// DownloadSkillVersion returns the version package bytes. Use
-	// if_none_match to leverage ETag-based 304 Not Modified.
-	DownloadSkillVersion(ctx context.Context, in *DownloadSkillVersionRequest, opts ...grpc.CallOption) (*SkillPackageDownload, error)
-	// ListSkillVersionFiles lists files stored for one skill version.
-	ListSkillVersionFiles(ctx context.Context, in *ListSkillVersionFilesRequest, opts ...grpc.CallOption) (*ListSkillVersionFilesResponse, error)
-	// GetSkillVersionFile returns one text or base64-encoded file content.
-	GetSkillVersionFile(ctx context.Context, in *GetSkillVersionFileRequest, opts ...grpc.CallOption) (*GetSkillVersionFileResponse, error)
-	// ListSkillDraftFiles lists the editable draft workspace tree.
-	ListSkillDraftFiles(ctx context.Context, in *ListSkillDraftFilesRequest, opts ...grpc.CallOption) (*ListSkillDraftFilesResponse, error)
-	// GetSkillDraftFile returns one draft file's metadata and content.
-	GetSkillDraftFile(ctx context.Context, in *GetSkillDraftFileRequest, opts ...grpc.CallOption) (*GetSkillDraftFileResponse, error)
-	// UpsertSkillDraftFile creates or updates a draft file.
-	UpsertSkillDraftFile(ctx context.Context, in *UpsertSkillDraftFileRequest, opts ...grpc.CallOption) (*UpsertSkillDraftFileResponse, error)
-	// UpsertSkillDraftDirectory creates a directory in the draft workspace.
-	UpsertSkillDraftDirectory(ctx context.Context, in *UpsertSkillDraftDirectoryRequest, opts ...grpc.CallOption) (*UpsertSkillDraftDirectoryResponse, error)
-	// DeleteSkillDraftPath deletes a file or directory from the draft workspace.
-	DeleteSkillDraftPath(ctx context.Context, in *DeleteSkillDraftPathRequest, opts ...grpc.CallOption) (*DeleteSkillDraftPathResponse, error)
-	// MoveSkillDraftPath renames or moves a draft workspace path.
-	MoveSkillDraftPath(ctx context.Context, in *MoveSkillDraftPathRequest, opts ...grpc.CallOption) (*MoveSkillDraftPathResponse, error)
-	// CommitSkillDraft materializes the draft workspace into a SkillVersion.
-	CommitSkillDraft(ctx context.Context, in *CommitSkillDraftRequest, opts ...grpc.CallOption) (*CommitSkillDraftResponse, error)
-	// ListSkillShares lists subjects that have any relation on the named
-	// skill. Requires skill.manage.
 	ListSkillShares(ctx context.Context, in *ListSkillSharesRequest, opts ...grpc.CallOption) (*ListSkillSharesResponse, error)
-	// CreateSkillShare grants a viewer or editor relation on the named
-	// skill to a subject. Requires skill.manage. The relation field accepts
-	// "viewer", "editor", or "reviewer"; passing "owner" returns INVALID_ARGUMENT.
-	CreateSkillShare(ctx context.Context, in *CreateSkillShareRequest, opts ...grpc.CallOption) (*SkillShare, error)
-	// DeleteSkillShare revokes ALL relations between the named skill and
-	// the named subject. Requires skill.manage.
+	CreateSkillShare(ctx context.Context, in *CreateSkillShareRequest, opts ...grpc.CallOption) (*CreateSkillShareResponse, error)
 	DeleteSkillShare(ctx context.Context, in *DeleteSkillShareRequest, opts ...grpc.CallOption) (*DeleteSkillShareResponse, error)
+	CreatePullRequest(ctx context.Context, in *CreatePullRequestRequest, opts ...grpc.CallOption) (*CreatePullRequestResponse, error)
+	ListPullRequests(ctx context.Context, in *ListPullRequestsRequest, opts ...grpc.CallOption) (*ListPullRequestsResponse, error)
+	GetPullRequest(ctx context.Context, in *GetPullRequestRequest, opts ...grpc.CallOption) (*GetPullRequestResponse, error)
+	ReviewPullRequest(ctx context.Context, in *ReviewPullRequestRequest, opts ...grpc.CallOption) (*ReviewPullRequestResponse, error)
+	ClosePullRequest(ctx context.Context, in *ClosePullRequestRequest, opts ...grpc.CallOption) (*ClosePullRequestResponse, error)
+	MergePullRequest(ctx context.Context, in *MergePullRequestRequest, opts ...grpc.CallOption) (*MergePullRequestResponse, error)
+	ListSkillReleases(ctx context.Context, in *ListSkillReleasesRequest, opts ...grpc.CallOption) (*ListSkillReleasesResponse, error)
 }
 
 type skillServiceClient struct {
@@ -166,26 +75,6 @@ func (c *skillServiceClient) CreateSkill(ctx context.Context, in *CreateSkillReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSkillResponse)
 	err := c.cc.Invoke(ctx, SkillService_CreateSkill_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateSkillResponse)
-	err := c.cc.Invoke(ctx, SkillService_UpdateSkill_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) UpdateSkillVisibility(ctx context.Context, in *UpdateSkillVisibilityRequest, opts ...grpc.CallOption) (*UpdateSkillVisibilityResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateSkillVisibilityResponse)
-	err := c.cc.Invoke(ctx, SkillService_UpdateSkillVisibility_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -212,180 +101,30 @@ func (c *skillServiceClient) GetSkill(ctx context.Context, in *GetSkillRequest, 
 	return out, nil
 }
 
+func (c *skillServiceClient) UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSkillResponse)
+	err := c.cc.Invoke(ctx, SkillService_UpdateSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) UpdateSkillVisibility(ctx context.Context, in *UpdateSkillVisibilityRequest, opts ...grpc.CallOption) (*UpdateSkillVisibilityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSkillVisibilityResponse)
+	err := c.cc.Invoke(ctx, SkillService_UpdateSkillVisibility_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *skillServiceClient) DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteSkillResponse)
 	err := c.cc.Invoke(ctx, SkillService_DeleteSkill_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) UploadSkillPackage(ctx context.Context, in *UploadSkillPackageRequest, opts ...grpc.CallOption) (*UploadSkillPackageResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UploadSkillPackageResponse)
-	err := c.cc.Invoke(ctx, SkillService_UploadSkillPackage_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) ListSkillVersions(ctx context.Context, in *ListSkillVersionsRequest, opts ...grpc.CallOption) (*ListSkillVersionsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListSkillVersionsResponse)
-	err := c.cc.Invoke(ctx, SkillService_ListSkillVersions_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) GetSkillVersion(ctx context.Context, in *GetSkillVersionRequest, opts ...grpc.CallOption) (*GetSkillVersionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetSkillVersionResponse)
-	err := c.cc.Invoke(ctx, SkillService_GetSkillVersion_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) SubmitSkillVersion(ctx context.Context, in *SubmitSkillVersionRequest, opts ...grpc.CallOption) (*SubmitSkillVersionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubmitSkillVersionResponse)
-	err := c.cc.Invoke(ctx, SkillService_SubmitSkillVersion_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) PublishSkillVersion(ctx context.Context, in *PublishSkillVersionRequest, opts ...grpc.CallOption) (*PublishSkillVersionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PublishSkillVersionResponse)
-	err := c.cc.Invoke(ctx, SkillService_PublishSkillVersion_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) OnlineSkillVersion(ctx context.Context, in *OnlineSkillVersionRequest, opts ...grpc.CallOption) (*OnlineSkillVersionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OnlineSkillVersionResponse)
-	err := c.cc.Invoke(ctx, SkillService_OnlineSkillVersion_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) OfflineSkillVersion(ctx context.Context, in *OfflineSkillVersionRequest, opts ...grpc.CallOption) (*OfflineSkillVersionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OfflineSkillVersionResponse)
-	err := c.cc.Invoke(ctx, SkillService_OfflineSkillVersion_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) DownloadSkillVersion(ctx context.Context, in *DownloadSkillVersionRequest, opts ...grpc.CallOption) (*SkillPackageDownload, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SkillPackageDownload)
-	err := c.cc.Invoke(ctx, SkillService_DownloadSkillVersion_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) ListSkillVersionFiles(ctx context.Context, in *ListSkillVersionFilesRequest, opts ...grpc.CallOption) (*ListSkillVersionFilesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListSkillVersionFilesResponse)
-	err := c.cc.Invoke(ctx, SkillService_ListSkillVersionFiles_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) GetSkillVersionFile(ctx context.Context, in *GetSkillVersionFileRequest, opts ...grpc.CallOption) (*GetSkillVersionFileResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetSkillVersionFileResponse)
-	err := c.cc.Invoke(ctx, SkillService_GetSkillVersionFile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) ListSkillDraftFiles(ctx context.Context, in *ListSkillDraftFilesRequest, opts ...grpc.CallOption) (*ListSkillDraftFilesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListSkillDraftFilesResponse)
-	err := c.cc.Invoke(ctx, SkillService_ListSkillDraftFiles_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) GetSkillDraftFile(ctx context.Context, in *GetSkillDraftFileRequest, opts ...grpc.CallOption) (*GetSkillDraftFileResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetSkillDraftFileResponse)
-	err := c.cc.Invoke(ctx, SkillService_GetSkillDraftFile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) UpsertSkillDraftFile(ctx context.Context, in *UpsertSkillDraftFileRequest, opts ...grpc.CallOption) (*UpsertSkillDraftFileResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpsertSkillDraftFileResponse)
-	err := c.cc.Invoke(ctx, SkillService_UpsertSkillDraftFile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) UpsertSkillDraftDirectory(ctx context.Context, in *UpsertSkillDraftDirectoryRequest, opts ...grpc.CallOption) (*UpsertSkillDraftDirectoryResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpsertSkillDraftDirectoryResponse)
-	err := c.cc.Invoke(ctx, SkillService_UpsertSkillDraftDirectory_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) DeleteSkillDraftPath(ctx context.Context, in *DeleteSkillDraftPathRequest, opts ...grpc.CallOption) (*DeleteSkillDraftPathResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteSkillDraftPathResponse)
-	err := c.cc.Invoke(ctx, SkillService_DeleteSkillDraftPath_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) MoveSkillDraftPath(ctx context.Context, in *MoveSkillDraftPathRequest, opts ...grpc.CallOption) (*MoveSkillDraftPathResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MoveSkillDraftPathResponse)
-	err := c.cc.Invoke(ctx, SkillService_MoveSkillDraftPath_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *skillServiceClient) CommitSkillDraft(ctx context.Context, in *CommitSkillDraftRequest, opts ...grpc.CallOption) (*CommitSkillDraftResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CommitSkillDraftResponse)
-	err := c.cc.Invoke(ctx, SkillService_CommitSkillDraft_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -402,9 +141,9 @@ func (c *skillServiceClient) ListSkillShares(ctx context.Context, in *ListSkillS
 	return out, nil
 }
 
-func (c *skillServiceClient) CreateSkillShare(ctx context.Context, in *CreateSkillShareRequest, opts ...grpc.CallOption) (*SkillShare, error) {
+func (c *skillServiceClient) CreateSkillShare(ctx context.Context, in *CreateSkillShareRequest, opts ...grpc.CallOption) (*CreateSkillShareResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SkillShare)
+	out := new(CreateSkillShareResponse)
 	err := c.cc.Invoke(ctx, SkillService_CreateSkillShare_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -422,111 +161,100 @@ func (c *skillServiceClient) DeleteSkillShare(ctx context.Context, in *DeleteSki
 	return out, nil
 }
 
+func (c *skillServiceClient) CreatePullRequest(ctx context.Context, in *CreatePullRequestRequest, opts ...grpc.CallOption) (*CreatePullRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreatePullRequestResponse)
+	err := c.cc.Invoke(ctx, SkillService_CreatePullRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) ListPullRequests(ctx context.Context, in *ListPullRequestsRequest, opts ...grpc.CallOption) (*ListPullRequestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPullRequestsResponse)
+	err := c.cc.Invoke(ctx, SkillService_ListPullRequests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) GetPullRequest(ctx context.Context, in *GetPullRequestRequest, opts ...grpc.CallOption) (*GetPullRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPullRequestResponse)
+	err := c.cc.Invoke(ctx, SkillService_GetPullRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) ReviewPullRequest(ctx context.Context, in *ReviewPullRequestRequest, opts ...grpc.CallOption) (*ReviewPullRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReviewPullRequestResponse)
+	err := c.cc.Invoke(ctx, SkillService_ReviewPullRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) ClosePullRequest(ctx context.Context, in *ClosePullRequestRequest, opts ...grpc.CallOption) (*ClosePullRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClosePullRequestResponse)
+	err := c.cc.Invoke(ctx, SkillService_ClosePullRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) MergePullRequest(ctx context.Context, in *MergePullRequestRequest, opts ...grpc.CallOption) (*MergePullRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MergePullRequestResponse)
+	err := c.cc.Invoke(ctx, SkillService_MergePullRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) ListSkillReleases(ctx context.Context, in *ListSkillReleasesRequest, opts ...grpc.CallOption) (*ListSkillReleasesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSkillReleasesResponse)
+	err := c.cc.Invoke(ctx, SkillService_ListSkillReleases_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SkillServiceServer is the server API for SkillService service.
 // All implementations must embed UnimplementedSkillServiceServer
 // for forward compatibility.
 //
-// SkillService exposes the canonical AIHub Skill API.
-//
-// This is the first real business module migrated from the legacy backend
-// into the new kernel-based Hub. It manages canonical Skills and their
-// versioned packages.
-//
-// ## Resource model
-//
-//	Skill           /v1/skills/{name}
-//	SkillVersion    /v1/skills/{name}/versions/{version}
-//	SkillFile       /v1/skills/{name}/versions/{version}/files/{path}
-//
-// Skill names match `^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$` and are globally
-// unique. Version strings are arbitrary but should follow semver when
-// possible (`0.1.0`, `1.0.0-rc.1`).
-//
-// ## Authz
-//
-// Access policy is declared at the proto layer and consumed by Kernel/Gateway
-// generators. Resource-level ownership/public/share fallbacks remain in the
-// Hub biz layer.
-//
-// ## Status machine (SkillVersion)
-//
-//	draft → submitted → published → online → offline
-//	                                    ↑________|
-//
-// Each transition is an idempotent CAS (compare-and-set on the status
-// column) so concurrent transition calls on the same version cannot both
-// succeed.
+// SkillService is the Git-native SkillHub management plane. Skill content,
+// branches and release tags remain native Git/LFS data and are intentionally
+// not represented by protobuf upload or draft-file RPCs.
 type SkillServiceServer interface {
-	// CreateSkill creates one canonical skill. The caller becomes the owner.
 	CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error)
-	// UpdateSkill updates mutable fields of one canonical skill. owner_id /
-	// visibility / status are NOT updated by this RPC — they require
-	// separate lifecycle endpoints.
-	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
-	// UpdateSkillVisibility changes the access visibility of one canonical
-	// skill. This endpoint is the contract-backed path for public/private
-	// toggles; subject-specific sharing remains under Skill share RPCs.
-	UpdateSkillVisibility(context.Context, *UpdateSkillVisibilityRequest) (*UpdateSkillVisibilityResponse, error)
-	// ListSkills lists canonical skills visible to the caller. Visibility
-	// rules: caller sees (a) skills they own, (b) skills shared with them
-	// via accessx grants, (c) skills with visibility=public.
 	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
-	// GetSkill returns one canonical skill by name.
 	GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error)
-	// DeleteSkill soft-deletes one canonical skill by name. Cascades to
-	// versions and files. S3 objects are purged best-effort after the DB
-	// transaction commits.
+	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
+	UpdateSkillVisibility(context.Context, *UpdateSkillVisibilityRequest) (*UpdateSkillVisibilityResponse, error)
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
-	// UploadSkillPackage imports a zipped Skill package into a new or
-	// existing version. The zip must contain SKILL.md with YAML front-matter
-	// declaring name, description, version. Other files become version
-	// files; binary files are base64-encoded in the DB content column.
-	UploadSkillPackage(context.Context, *UploadSkillPackageRequest) (*UploadSkillPackageResponse, error)
-	// ListSkillVersions lists versions of one canonical skill, oldest first.
-	ListSkillVersions(context.Context, *ListSkillVersionsRequest) (*ListSkillVersionsResponse, error)
-	// GetSkillVersion returns one version metadata record.
-	GetSkillVersion(context.Context, *GetSkillVersionRequest) (*GetSkillVersionResponse, error)
-	// SubmitSkillVersion marks a draft version ready for publish.
-	SubmitSkillVersion(context.Context, *SubmitSkillVersionRequest) (*SubmitSkillVersionResponse, error)
-	// PublishSkillVersion marks a submitted version as published.
-	PublishSkillVersion(context.Context, *PublishSkillVersionRequest) (*PublishSkillVersionResponse, error)
-	// OnlineSkillVersion makes one published version consumable by
-	// catalog/runtime. Any previously-online version of the same skill is
-	// automatically demoted to published.
-	OnlineSkillVersion(context.Context, *OnlineSkillVersionRequest) (*OnlineSkillVersionResponse, error)
-	// OfflineSkillVersion removes one online version from catalog/runtime use.
-	OfflineSkillVersion(context.Context, *OfflineSkillVersionRequest) (*OfflineSkillVersionResponse, error)
-	// DownloadSkillVersion returns the version package bytes. Use
-	// if_none_match to leverage ETag-based 304 Not Modified.
-	DownloadSkillVersion(context.Context, *DownloadSkillVersionRequest) (*SkillPackageDownload, error)
-	// ListSkillVersionFiles lists files stored for one skill version.
-	ListSkillVersionFiles(context.Context, *ListSkillVersionFilesRequest) (*ListSkillVersionFilesResponse, error)
-	// GetSkillVersionFile returns one text or base64-encoded file content.
-	GetSkillVersionFile(context.Context, *GetSkillVersionFileRequest) (*GetSkillVersionFileResponse, error)
-	// ListSkillDraftFiles lists the editable draft workspace tree.
-	ListSkillDraftFiles(context.Context, *ListSkillDraftFilesRequest) (*ListSkillDraftFilesResponse, error)
-	// GetSkillDraftFile returns one draft file's metadata and content.
-	GetSkillDraftFile(context.Context, *GetSkillDraftFileRequest) (*GetSkillDraftFileResponse, error)
-	// UpsertSkillDraftFile creates or updates a draft file.
-	UpsertSkillDraftFile(context.Context, *UpsertSkillDraftFileRequest) (*UpsertSkillDraftFileResponse, error)
-	// UpsertSkillDraftDirectory creates a directory in the draft workspace.
-	UpsertSkillDraftDirectory(context.Context, *UpsertSkillDraftDirectoryRequest) (*UpsertSkillDraftDirectoryResponse, error)
-	// DeleteSkillDraftPath deletes a file or directory from the draft workspace.
-	DeleteSkillDraftPath(context.Context, *DeleteSkillDraftPathRequest) (*DeleteSkillDraftPathResponse, error)
-	// MoveSkillDraftPath renames or moves a draft workspace path.
-	MoveSkillDraftPath(context.Context, *MoveSkillDraftPathRequest) (*MoveSkillDraftPathResponse, error)
-	// CommitSkillDraft materializes the draft workspace into a SkillVersion.
-	CommitSkillDraft(context.Context, *CommitSkillDraftRequest) (*CommitSkillDraftResponse, error)
-	// ListSkillShares lists subjects that have any relation on the named
-	// skill. Requires skill.manage.
 	ListSkillShares(context.Context, *ListSkillSharesRequest) (*ListSkillSharesResponse, error)
-	// CreateSkillShare grants a viewer or editor relation on the named
-	// skill to a subject. Requires skill.manage. The relation field accepts
-	// "viewer", "editor", or "reviewer"; passing "owner" returns INVALID_ARGUMENT.
-	CreateSkillShare(context.Context, *CreateSkillShareRequest) (*SkillShare, error)
-	// DeleteSkillShare revokes ALL relations between the named skill and
-	// the named subject. Requires skill.manage.
+	CreateSkillShare(context.Context, *CreateSkillShareRequest) (*CreateSkillShareResponse, error)
 	DeleteSkillShare(context.Context, *DeleteSkillShareRequest) (*DeleteSkillShareResponse, error)
+	CreatePullRequest(context.Context, *CreatePullRequestRequest) (*CreatePullRequestResponse, error)
+	ListPullRequests(context.Context, *ListPullRequestsRequest) (*ListPullRequestsResponse, error)
+	GetPullRequest(context.Context, *GetPullRequestRequest) (*GetPullRequestResponse, error)
+	ReviewPullRequest(context.Context, *ReviewPullRequestRequest) (*ReviewPullRequestResponse, error)
+	ClosePullRequest(context.Context, *ClosePullRequestRequest) (*ClosePullRequestResponse, error)
+	MergePullRequest(context.Context, *MergePullRequestRequest) (*MergePullRequestResponse, error)
+	ListSkillReleases(context.Context, *ListSkillReleasesRequest) (*ListSkillReleasesResponse, error)
 	mustEmbedUnimplementedSkillServiceServer()
 }
 
@@ -540,80 +268,50 @@ type UnimplementedSkillServiceServer struct{}
 func (UnimplementedSkillServiceServer) CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSkill not implemented")
 }
-func (UnimplementedSkillServiceServer) UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkill not implemented")
-}
-func (UnimplementedSkillServiceServer) UpdateSkillVisibility(context.Context, *UpdateSkillVisibilityRequest) (*UpdateSkillVisibilityResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkillVisibility not implemented")
-}
 func (UnimplementedSkillServiceServer) ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSkills not implemented")
 }
 func (UnimplementedSkillServiceServer) GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSkill not implemented")
 }
+func (UnimplementedSkillServiceServer) UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkill not implemented")
+}
+func (UnimplementedSkillServiceServer) UpdateSkillVisibility(context.Context, *UpdateSkillVisibilityRequest) (*UpdateSkillVisibilityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkillVisibility not implemented")
+}
 func (UnimplementedSkillServiceServer) DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSkill not implemented")
-}
-func (UnimplementedSkillServiceServer) UploadSkillPackage(context.Context, *UploadSkillPackageRequest) (*UploadSkillPackageResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UploadSkillPackage not implemented")
-}
-func (UnimplementedSkillServiceServer) ListSkillVersions(context.Context, *ListSkillVersionsRequest) (*ListSkillVersionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListSkillVersions not implemented")
-}
-func (UnimplementedSkillServiceServer) GetSkillVersion(context.Context, *GetSkillVersionRequest) (*GetSkillVersionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSkillVersion not implemented")
-}
-func (UnimplementedSkillServiceServer) SubmitSkillVersion(context.Context, *SubmitSkillVersionRequest) (*SubmitSkillVersionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitSkillVersion not implemented")
-}
-func (UnimplementedSkillServiceServer) PublishSkillVersion(context.Context, *PublishSkillVersionRequest) (*PublishSkillVersionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PublishSkillVersion not implemented")
-}
-func (UnimplementedSkillServiceServer) OnlineSkillVersion(context.Context, *OnlineSkillVersionRequest) (*OnlineSkillVersionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OnlineSkillVersion not implemented")
-}
-func (UnimplementedSkillServiceServer) OfflineSkillVersion(context.Context, *OfflineSkillVersionRequest) (*OfflineSkillVersionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OfflineSkillVersion not implemented")
-}
-func (UnimplementedSkillServiceServer) DownloadSkillVersion(context.Context, *DownloadSkillVersionRequest) (*SkillPackageDownload, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DownloadSkillVersion not implemented")
-}
-func (UnimplementedSkillServiceServer) ListSkillVersionFiles(context.Context, *ListSkillVersionFilesRequest) (*ListSkillVersionFilesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListSkillVersionFiles not implemented")
-}
-func (UnimplementedSkillServiceServer) GetSkillVersionFile(context.Context, *GetSkillVersionFileRequest) (*GetSkillVersionFileResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSkillVersionFile not implemented")
-}
-func (UnimplementedSkillServiceServer) ListSkillDraftFiles(context.Context, *ListSkillDraftFilesRequest) (*ListSkillDraftFilesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListSkillDraftFiles not implemented")
-}
-func (UnimplementedSkillServiceServer) GetSkillDraftFile(context.Context, *GetSkillDraftFileRequest) (*GetSkillDraftFileResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSkillDraftFile not implemented")
-}
-func (UnimplementedSkillServiceServer) UpsertSkillDraftFile(context.Context, *UpsertSkillDraftFileRequest) (*UpsertSkillDraftFileResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpsertSkillDraftFile not implemented")
-}
-func (UnimplementedSkillServiceServer) UpsertSkillDraftDirectory(context.Context, *UpsertSkillDraftDirectoryRequest) (*UpsertSkillDraftDirectoryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpsertSkillDraftDirectory not implemented")
-}
-func (UnimplementedSkillServiceServer) DeleteSkillDraftPath(context.Context, *DeleteSkillDraftPathRequest) (*DeleteSkillDraftPathResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteSkillDraftPath not implemented")
-}
-func (UnimplementedSkillServiceServer) MoveSkillDraftPath(context.Context, *MoveSkillDraftPathRequest) (*MoveSkillDraftPathResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MoveSkillDraftPath not implemented")
-}
-func (UnimplementedSkillServiceServer) CommitSkillDraft(context.Context, *CommitSkillDraftRequest) (*CommitSkillDraftResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CommitSkillDraft not implemented")
 }
 func (UnimplementedSkillServiceServer) ListSkillShares(context.Context, *ListSkillSharesRequest) (*ListSkillSharesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSkillShares not implemented")
 }
-func (UnimplementedSkillServiceServer) CreateSkillShare(context.Context, *CreateSkillShareRequest) (*SkillShare, error) {
+func (UnimplementedSkillServiceServer) CreateSkillShare(context.Context, *CreateSkillShareRequest) (*CreateSkillShareResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSkillShare not implemented")
 }
 func (UnimplementedSkillServiceServer) DeleteSkillShare(context.Context, *DeleteSkillShareRequest) (*DeleteSkillShareResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSkillShare not implemented")
+}
+func (UnimplementedSkillServiceServer) CreatePullRequest(context.Context, *CreatePullRequestRequest) (*CreatePullRequestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePullRequest not implemented")
+}
+func (UnimplementedSkillServiceServer) ListPullRequests(context.Context, *ListPullRequestsRequest) (*ListPullRequestsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPullRequests not implemented")
+}
+func (UnimplementedSkillServiceServer) GetPullRequest(context.Context, *GetPullRequestRequest) (*GetPullRequestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPullRequest not implemented")
+}
+func (UnimplementedSkillServiceServer) ReviewPullRequest(context.Context, *ReviewPullRequestRequest) (*ReviewPullRequestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReviewPullRequest not implemented")
+}
+func (UnimplementedSkillServiceServer) ClosePullRequest(context.Context, *ClosePullRequestRequest) (*ClosePullRequestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClosePullRequest not implemented")
+}
+func (UnimplementedSkillServiceServer) MergePullRequest(context.Context, *MergePullRequestRequest) (*MergePullRequestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MergePullRequest not implemented")
+}
+func (UnimplementedSkillServiceServer) ListSkillReleases(context.Context, *ListSkillReleasesRequest) (*ListSkillReleasesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSkillReleases not implemented")
 }
 func (UnimplementedSkillServiceServer) mustEmbedUnimplementedSkillServiceServer() {}
 func (UnimplementedSkillServiceServer) testEmbeddedByValue()                      {}
@@ -654,42 +352,6 @@ func _SkillService_CreateSkill_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SkillService_UpdateSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSkillRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).UpdateSkill(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_UpdateSkill_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).UpdateSkill(ctx, req.(*UpdateSkillRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_UpdateSkillVisibility_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSkillVisibilityRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).UpdateSkillVisibility(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_UpdateSkillVisibility_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).UpdateSkillVisibility(ctx, req.(*UpdateSkillVisibilityRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _SkillService_ListSkills_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSkillsRequest)
 	if err := dec(in); err != nil {
@@ -726,6 +388,42 @@ func _SkillService_GetSkill_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SkillService_UpdateSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSkillRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).UpdateSkill(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_UpdateSkill_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).UpdateSkill(ctx, req.(*UpdateSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_UpdateSkillVisibility_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSkillVisibilityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).UpdateSkillVisibility(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_UpdateSkillVisibility_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).UpdateSkillVisibility(ctx, req.(*UpdateSkillVisibilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SkillService_DeleteSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteSkillRequest)
 	if err := dec(in); err != nil {
@@ -740,312 +438,6 @@ func _SkillService_DeleteSkill_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SkillServiceServer).DeleteSkill(ctx, req.(*DeleteSkillRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_UploadSkillPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UploadSkillPackageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).UploadSkillPackage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_UploadSkillPackage_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).UploadSkillPackage(ctx, req.(*UploadSkillPackageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_ListSkillVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListSkillVersionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).ListSkillVersions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_ListSkillVersions_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).ListSkillVersions(ctx, req.(*ListSkillVersionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_GetSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSkillVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).GetSkillVersion(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_GetSkillVersion_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).GetSkillVersion(ctx, req.(*GetSkillVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_SubmitSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SubmitSkillVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).SubmitSkillVersion(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_SubmitSkillVersion_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).SubmitSkillVersion(ctx, req.(*SubmitSkillVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_PublishSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PublishSkillVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).PublishSkillVersion(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_PublishSkillVersion_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).PublishSkillVersion(ctx, req.(*PublishSkillVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_OnlineSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OnlineSkillVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).OnlineSkillVersion(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_OnlineSkillVersion_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).OnlineSkillVersion(ctx, req.(*OnlineSkillVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_OfflineSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OfflineSkillVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).OfflineSkillVersion(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_OfflineSkillVersion_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).OfflineSkillVersion(ctx, req.(*OfflineSkillVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_DownloadSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DownloadSkillVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).DownloadSkillVersion(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_DownloadSkillVersion_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).DownloadSkillVersion(ctx, req.(*DownloadSkillVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_ListSkillVersionFiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListSkillVersionFilesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).ListSkillVersionFiles(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_ListSkillVersionFiles_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).ListSkillVersionFiles(ctx, req.(*ListSkillVersionFilesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_GetSkillVersionFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSkillVersionFileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).GetSkillVersionFile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_GetSkillVersionFile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).GetSkillVersionFile(ctx, req.(*GetSkillVersionFileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_ListSkillDraftFiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListSkillDraftFilesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).ListSkillDraftFiles(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_ListSkillDraftFiles_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).ListSkillDraftFiles(ctx, req.(*ListSkillDraftFilesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_GetSkillDraftFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSkillDraftFileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).GetSkillDraftFile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_GetSkillDraftFile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).GetSkillDraftFile(ctx, req.(*GetSkillDraftFileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_UpsertSkillDraftFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpsertSkillDraftFileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).UpsertSkillDraftFile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_UpsertSkillDraftFile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).UpsertSkillDraftFile(ctx, req.(*UpsertSkillDraftFileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_UpsertSkillDraftDirectory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpsertSkillDraftDirectoryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).UpsertSkillDraftDirectory(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_UpsertSkillDraftDirectory_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).UpsertSkillDraftDirectory(ctx, req.(*UpsertSkillDraftDirectoryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_DeleteSkillDraftPath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteSkillDraftPathRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).DeleteSkillDraftPath(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_DeleteSkillDraftPath_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).DeleteSkillDraftPath(ctx, req.(*DeleteSkillDraftPathRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_MoveSkillDraftPath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MoveSkillDraftPathRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).MoveSkillDraftPath(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_MoveSkillDraftPath_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).MoveSkillDraftPath(ctx, req.(*MoveSkillDraftPathRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SkillService_CommitSkillDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CommitSkillDraftRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SkillServiceServer).CommitSkillDraft(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SkillService_CommitSkillDraft_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillServiceServer).CommitSkillDraft(ctx, req.(*CommitSkillDraftRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1104,6 +496,132 @@ func _SkillService_DeleteSkillShare_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SkillService_CreatePullRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePullRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).CreatePullRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_CreatePullRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).CreatePullRequest(ctx, req.(*CreatePullRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_ListPullRequests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPullRequestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).ListPullRequests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_ListPullRequests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).ListPullRequests(ctx, req.(*ListPullRequestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_GetPullRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPullRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).GetPullRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_GetPullRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).GetPullRequest(ctx, req.(*GetPullRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_ReviewPullRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReviewPullRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).ReviewPullRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_ReviewPullRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).ReviewPullRequest(ctx, req.(*ReviewPullRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_ClosePullRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClosePullRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).ClosePullRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_ClosePullRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).ClosePullRequest(ctx, req.(*ClosePullRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_MergePullRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MergePullRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).MergePullRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_MergePullRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).MergePullRequest(ctx, req.(*MergePullRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_ListSkillReleases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSkillReleasesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).ListSkillReleases(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_ListSkillReleases_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).ListSkillReleases(ctx, req.(*ListSkillReleasesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SkillService_ServiceDesc is the grpc.ServiceDesc for SkillService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1116,14 +634,6 @@ var SkillService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SkillService_CreateSkill_Handler,
 		},
 		{
-			MethodName: "UpdateSkill",
-			Handler:    _SkillService_UpdateSkill_Handler,
-		},
-		{
-			MethodName: "UpdateSkillVisibility",
-			Handler:    _SkillService_UpdateSkillVisibility_Handler,
-		},
-		{
 			MethodName: "ListSkills",
 			Handler:    _SkillService_ListSkills_Handler,
 		},
@@ -1132,76 +642,16 @@ var SkillService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SkillService_GetSkill_Handler,
 		},
 		{
+			MethodName: "UpdateSkill",
+			Handler:    _SkillService_UpdateSkill_Handler,
+		},
+		{
+			MethodName: "UpdateSkillVisibility",
+			Handler:    _SkillService_UpdateSkillVisibility_Handler,
+		},
+		{
 			MethodName: "DeleteSkill",
 			Handler:    _SkillService_DeleteSkill_Handler,
-		},
-		{
-			MethodName: "UploadSkillPackage",
-			Handler:    _SkillService_UploadSkillPackage_Handler,
-		},
-		{
-			MethodName: "ListSkillVersions",
-			Handler:    _SkillService_ListSkillVersions_Handler,
-		},
-		{
-			MethodName: "GetSkillVersion",
-			Handler:    _SkillService_GetSkillVersion_Handler,
-		},
-		{
-			MethodName: "SubmitSkillVersion",
-			Handler:    _SkillService_SubmitSkillVersion_Handler,
-		},
-		{
-			MethodName: "PublishSkillVersion",
-			Handler:    _SkillService_PublishSkillVersion_Handler,
-		},
-		{
-			MethodName: "OnlineSkillVersion",
-			Handler:    _SkillService_OnlineSkillVersion_Handler,
-		},
-		{
-			MethodName: "OfflineSkillVersion",
-			Handler:    _SkillService_OfflineSkillVersion_Handler,
-		},
-		{
-			MethodName: "DownloadSkillVersion",
-			Handler:    _SkillService_DownloadSkillVersion_Handler,
-		},
-		{
-			MethodName: "ListSkillVersionFiles",
-			Handler:    _SkillService_ListSkillVersionFiles_Handler,
-		},
-		{
-			MethodName: "GetSkillVersionFile",
-			Handler:    _SkillService_GetSkillVersionFile_Handler,
-		},
-		{
-			MethodName: "ListSkillDraftFiles",
-			Handler:    _SkillService_ListSkillDraftFiles_Handler,
-		},
-		{
-			MethodName: "GetSkillDraftFile",
-			Handler:    _SkillService_GetSkillDraftFile_Handler,
-		},
-		{
-			MethodName: "UpsertSkillDraftFile",
-			Handler:    _SkillService_UpsertSkillDraftFile_Handler,
-		},
-		{
-			MethodName: "UpsertSkillDraftDirectory",
-			Handler:    _SkillService_UpsertSkillDraftDirectory_Handler,
-		},
-		{
-			MethodName: "DeleteSkillDraftPath",
-			Handler:    _SkillService_DeleteSkillDraftPath_Handler,
-		},
-		{
-			MethodName: "MoveSkillDraftPath",
-			Handler:    _SkillService_MoveSkillDraftPath_Handler,
-		},
-		{
-			MethodName: "CommitSkillDraft",
-			Handler:    _SkillService_CommitSkillDraft_Handler,
 		},
 		{
 			MethodName: "ListSkillShares",
@@ -1214,6 +664,34 @@ var SkillService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSkillShare",
 			Handler:    _SkillService_DeleteSkillShare_Handler,
+		},
+		{
+			MethodName: "CreatePullRequest",
+			Handler:    _SkillService_CreatePullRequest_Handler,
+		},
+		{
+			MethodName: "ListPullRequests",
+			Handler:    _SkillService_ListPullRequests_Handler,
+		},
+		{
+			MethodName: "GetPullRequest",
+			Handler:    _SkillService_GetPullRequest_Handler,
+		},
+		{
+			MethodName: "ReviewPullRequest",
+			Handler:    _SkillService_ReviewPullRequest_Handler,
+		},
+		{
+			MethodName: "ClosePullRequest",
+			Handler:    _SkillService_ClosePullRequest_Handler,
+		},
+		{
+			MethodName: "MergePullRequest",
+			Handler:    _SkillService_MergePullRequest_Handler,
+		},
+		{
+			MethodName: "ListSkillReleases",
+			Handler:    _SkillService_ListSkillReleases_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

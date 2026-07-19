@@ -37,6 +37,9 @@ spec:
                 path: config.yaml
         - name: tmp
           emptyDir: {}
+        - name: git-data
+          persistentVolumeClaim:
+            claimName: aisphere-hub-git
       containers:
         - name: backend
           image: registry.cn-beijing.aliyuncs.com/ainfracn/aisphere-hub:feat-root-skill-iam-share
@@ -63,6 +66,8 @@ spec:
               readOnly: true
             - name: tmp
               mountPath: /tmp
+            - name: git-data
+              mountPath: /var/lib/aisphere-hub/git
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -7,6 +7,7 @@ import (
 
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
+	"github.com/aisphereio/aisphere-hub/internal/gitengine"
 	"github.com/aisphereio/aisphere-hub/internal/service"
 
 	"github.com/aisphereio/kernel/authz"
@@ -39,7 +40,7 @@ import (
 // serverx/autowire mounts the standard authn middleware before access. Public
 // routes are configured through security.access.public_operations instead of a
 // Hub-specific authn filter.
-func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *khttp.Server {
+func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *khttp.Server {
 	addr := cfg.HTTP.Addr
 	if addr == "" {
 		addr = "0.0.0.0:8000"
@@ -92,16 +93,8 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	// SkillSet is intentionally a lightweight HTTP resource. It stores only
 	// ordered references to canonical Skills; version/release/runtime remain on Skill.
 	registerSkillSetHTTP(srv, resources)
-	if resources != nil && resources.DTM != nil {
-		dtmSkill := data.NewSkillDTMBranchHandler(resources)
-		srv.HandleFunc("/internal/dtm/skill/package/promote", dtmSkill.PromotePackage)
-		srv.HandleFunc("/internal/dtm/skill/package/promote_compensate", dtmSkill.CompensatePackage)
-		srv.HandleFunc("/internal/dtm/skill/metadata/upsert", dtmSkill.UpsertMetadata)
-		srv.HandleFunc("/internal/dtm/skill/metadata/upsert_compensate", dtmSkill.CompensateMetadata)
-		srv.HandleFunc("/internal/dtm/skill/draft/object/promote", dtmSkill.PromoteDraftObject)
-		srv.HandleFunc("/internal/dtm/skill/draft/object/promote_compensate", dtmSkill.CompensateDraftObject)
-		srv.HandleFunc("/internal/dtm/skill/draft/metadata/upsert", dtmSkill.UpsertDraftMetadata)
-		srv.HandleFunc("/internal/dtm/skill/draft/metadata/upsert_compensate", dtmSkill.CompensateDraftMetadata)
+	if git != nil {
+		srv.HandleProtocolPrefix(gitengine.HTTPPrefix, gitengine.DescribeProtocolRequest, git.Handler())
 	}
 	srv.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
