@@ -17,12 +17,34 @@ import (
 
 func hubServerMiddlewares(resources *data.Resources, cfg conf.SecurityConfig) []middleware.Middleware {
 	securityRuntime := mustHubSecurityRuntime(cfg)
-	guard := accessx.NewGuard(authz.AllowAllForDevOnly(), auditRecorder(resources))
+	var guard accessx.Guard
+	if resources == nil {
+		guard = accessx.NewGuard(authz.DenyAll(), auditRecorder(resources))
+	} else {
+		guard = accessx.NewGuard(resources.Authz, auditRecorder(resources))
+	}
+	catalog := HubCatalog()
 	return serverx.ServerMiddlewareFromProviders(context.Background(), serverx.RuntimeProviders{
-		Security:       securityRuntime,
-		AccessGuard:    &guard,
-		AccessResolver: hubAuthenticatedResolver,
+		Security:            securityRuntime,
+		AccessGuard:         &guard,
+		AccessResolver:      hubAccessResolver(catalog),
+		RequestInfoResolver: catalog.RequestInfoResolver,
 	})
+}
+
+func hubAccessResolver(catalog serverx.ServiceCatalog) mwaccess.Resolver {
+	return func(ctx context.Context, operation string, request any) (accessx.Check, bool, error) {
+		// Create operations bootstrap a new resource that does not yet exist
+		// in the authorization graph. Skip the SpiceDB check — the biz layer
+		// will write the owner relationship after the row is persisted.
+		if strings.HasSuffix(operation, "/CreateSkill") {
+			return accessx.Check{
+				SkipPolicy:  accessx.SkipAuthz,
+				AuditAction: "hub.skill.create",
+			}, true, nil
+		}
+		return catalog.AccessResolver(ctx, operation, request)
+	}
 }
 
 func mustHubSecurityRuntime(cfg conf.SecurityConfig) *securityx.Runtime {
@@ -45,33 +67,9 @@ func mustHubSecurityRuntime(cfg conf.SecurityConfig) *securityx.Runtime {
 	return runtime
 }
 
-func hubAuthenticatedResolver(ctx context.Context, operation string, req any) (accessx.Check, bool, error) {
-	_ = ctx
-	_ = req
-	return accessx.Check{
-		SkipPolicy:  accessx.SkipAuthz,
-		AuditAction: "hub." + normalizeOperationAction(operation),
-	}, true, nil
-}
-
-func normalizeOperationAction(operation string) string {
-	operation = strings.TrimSpace(operation)
-	if operation == "" {
-		return "unknown"
-	}
-	if i := strings.LastIndex(operation, "/"); i >= 0 && i+1 < len(operation) {
-		operation = operation[i+1:]
-	}
-	operation = strings.ReplaceAll(operation, ".", "_")
-	operation = strings.ReplaceAll(operation, "-", "_")
-	return strings.ToLower(operation)
-}
-
 func auditRecorder(resources *data.Resources) auditx.Recorder {
 	if resources == nil {
 		return auditx.Noop()
 	}
 	return resources.Audit
 }
-
-var _ mwaccess.Resolver = hubAuthenticatedResolver
