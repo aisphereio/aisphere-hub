@@ -25,9 +25,10 @@ service SkillService {
   rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) {
     option (google.api.http) = { get: "/v1/skills" };
     option (aisphere.access.v1.policy) = {
-      exposure: AUTHORIZED
-      authz: { action: "view" resource: "skill:collection" audience: "hub-service" mode: SELF_CHECK }
+      exposure: AUTHENTICATED
+      gateway: { upstream_service: "hub-service" }
       audit: { enabled: true event: "hub.skill.list" risk: "low" }
+      reason: "handler batch-checks view permission for every concrete skill"
     };
   }
 

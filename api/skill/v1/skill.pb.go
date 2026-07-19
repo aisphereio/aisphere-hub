@@ -2378,14 +2378,13 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\x18ListSkillReleasesRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"O\n" +
 	"\x19ListSkillReleasesResponse\x122\n" +
-	"\breleases\x18\x01 \x03(\v2\x16.skill.v1.SkillReleaseR\breleases2\xf2\x1a\n" +
+	"\breleases\x18\x01 \x03(\v2\x16.skill.v1.SkillReleaseR\breleases2\x97\x1b\n" +
 	"\fSkillService\x12\xc1\x01\n" +
 	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"u\x92\xf4\x18U\b\x03\x125\n" +
 	"\x05write\x12\x1dproject:{org_id}/{project_id}\x1a\vhub-service \x01\x1a\x1a\b\x01\x12\x10hub.skill.create\x1a\x04high\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
-	"/v1/skills\x12\xa3\x01\n" +
+	"/v1/skills\x12\xc8\x01\n" +
 	"\n" +
-	"ListSkills\x12\x1b.skill.v1.ListSkillsRequest\x1a\x1c.skill.v1.ListSkillsResponse\"Z\x92\xf4\x18D\b\x03\x12'\n" +
-	"\x04view\x12\x10skill:collection\x1a\vhub-service \x03\x1a\x17\b\x01\x12\x0ehub.skill.list\x1a\x03low\x82\xd3\xe4\x93\x02\f\x12\n" +
+	"ListSkills\x12\x1b.skill.v1.ListSkillsRequest\x1a\x1c.skill.v1.ListSkillsResponse\"\x7f\x92\xf4\x18i\b\x02\x1a\x17\b\x01\x12\x0ehub.skill.list\x1a\x03low2=handler batch-checks view permission for every concrete skill:\r\"\vhub-service\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/v1/skills\x12\xa6\x01\n" +
 	"\bGetSkill\x12\x19.skill.v1.GetSkillRequest\x1a\x1a.skill.v1.GetSkillResponse\"c\x92\xf4\x18?\b\x03\x12#\n" +
 	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x16\b\x01\x12\rhub.skill.get\x1a\x03low\x82\xd3\xe4\x93\x02\x1ab\x05skill\x12\x11/v1/skills/{name}\x12\xb8\x01\n" +
