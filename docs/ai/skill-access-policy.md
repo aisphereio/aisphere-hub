@@ -1,9 +1,10 @@
 # Skill Access Policy
 
-Skill remains a globally named resource in the Hub root catalog. It is not placed
-under a Hub organization, group, or project. `org_id` is retained as the governing
-IAM/Casdoor organization for access scope, directory selection, audit, and future
-quota policy.
+Skill remains a globally named resource in the Hub root catalog and its name is also
+the native Git repository name. Creation requires an IAM Project authorization scope:
+Hub checks `create_skill` on `project:{org_id}/{project_id}`, while `org_id` must match
+the authenticated Principal. The resulting Skill is still authorized as the single
+`skill:<name>` resource for metadata and Git operations.
 
 ## Visibility
 

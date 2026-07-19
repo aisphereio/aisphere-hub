@@ -11,13 +11,13 @@ Skills are created in the global Skill root catalog:
 /v1/skills/{name}
 ```
 
-There is no product concept of "create a Skill under an organization/group/project" in Hub. Organization and group membership belong to Casdoor/IAM and are only used as authorization subjects.
+Skill names remain globally unique and repository names stay identical to Skill names. Creation is nevertheless scoped to an IAM Project: the client must select `org_id` and `project_id`, Hub checks `create_skill` on `project:{org_id}/{project_id}`, and the selected organization must match the authenticated Principal. This scope controls who may create; it does not introduce a second repository or Skill identity.
 
 ## Ownership
 
 When a user creates a Skill, Hub stamps the creator as the Skill owner from the authenticated principal.
 
-Client supplied `owner_id`, `org_id`, and `project_id` must not decide Skill ownership or placement. They are compatibility fields only and should not be used by new UI flows.
+Client supplied `owner_id` never decides ownership. The creation UI supplies `org_id` and `project_id` only as the authorization scope; Hub derives the owner from the authenticated Principal and rejects cross-organization scope.
 
 ```text
 skill:{name}#owner@user:{principal.subject_id}
@@ -77,10 +77,10 @@ SpiceDB: authorization graph and permission checks
 
 The Skill list and editor should expose:
 
-1. Create Skill at root catalog.
+1. Create a globally named Skill after selecting an authorized IAM Project.
 2. Private/public toggle.
 3. Share dialog.
 4. IAM principal picker for users and groups.
 5. Viewer/editor grant selection.
 
-The frontend should not expose Hub-level group management, organization tree selection, or "create under org/project" selectors for Skill creation.
+The frontend should not expose Hub-level group management or organization tree management. It does expose a Project selector for the Principal's current Zone so the `create_skill` check targets a concrete IAM Project.
