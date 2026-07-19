@@ -20,6 +20,7 @@ type SkillGitEngine interface {
 }
 
 type SkillRelationships interface {
+	BatchCheck(context.Context, AuthzBatchCheckRequest) (AuthzBatchCheckResult, error)
 	GrantOwner(context.Context, AuthzObjectRef, AuthzSubjectRef) error
 	GrantRole(context.Context, AuthzObjectRef, string, AuthzSubjectRef) error
 	RevokeAll(context.Context, AuthzObjectRef, AuthzSubjectRef) error
@@ -87,8 +88,43 @@ func (uc *SkillUsecase) GetSkill(ctx context.Context, name string) (*GitSkill, e
 	return uc.skills.GetSkill(ctx, strings.TrimSpace(name))
 }
 
-func (uc *SkillUsecase) ListSkills(ctx context.Context, opts GitSkillListOptions) (*GitSkillListResult, error) {
-	return uc.skills.ListSkills(ctx, opts)
+func (uc *SkillUsecase) ListSkills(ctx context.Context, principal authn.Principal, opts GitSkillListOptions) (*GitSkillListResult, error) {
+	if err := requirePrincipal(principal); err != nil {
+		return nil, err
+	}
+	if uc.skills == nil || uc.rels == nil {
+		return nil, ErrSkillDependencyFailed
+	}
+	result, err := uc.skills.ListSkills(ctx, opts)
+	if err != nil || result == nil || len(result.Items) == 0 {
+		return result, err
+	}
+	checks := make([]AuthzCheckRequest, 0, len(result.Items))
+	for _, item := range result.Items {
+		checks = append(checks, AuthzCheckRequest{
+			Subject:    principalSubject(principal),
+			Resource:   AuthzObjectRef{Type: "skill", ID: item.Name},
+			Permission: "view",
+			TenantID:   principal.TenantID,
+			OrgID:      item.OrgID,
+			ProjectID:  item.ProjectID,
+		})
+	}
+	decisions, err := uc.rels.BatchCheck(ctx, AuthzBatchCheckRequest{Checks: checks})
+	if err != nil {
+		return nil, fmt.Errorf("%w: check list permissions: %v", ErrSkillDependencyFailed, err)
+	}
+	if len(decisions.Decisions) != len(result.Items) {
+		return nil, fmt.Errorf("%w: authorization decision count mismatch", ErrSkillDependencyFailed)
+	}
+	visible := make([]*GitSkill, 0, len(result.Items))
+	for i, item := range result.Items {
+		if decisions.Decisions[i].Allowed {
+			visible = append(visible, item)
+		}
+	}
+	result.Items = visible
+	return result, nil
 }
 
 func (uc *SkillUsecase) UpdateSkill(ctx context.Context, in *GitSkill) (*GitSkill, error) {

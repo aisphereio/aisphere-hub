@@ -37,7 +37,7 @@ func (s *SkillService) ListSkills(ctx context.Context, req *skillv1.ListSkillsRe
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.uc.ListSkills(ctx, biz.GitSkillListOptions{Limit: int(req.GetPageSize()), Offset: offset, Query: req.GetQuery(), Visibility: req.GetVisibility(), Status: biz.SkillStatusActive})
+	result, err := s.uc.ListSkills(ctx, principalFromContext(ctx), biz.GitSkillListOptions{Limit: int(req.GetPageSize()), Offset: offset, Query: req.GetQuery(), Visibility: req.GetVisibility(), Status: biz.SkillStatusActive})
 	if err != nil {
 		return nil, err
 	}

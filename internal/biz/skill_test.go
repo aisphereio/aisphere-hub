@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"errors"
+	"sort"
 	"testing"
 
 	"github.com/aisphereio/kernel/authn"
@@ -61,6 +62,23 @@ func TestSkillUsecaseCreateRejectsPrincipalOrgMismatch(t *testing.T) {
 	_, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}, &GitSkill{Name: "search", OrgID: "org-2", ProjectID: "project-1"})
 	if !errors.Is(err, ErrSkillInvalidArgument) {
 		t.Fatalf("CreateSkill() error = %v, want ErrSkillInvalidArgument", err)
+	}
+}
+
+func TestSkillUsecaseListReturnsOnlySkillsViewableByPrincipal(t *testing.T) {
+	skills := newMemoryGitSkillRepo()
+	skills.items["allowed-skill"] = &GitSkill{Name: "allowed-skill", Status: SkillStatusActive}
+	skills.items["denied-skill"] = &GitSkill{Name: "denied-skill", Status: SkillStatusActive}
+	rels := &fakeSkillRelationships{viewAllowed: map[string]bool{"allowed-skill": true}}
+	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), &fakeSkillGitEngine{}, rels)
+	principal := authn.Principal{SubjectID: "496333c7-7acc-4717-8596-056544fc0a68", SubjectType: authn.SubjectTypeUser}
+
+	result, err := uc.ListSkills(context.Background(), principal, GitSkillListOptions{Limit: 80})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) != 1 || result.Items[0].Name != "allowed-skill" {
+		t.Fatalf("visible skills = %+v, want allowed-skill only", result.Items)
 	}
 }
 
@@ -132,7 +150,17 @@ func (r *memoryGitSkillRepo) GetSkill(_ context.Context, name string) (*GitSkill
 	return &out, nil
 }
 func (r *memoryGitSkillRepo) ListSkills(context.Context, GitSkillListOptions) (*GitSkillListResult, error) {
-	return &GitSkillListResult{}, nil
+	names := make([]string, 0, len(r.items))
+	for name := range r.items {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	items := make([]*GitSkill, 0, len(names))
+	for _, name := range names {
+		copy := *r.items[name]
+		items = append(items, &copy)
+	}
+	return &GitSkillListResult{Items: items}, nil
 }
 func (r *memoryGitSkillRepo) UpdateSkill(_ context.Context, in *GitSkill) (*GitSkill, error) {
 	r.items[in.Name] = in
@@ -264,6 +292,16 @@ type fakeSkillRelationships struct {
 	ownerResource AuthzObjectRef
 	ownerSubject  AuthzSubjectRef
 	grantOwnerErr error
+	viewAllowed   map[string]bool
+}
+
+func (r *fakeSkillRelationships) BatchCheck(_ context.Context, req AuthzBatchCheckRequest) (AuthzBatchCheckResult, error) {
+	decisions := make([]AuthzDecision, 0, len(req.Checks))
+	for _, check := range req.Checks {
+		allowed := r.viewAllowed == nil || r.viewAllowed[check.Resource.ID]
+		decisions = append(decisions, AuthzDecision{Allowed: allowed})
+	}
+	return AuthzBatchCheckResult{Decisions: decisions}, nil
 }
 
 func (r *fakeSkillRelationships) GrantOwner(_ context.Context, resource AuthzObjectRef, subject AuthzSubjectRef) error {

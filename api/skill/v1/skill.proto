@@ -26,7 +26,7 @@ service SkillService {
     option (google.api.http) = { get: "/v1/skills" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "view" resource: "skill:*" audience: "hub-service" mode: CHECK_ONLY }
+      authz: { action: "view" resource: "skill:collection" audience: "hub-service" mode: SELF_CHECK }
       audit: { enabled: true event: "hub.skill.list" risk: "low" }
     };
   }

@@ -41,9 +41,9 @@ var SkillServiceKernelAuthzRules = authz.Rules{
 		Method:     "ListSkills",
 		FullMethod: "/skill.v1.SkillService/ListSkills",
 		Action:     "view",
-		Resource:   "skill:*",
+		Resource:   "skill:collection",
 		Audience:   "hub-service",
-		Mode:       authz.RuleMode("CHECK_ONLY"),
+		Mode:       authz.RuleMode("SELF_CHECK"),
 		AuditEvent: "hub.skill.list",
 		AuditRisk:  "low",
 	},
@@ -230,11 +230,11 @@ func SkillServiceKernelRequestInfoResolver(ctx context.Context, operation string
 			Operation:     "/skill.v1.SkillService/ListSkills",
 			Exposure:      v1.Exposure_AUTHORIZED,
 			Action:        "view",
-			Resource:      "skill:*",
+			Resource:      "skill:collection",
 			TargetService: "hub-service",
 			Labels:        map[string]string{},
 		}
-		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["authz_mode"] = "SELF_CHECK"
 		info.Labels["audit_event"] = "hub.skill.list"
 		info.Labels["audit_risk"] = "low"
 		return info.Normalize(), true, nil
