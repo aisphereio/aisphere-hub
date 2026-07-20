@@ -3,7 +3,7 @@ module github.com/aisphereio/aisphere-hub
 go 1.26.4
 
 require (
-	github.com/aisphereio/kernel v0.4.16
+	github.com/aisphereio/kernel v0.4.17
 	github.com/aisphereio/soft-serve v0.0.0-20260717135647-bbbe77ccb2ac
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	go.yaml.in/yaml/v3 v3.0.4
@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/aisphereio/aisphere-iam v0.1.8-0.20260720041937-fe8b7382063c
+	github.com/aisphereio/aisphere-iam v0.2.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
