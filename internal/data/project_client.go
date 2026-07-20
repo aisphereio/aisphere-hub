@@ -113,10 +113,9 @@ func (v *projectValidator) ValidateProject(ctx context.Context, orgID, projectID
 			"project_id and org_id are required for project validation")
 	}
 
-	project, err := v.client.GetProject(ctx, &projectv1.GetProjectRequest{
-		OrgId:     orgID,
-		ProjectId: projectID,
-	})
+project, err := v.client.GetProject(ctx, &projectv1.GetProjectRequest{
+			ProjectId: projectID,
+		})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
