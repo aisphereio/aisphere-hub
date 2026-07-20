@@ -478,15 +478,27 @@ func (uc *AuthzUsecase) WriteSchema(ctx context.Context, schema AuthzSchema) (er
 // "owner" relation must be defined in the SpiceDB schema for the
 // resource type.
 func (uc *AuthzUsecase) GrantOwner(ctx context.Context, resource AuthzObjectRef, subject AuthzSubjectRef) error {
-	_, err := uc.WriteRelationships(ctx, AuthzRelationship{
-		Resource: resource,
-		Relation: "owner",
-		Subject:  subject,
-	})
-	return err
-}
-
-// GrantRole writes a {resource}#{relation}@{subject} relationship. Use
+		_, err := uc.WriteRelationships(ctx, AuthzRelationship{
+			Resource: resource,
+			Relation: "owner",
+			Subject:  subject,
+		})
+		return err
+	}
+	
+	// GrantZone writes a {resource}#zone@{subject} relationship. Used by
+	// SkillUsecase.CreateSkill to link the skill to its Zone for governance
+	// override (Zone owner/admin can manage any skill in the zone).
+	func (uc *AuthzUsecase) GrantZone(ctx context.Context, resource AuthzObjectRef, subject AuthzSubjectRef) error {
+		_, err := uc.WriteRelationships(ctx, AuthzRelationship{
+			Resource: resource,
+			Relation: "zone",
+			Subject:  subject,
+		})
+		return err
+	}
+	
+	// GrantRole writes a {resource}#{relation}@{subject} relationship. Use
 // relation = "viewer" / "editor" / "admin" etc.
 func (uc *AuthzUsecase) GrantRole(ctx context.Context, resource AuthzObjectRef, relation string, subject AuthzSubjectRef) error {
 	if strings.TrimSpace(relation) == "" {

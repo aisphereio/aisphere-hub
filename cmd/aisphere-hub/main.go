@@ -107,9 +107,24 @@ func main() {
 		panic(err)
 	}
 	defer gitEngine.Close()
-	skillRepo := data.NewSkillRepo(resources)
-	pullRequestRepo := data.NewPullRequestRepo(resources)
-	skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
+skillRepo := data.NewSkillRepo(resources)
+		pullRequestRepo := data.NewPullRequestRepo(resources)
+		skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
+
+		// Attach optional project validator when authz is enabled.
+		if bc.Security.Authz.Enabled && !bc.Security.Authz.DevAllowAll {
+			projectValidator, err := data.NewProjectValidator(
+				bc.Security.Authz.IAMGRPC.Endpoint,
+				bc.Security.Authz.IAMGRPC.CallerService,
+				bc.Security.Authz.IAMGRPC.Insecure,
+			)
+			if err != nil {
+				logger.Error("project validator initialization failed", logx.Err(err))
+				panic(err)
+			}
+			defer projectValidator.Close()
+			skillUsecase.WithProjectValidator(projectValidator)
+		}
 	skillService := service.NewSkillService(skillUsecase)
 
 	// Repair durable owner relationships through IAM's runtime authorization API.
