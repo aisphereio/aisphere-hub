@@ -16,6 +16,22 @@
 - 修改 proto 后必须运行 `make api && make proto-check`。
 - 如果 Kernel generator 不能表达需求，先修 Kernel generator，再改 Hub 业务代码。
 
+### 2.1 HTTP JSON 编码契约（camelCase / snake_case）
+
+Kernel `transportx/http` 按 **请求 `Content-Type`** 选择 JSON codec，前端发送什么编码就必须能用什么编码解码，改 proto/HTTP handler 时不要破坏这个契约。
+
+| 请求 Content-Type | codec | 接受的字段名 |
+| --- | --- | --- |
+| `application/json` | `encoding/json`（stdlib） | **仅 snake_case**（只认 `*.pb.go` struct tag，如 `json:"org_id,omitempty"`） |
+| `application/protojson` | `google.golang.org/protobuf/encoding/protojson` | **camelCase 与 snake_case 都接受**（proto JSON 规范） |
+
+- 前端 `aisphere-hub-front` 的 orval 生成类型是 camelCase（`orgId`、`projectId`、`displayName`），`JSON.stringify` 原样发出 camelCase 字段名。前端 `hubFetch` 因此**强制**把带 body 请求的 `Content-Type` 覆盖为 `application/protojson`（覆盖而非默认，因为 orval 生成函数硬编码了 `application/json`）。详见前端 `src/lib/api/README.md` 与 `openwiki/operations/api-layer.md`。
+- 后端规则：
+  - 生成的 HTTP handler（`*_http.pb.go` 经 `ctx.Bind`）走 `transportx` codec 路由，按上表行为执行，无需手写。
+  - **禁止**新增用 `encoding/json` 直接解码 proto 请求体、却期望 camelCase 字段的手写 HTTP handler——前端发 camelCase 会静默丢字段（如 `orgId` 解析为空，触发 `ORG_ID_REQUIRED`）。如确需手写 handler，要么显式读 `application/protojson` 走 `protojson.Unmarshal`，要么要求前端按 snake_case 发送。
+  - 响应侧统一走 protojson 编码，输出是合法 JSON，前端 `JSON.parse` 无需改动。
+  - 改 proto 字段名后，前端契约受影响：snake_case（struct tag）和 camelCase（proto JSON 名）都会跟着变，跑 `scripts/sync-contract.mjs` + `npx orval --config orval.config.ts` 重新生成前端 client。
+
 ## 3. 访问控制硬规则
 
 Hub 是业务服务，不能只依赖 Gateway 防护。
@@ -35,7 +51,7 @@ Hub 支持两种认证模式（配置 `security.authn.mode`）：
 | `casdoor_jwt` | 后端用 `kernel/authn/oidcx` 再验一次 JWT | 当前测试阶段 |
 | `gateway_trusted` | 信任 Gateway 注入的 X-Aisphere-* headers | 生产推荐（需 mTLS/NetworkPolicy） |
 
-详见项目根 `docs/features/003-authn-full-flow.md`。
+详见 `docs/authn/`（`gateway-trusted-internal-token.md`、`casdoor-jwks-backend-verify.md`、`authn-auto-wiring.md`）。
 
 ## 5. Service/Biz/Data 分层
 
