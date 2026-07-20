@@ -92,7 +92,7 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	}
 	// SkillSet is intentionally a lightweight HTTP resource. It stores only
 	// ordered references to canonical Skills; version/release/runtime remain on Skill.
-	registerSkillSetHTTP(srv, resources)
+	registerSecuredSkillSetHTTP(srv, resources)
 	if git != nil {
 		srv.HandleProtocolPrefix(gitengine.HTTPPrefix, gitengine.DescribeProtocolRequest, git.Handler())
 	}
