@@ -62,3 +62,13 @@ spec:
             header: x-aisphere-external-name
           - claim: preferred_username
             header: x-aisphere-external-username
+          - claim: iss
+            header: x-aisphere-external-issuer
+          - claim: owner
+            header: x-aisphere-external-owner
+          - claim: id
+            header: x-aisphere-external-id
+          - claim: displayName
+            header: x-aisphere-external-display-name
+          - claim: scope
+            header: x-aisphere-external-scope
