@@ -2218,16 +2218,16 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xd2\x01\n" +
+	"updateTime\"\xcd\x01\n" +
 	"\x12CreateSkillRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1e\n" +
 	"\n" +
 	"visibility\x18\x04 \x01(\tR\n" +
-	"visibility\x12\"\n" +
+	"visibility\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x05 \x01(\tB\x03\xe0A\x02R\tprojectId\x12\x1a\n" +
+	"project_id\x18\x05 \x01(\tR\tprojectId\x12\x1a\n" +
 	"\x06org_id\x18\x06 \x01(\tB\x03\xe0A\x02R\x05orgId\"<\n" +
 	"\x13CreateSkillResponse\x12%\n" +
 	"\x05skill\x18\x01 \x01(\v2\x0f.skill.v1.SkillR\x05skill\"\x85\x01\n" +
@@ -2378,10 +2378,10 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\x18ListSkillReleasesRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"O\n" +
 	"\x19ListSkillReleasesResponse\x122\n" +
-	"\breleases\x18\x01 \x03(\v2\x16.skill.v1.SkillReleaseR\breleases2\x9e\x1b\n" +
-	"\fSkillService\x12\xc8\x01\n" +
-	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"|\x92\xf4\x18\\\b\x03\x12<\n" +
-	"\fcreate_skill\x12\x1dproject:{org_id}/{project_id}\x1a\vhub-service \x01\x1a\x1a\b\x01\x12\x10hub.skill.create\x1a\x04high\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
+	"\breleases\x18\x01 \x03(\v2\x16.skill.v1.SkillReleaseR\breleases2\x8e\x1b\n" +
+	"\fSkillService\x12\xb8\x01\n" +
+	"\vCreateSkill\x12\x1c.skill.v1.CreateSkillRequest\x1a\x1d.skill.v1.CreateSkillResponse\"l\x92\xf4\x18L\b\x03\x12,\n" +
+	"\fcreate_skill\x12\rzone:{org_id}\x1a\vhub-service \x01\x1a\x1a\b\x01\x12\x10hub.skill.create\x1a\x04high\x82\xd3\xe4\x93\x02\x16:\x01*b\x05skill\"\n" +
 	"/v1/skills\x12\xc8\x01\n" +
 	"\n" +
 	"ListSkills\x12\x1b.skill.v1.ListSkillsRequest\x1a\x1c.skill.v1.ListSkillsResponse\"\x7f\x92\xf4\x18i\b\x02\x1a\x17\b\x01\x12\x0ehub.skill.list\x1a\x03low2=handler batch-checks view permission for every concrete skill:\r\"\vhub-service\x82\xd3\xe4\x93\x02\f\x12\n" +

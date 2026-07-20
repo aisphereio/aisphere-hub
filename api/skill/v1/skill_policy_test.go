@@ -11,7 +11,7 @@ func TestGitNativeSkillContractUsesCanonicalPermissions(t *testing.T) {
 		permission string
 		resource   string
 	}{
-		"/skill.v1.SkillService/CreateSkill":       {permission: "create_skill", resource: "project:{org_id}/{project_id}"},
+		"/skill.v1.SkillService/CreateSkill":       {permission: "create_skill", resource: "zone:{org_id}"},
 		"/skill.v1.SkillService/UpdateSkill":       {permission: "edit", resource: "skill:{name}"},
 		"/skill.v1.SkillService/GetSkill":          {permission: "view", resource: "skill:{name}"},
 		"/skill.v1.SkillService/DeleteSkill":       {permission: "manage", resource: "skill:{name}"},

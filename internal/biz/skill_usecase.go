@@ -21,68 +21,108 @@ type SkillGitEngine interface {
 
 type SkillRelationships interface {
 	BatchCheck(context.Context, AuthzBatchCheckRequest) (AuthzBatchCheckResult, error)
+	WriteRelationships(ctx context.Context, rels ...AuthzRelationship) (AuthzWriteResult, error)
 	GrantOwner(context.Context, AuthzObjectRef, AuthzSubjectRef) error
+	GrantZone(context.Context, AuthzObjectRef, AuthzSubjectRef) error
 	GrantRole(context.Context, AuthzObjectRef, string, AuthzSubjectRef) error
 	RevokeAll(context.Context, AuthzObjectRef, AuthzSubjectRef) error
 	RevokeResource(context.Context, AuthzObjectRef) error
 	ReadRelationships(context.Context, AuthzRelationshipFilter, int, string) ([]AuthzRelationship, string, error)
 }
 
+// ProjectValidator validates that a project exists, is readable by the
+// caller, and is in ACTIVE status. When nil, project_id is stored as-is
+// without validation (best-effort classification).
+type ProjectValidator interface {
+	ValidateProject(ctx context.Context, orgID, projectID string) error
+}
+
 type SkillUsecase struct {
-	skills GitSkillRepository
-	pulls  PullRequestRepository
-	git    SkillGitEngine
-	rels   SkillRelationships
+	skills           GitSkillRepository
+	pulls            PullRequestRepository
+	git              SkillGitEngine
+	rels             SkillRelationships
+	projectValidator ProjectValidator
 }
 
 func NewSkillUsecase(skills GitSkillRepository, pulls PullRequestRepository, git SkillGitEngine, rels SkillRelationships) *SkillUsecase {
 	return &SkillUsecase{skills: skills, pulls: pulls, git: git, rels: rels}
 }
 
-func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Principal, in *GitSkill) (*GitSkill, error) {
-	if err := requirePrincipal(principal); err != nil {
-		return nil, err
-	}
-	if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) || strings.TrimSpace(in.OrgID) == "" || strings.TrimSpace(in.OrgID) != strings.TrimSpace(principal.OrgID) || strings.TrimSpace(in.ProjectID) == "" {
-		return nil, ErrSkillInvalidArgument
-	}
-	if uc.skills == nil || uc.git == nil || uc.rels == nil {
-		return nil, ErrSkillDependencyFailed
-	}
-	item := *in
-	item.Name = strings.TrimSpace(item.Name)
-	item.OrgID = strings.TrimSpace(item.OrgID)
-	item.OwnerID = principal.SubjectID
-	item.DefaultBranch = SkillDefaultBranch
-	item.Status = SkillStatusProvisioning
-	if item.Visibility == "" {
-		item.Visibility = SkillVisibilityPrivate
-	}
-	created, err := uc.skills.CreateSkill(ctx, &item)
-	if err != nil {
-		return nil, err
-	}
-	if err := uc.git.CreateRepository(ctx, item.Name); err != nil {
-		_ = uc.skills.DeleteSkill(context.WithoutCancel(ctx), item.Name)
-		return nil, fmt.Errorf("%w: create repository: %v", ErrSkillDependencyFailed, err)
-	}
-	resource := AuthzObjectRef{Type: "skill", ID: item.Name}
-	if err := uc.rels.GrantOwner(ctx, resource, principalSubject(principal)); err != nil {
-		compensateCtx := context.WithoutCancel(ctx)
-		_ = uc.git.DeleteRepository(compensateCtx, item.Name)
-		_ = uc.skills.DeleteSkill(compensateCtx, item.Name)
-		return nil, fmt.Errorf("%w: project owner: %v", ErrSkillDependencyFailed, err)
-	}
-	active, err := uc.skills.UpdateSkillStatus(ctx, created.Name, SkillStatusProvisioning, SkillStatusActive)
-	if err != nil {
-		compensateCtx := context.WithoutCancel(ctx)
-		_ = uc.rels.RevokeResource(compensateCtx, resource)
-		_ = uc.git.DeleteRepository(compensateCtx, item.Name)
-		_ = uc.skills.DeleteSkill(compensateCtx, item.Name)
-		return nil, err
-	}
-	return active, nil
+// WithProjectValidator sets an optional project validator. When set, non-empty
+// project_id values in CreateSkill are validated before creation.
+func (uc *SkillUsecase) WithProjectValidator(v ProjectValidator) *SkillUsecase {
+	uc.projectValidator = v
+	return uc
 }
+
+func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Principal, in *GitSkill) (*GitSkill, error) {
+		if err := requirePrincipal(principal); err != nil {
+			return nil, err
+		}
+		if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) || strings.TrimSpace(in.OrgID) == "" || strings.TrimSpace(in.OrgID) != strings.TrimSpace(principal.OrgID) {
+			return nil, ErrSkillInvalidArgument
+		}
+		if uc.skills == nil || uc.git == nil || uc.rels == nil {
+			return nil, ErrSkillDependencyFailed
+		}
+		item := *in
+		item.Name = strings.TrimSpace(item.Name)
+		item.OrgID = strings.TrimSpace(item.OrgID)
+		item.ProjectID = strings.TrimSpace(item.ProjectID)
+		item.OwnerID = principal.SubjectID
+		item.DefaultBranch = SkillDefaultBranch
+		item.Status = SkillStatusProvisioning
+		if item.Visibility == "" {
+			item.Visibility = SkillVisibilityPrivate
+		}
+		// Validate optional project_id. Non-empty project_id requires a
+		// configured validator; fail-closed when missing.
+		if item.ProjectID != "" {
+			if uc.projectValidator == nil {
+				return nil, ErrSkillDependencyFailed
+			}
+			if err := uc.projectValidator.ValidateProject(ctx, item.OrgID, item.ProjectID); err != nil {
+				return nil, err
+			}
+		}
+		created, err := uc.skills.CreateSkill(ctx, &item)
+		if err != nil {
+			return nil, err
+		}
+		if err := uc.git.CreateRepository(ctx, item.Name); err != nil {
+			_ = uc.skills.DeleteSkill(context.WithoutCancel(ctx), item.Name)
+			return nil, fmt.Errorf("%w: create repository: %v", ErrSkillDependencyFailed, err)
+		}
+		resource := AuthzObjectRef{Type: "skill", ID: item.Name}
+		// Write owner and zone relationships atomically in a single call.
+		if _, err := uc.rels.WriteRelationships(ctx,
+			AuthzRelationship{
+				Resource: resource,
+				Relation: "owner",
+				Subject:  principalSubject(principal),
+			},
+			AuthzRelationship{
+				Resource: resource,
+				Relation: "zone",
+				Subject:  AuthzSubjectRef{Type: "zone", ID: item.OrgID},
+			},
+		); err != nil {
+			compensateCtx := context.WithoutCancel(ctx)
+			_ = uc.git.DeleteRepository(compensateCtx, item.Name)
+			_ = uc.skills.DeleteSkill(compensateCtx, item.Name)
+			return nil, fmt.Errorf("%w: project relationships: %v", ErrSkillDependencyFailed, err)
+		}
+		active, err := uc.skills.UpdateSkillStatus(ctx, created.Name, SkillStatusProvisioning, SkillStatusActive)
+		if err != nil {
+			compensateCtx := context.WithoutCancel(ctx)
+			_ = uc.rels.RevokeResource(compensateCtx, resource)
+			_ = uc.git.DeleteRepository(compensateCtx, item.Name)
+			_ = uc.skills.DeleteSkill(compensateCtx, item.Name)
+			return nil, err
+		}
+		return active, nil
+	}
 
 func (uc *SkillUsecase) GetSkill(ctx context.Context, name string) (*GitSkill, error) {
 	return uc.skills.GetSkill(ctx, strings.TrimSpace(name))
