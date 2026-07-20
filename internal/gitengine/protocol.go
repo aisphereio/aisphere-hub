@@ -29,7 +29,7 @@ func DescribeProtocolRequest(r *http.Request) (khttp.ProtocolRequest, error) {
 	}
 	request := r.Clone(r.Context())
 	urlCopy := *r.URL
-	urlCopy.Path = strings.TrimPrefix(urlCopy.Path, "/"+HTTPPrefix)
+	urlCopy.Path = strings.TrimPrefix(urlCopy.Path, HTTPPrefix)
 	if urlCopy.Path == "" {
 		urlCopy.Path = "/"
 	}
