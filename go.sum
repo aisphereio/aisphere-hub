@@ -27,8 +27,8 @@ github.com/aisphereio/aisphere-iam v0.2.0 h1:CPET2mbZjG85dPynFOvBkel4PV02O6kTz0V
 github.com/aisphereio/aisphere-iam v0.2.0/go.mod h1:1pn4XBqxYU38ysBbelokJvK9cwMFo78wBiO5Li9yvPc=
 github.com/aisphereio/kernel v0.4.17 h1:guRKINSakdqotLGEbI9qYvwwLo/PPCurcDS5Aw3f614=
 github.com/aisphereio/kernel v0.4.17/go.mod h1:q9OWv0BtDyfWIGxBgiNPM1MUI479Y6o9W8Sjo16p5II=
-github.com/aisphereio/soft-serve v0.0.0-20260717135647-bbbe77ccb2ac h1:NBPeajxTnlViScQiUtQPLmexbd/WAYwjANmWTvWrKmU=
-github.com/aisphereio/soft-serve v0.0.0-20260717135647-bbbe77ccb2ac/go.mod h1:kY0+O2kxZyMkOuW/SS+RmpOxFoI42luliUhXNv6h8vw=
+github.com/aisphereio/soft-serve v0.0.0-20260721001449-d322c25fba60 h1:XsaO4tl/c93CFiK9zaUm84lK3BheTbnKP2fJYM/UkIY=
+github.com/aisphereio/soft-serve v0.0.0-20260721001449-d322c25fba60/go.mod h1:kY0+O2kxZyMkOuW/SS+RmpOxFoI42luliUhXNv6h8vw=
 github.com/alicebob/miniredis/v2 v2.38.0 h1:nZAzCR+Lj+Vxk4ZXzm2NuKq2O33RXj1XxJ2e2uP9jiw=
 github.com/alicebob/miniredis/v2 v2.38.0/go.mod h1:TcL7YfarKPGDAthEtl5NBeHZfeUQj6OXMm/+iu5cLMM=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be h1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=
