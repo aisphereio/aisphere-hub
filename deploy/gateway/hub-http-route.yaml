@@ -1,5 +1,5 @@
 # Hub API HTTPRoute — routes /v1/authn/*, /v1/authz/*, /v1/skills/*,
-# /v1/audit/*, /v1/users/* to aisphere-hub:18001.
+# /v1/skillsets/*, /v1/audit/*, /v1/users/* to aisphere-hub:18001.
 #
 # Public routes (login, exchange, refresh) are in hub-api-public-route and
 # do NOT have OIDC protection. Protected routes are in hub-api-protected-route
@@ -73,6 +73,9 @@ spec:
         - path:
             type: PathPrefix
             value: /v1/skills/
+        - path:
+            type: PathPrefix
+            value: /v1/skillsets/
         - path:
             type: PathPrefix
             value: /v1/audit/
