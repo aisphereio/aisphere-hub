@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	kubernetesv1 "github.com/aisphereio/aisphere-hub/api/kubernetes/v1"
 	"github.com/aisphereio/aisphere-hub/internal/biz"
@@ -41,8 +42,23 @@ func (s *ClusterService) RegisterHTTPServer(server *khttp.Server) {
 // usecase. owner_type/owner_id in the request override the principal-derived
 // owner only when non-empty (service-account callers).
 func (s *ClusterService) CreateCluster(ctx context.Context, req *kubernetesv1.CreateClusterRequest) (*kubernetesv1.CreateClusterResponse, error) {
-	cred, err := credentialInputToKubernetesx(req.GetCredential(), req.GetServerUrl())
+	credIn := req.GetCredential()
+	fmt.Println("DEBUG CreateCluster: credential-nil=", credIn == nil, "server_url=", req.GetServerUrl(), "name=", req.GetName(), "org=", req.GetOrgId())
+	if credIn != nil {
+		switch src := credIn.GetSource().(type) {
+		case *kubernetesv1.ClusterCredentialInput_Kubeconfig:
+			fmt.Println("DEBUG CreateCluster: oneof=Kubeconfig len=", len(src.Kubeconfig))
+		case *kubernetesv1.ClusterCredentialInput_ServiceAccount:
+			fmt.Println("DEBUG CreateCluster: oneof=ServiceAccount")
+		case *kubernetesv1.ClusterCredentialInput_InCluster:
+			fmt.Println("DEBUG CreateCluster: oneof=InCluster")
+		default:
+			fmt.Println("DEBUG CreateCluster: oneof=NONE type=", fmt.Sprintf("%T", src))
+		}
+	}
+	cred, err := credentialInputToKubernetesx(credIn, req.GetServerUrl())
 	if err != nil {
+		fmt.Println("DEBUG CreateCluster: credentialInputToKubernetesx err=", err)
 		return nil, err
 	}
 	principal := principalFromContext(ctx)

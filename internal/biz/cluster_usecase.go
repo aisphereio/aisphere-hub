@@ -127,10 +127,19 @@ func (uc *ClusterUsecase) CreateCluster(ctx context.Context, principal authn.Pri
 		return nil, fmt.Errorf("%w: name, org_id, server_url are required", ErrClusterInvalidArgument)
 	}
 	if err := cred.Validate(); err != nil {
+		uc.log.WithContext(ctx).Warn("cluster create: cred.Validate failed",
+			logx.String("kind", string(cred.Kind)),
+			logx.Int("kubeconfig_len", len(cred.Kubeconfig)),
+			logx.String("host", cred.Host),
+			logx.Int("token_len", len(cred.Token)),
+			logx.Int("ca_len", len(cred.CACert)),
+			logx.Err(err))
 		return nil, fmt.Errorf("%w: credential: %v", ErrClusterCredentialInvalid, err)
 	}
 	// Step 1: SSRF validate server_url.
 	if _, err := uc.endpoint.Validate(ctx, c.ServerURL); err != nil {
+		uc.log.WithContext(ctx).Warn("cluster create: endpoint.Validate failed",
+			logx.String("server_url", c.ServerURL), logx.Err(err))
 		return nil, err
 	}
 	subject, err := canonicalSubject(principal)
