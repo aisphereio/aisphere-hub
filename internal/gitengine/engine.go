@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/kernel/authn"
@@ -227,11 +229,109 @@ func (e *Engine) CreateSkill(ctx context.Context, skill *biz.GitSkill) (*biz.Git
 	item.RepositoryID = canonical.ID
 	item.CreateTime = canonical.CreatedAt
 	item.UpdateTime = canonical.UpdatedAt
+
+	// Seed an initial commit on the default branch so the skill is immediately
+	// cloneable, has a materialized HEAD, and can host pull requests. The biz
+	// layer does not compensate when CreateSkill fails, so on seed error we
+	// delete the half-created repository to avoid orphans.
+	if seedErr := e.seedInitialCommit(ctx, item.Name, &item); seedErr != nil {
+		compensateCtx := context.WithoutCancel(ctx)
+		_ = e.backend.DeleteRepository(e.operationContext(compensateCtx), item.Name)
+		return nil, fmt.Errorf("%w: seed initial commit: %v", biz.ErrSkillDependencyFailed, seedErr)
+	}
+
 	return &item, nil
 }
 
 func (e *Engine) DeleteRepository(ctx context.Context, name string) error {
 	return e.backend.DeleteRepository(softproto.WithUserContext(e.operationContext(ctx), e.owner), name)
+}
+
+// seedInitialCommit writes an initial commit (SKILL.md + skill.yaml) to the
+// default branch of a freshly created skill repository and points HEAD at it.
+// It uses raw git plumbing (hash-object / mktree / commit-tree / update-ref /
+// symbolic-ref) against the bare repo path, mirroring the Merge helper's
+// exec-against-repo.Path pattern. soft-serve/git-module exposes no high-level
+// bare-repo commit API (its Commit runs `git commit`, which needs an index).
+func (e *Engine) seedInitialCommit(ctx context.Context, name string, skill *biz.GitSkill) error {
+	repo, err := e.open(ctx, name)
+	if err != nil {
+		return err
+	}
+	gitDir := repo.Path
+	skillMd, skillYaml := scaffoldContent(skill)
+
+	mdSha, err := runGitRepo(ctx, gitDir, strings.NewReader(skillMd), "hash-object", "-w", "--stdin")
+	if err != nil {
+		return fmt.Errorf("write SKILL.md blob: %w", err)
+	}
+	yamlSha, err := runGitRepo(ctx, gitDir, strings.NewReader(skillYaml), "hash-object", "-w", "--stdin")
+	if err != nil {
+		return fmt.Errorf("write skill.yaml blob: %w", err)
+	}
+
+	// mktree reads "<mode> <type> <sha>\t<name>" lines from stdin.
+	treeInput := fmt.Sprintf("100644 blob %s\tSKILL.md\n100644 blob %s\tskill.yaml\n", mdSha, yamlSha)
+	treeSha, err := runGitRepo(ctx, gitDir, strings.NewReader(treeInput), "mktree")
+	if err != nil {
+		return fmt.Errorf("build tree: %w", err)
+	}
+
+	commitMsg := fmt.Sprintf("Initial scaffold\n\nCreated by %s", skill.OwnerID)
+	now := time.Now().UTC().Format(time.RFC3339)
+	env := []string{
+		"GIT_AUTHOR_NAME=Aisphere Hub", "GIT_AUTHOR_EMAIL=noreply@aisphere.io",
+		"GIT_AUTHOR_DATE=" + now,
+		"GIT_COMMITTER_NAME=Aisphere Hub", "GIT_COMMITTER_EMAIL=noreply@aisphere.io",
+		"GIT_COMMITTER_DATE=" + now,
+	}
+	commitSha, err := runGitRepoEnv(ctx, gitDir, nil, env, "commit-tree", treeSha, "-m", commitMsg)
+	if err != nil {
+		return fmt.Errorf("create commit: %w", err)
+	}
+
+	branch := biz.SkillDefaultBranch // "main"
+	if _, err := runGitRepo(ctx, gitDir, nil, "update-ref", "refs/heads/"+branch, commitSha); err != nil {
+		return fmt.Errorf("update %s ref: %w", branch, err)
+	}
+	if _, err := runGitRepo(ctx, gitDir, nil, "symbolic-ref", "HEAD", "refs/heads/"+branch); err != nil {
+		return fmt.Errorf("point HEAD at %s: %w", branch, err)
+	}
+	return nil
+}
+
+// runGitRepo runs a git plumbing command against a bare repo path (GIT_DIR)
+// and returns trimmed stdout. stdin may be nil.
+func runGitRepo(ctx context.Context, gitDir string, stdin io.Reader, args ...string) (string, error) {
+	return runGitRepoEnv(ctx, gitDir, stdin, nil, args...)
+}
+
+// runGitRepoEnv is runGitRepo with extra environment variables (for
+// GIT_AUTHOR_*/GIT_COMMITTER_* identity on commit-tree).
+func runGitRepoEnv(ctx context.Context, gitDir string, stdin io.Reader, env []string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"--git-dir", gitDir}, args...)...)
+	if stdin != nil {
+		cmd.Stdin = stdin
+	}
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		stderr := ""
+		if ee, ok := err.(*exec.ExitError); ok {
+			stderr = strings.TrimSpace(string(ee.Stderr))
+		}
+		return "", fmt.Errorf("git %s: %w%s", strings.Join(args, " "), err, nonemptyPrefix(stderr))
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func nonemptyPrefix(s string) string {
+	if s == "" {
+		return ""
+	}
+	return " (" + s + ")"
 }
 
 func (e *Engine) ResolveRef(ctx context.Context, name, ref string) (string, error) {
