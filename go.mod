@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/aisphereio/kernel v0.4.17
-	github.com/aisphereio/soft-serve v0.0.0-20260721003851-0306cce0db48
+	github.com/aisphereio/soft-serve v0.0.0-20260721010705-4047afdf7dcc
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	go.yaml.in/yaml/v3 v3.0.4
 	google.golang.org/genproto/googleapis/api v0.0.0-20260511170946-3700d4141b60
