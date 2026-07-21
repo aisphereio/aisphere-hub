@@ -143,11 +143,13 @@ func (uc *NamespaceUsecase) CreateNamespace(ctx context.Context, principal authn
 		return nil, err
 	}
 
-	// Step 4: SpiceDB owner + parent relationships.
+	// Step 4: SpiceDB owner + cluster relationships (design §7.2.2 line 993:
+	// k8s_namespace:{id}#cluster@k8s_cluster:{cluster_id} — the relation is
+	// "cluster", not "parent", matching the SpiceDB schema definition).
 	resource := namespaceResource(created.ID)
 	if _, err := uc.rels.WriteRelationships(ctx,
 		AuthzRelationship{Resource: resource, Relation: "owner", Subject: subject},
-		AuthzRelationship{Resource: resource, Relation: "parent", Subject: AuthzSubjectRef{Type: "k8s_cluster", ID: created.ClusterID}},
+		AuthzRelationship{Resource: resource, Relation: "cluster", Subject: AuthzSubjectRef{Type: "k8s_cluster", ID: created.ClusterID}},
 	); err != nil {
 		compensateCtx := context.WithoutCancel(ctx)
 		_ = uc.rels.RevokeResource(compensateCtx, resource)
