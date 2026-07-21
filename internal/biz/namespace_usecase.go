@@ -328,8 +328,9 @@ func (uc *NamespaceUsecase) UpdateNamespaceVisibility(ctx context.Context, princ
 	}
 
 	// Step 2: synchronous SpiceDB projection. The wildcard subject represents
-	// "all authenticated principals" for PUBLIC visibility.
-	wildcard := AuthzSubjectRef{Type: "user", Relation: "..."}
+	// "all users" for PUBLIC visibility — SpiceDB subject `user:*` (design
+	// §7.5 line 1010: k8s_namespace:{id}#viewer@user:*).
+	wildcard := AuthzSubjectRef{Type: "user", ID: "*"}
 	resource := namespaceResource(id)
 	if desired == NamespaceVisibilityPublic {
 		if _, err := uc.rels.WriteRelationships(ctx, AuthzRelationship{
@@ -341,11 +342,11 @@ func (uc *NamespaceUsecase) UpdateNamespaceVisibility(ctx context.Context, princ
 		}
 	} else {
 		if _, err := uc.rels.DeleteRelationships(ctx, AuthzRelationshipFilter{
-			ResourceType: "k8s_namespace",
-			ResourceID:   id,
-			Relation:     "viewer",
-			SubjectType:  "user",
-			SubjectRelation: "...",
+			ResourceType:    "k8s_namespace",
+			ResourceID:      id,
+			Relation:        "viewer",
+			SubjectType:     "user",
+			SubjectID:       "*",
 		}); err != nil {
 			uc.compensateVisibility(ctx, id, ns.Visibility, err)
 			return uc.namespaces.GetNamespace(ctx, id)
@@ -368,13 +369,21 @@ func (uc *NamespaceUsecase) UpdateNamespaceVisibility(ctx context.Context, princ
 
 // compensateVisibility reverses the DB visibility to the prior value and
 // stamps SYNC_FAILED so the reconciler can retry (design §7.5.3 compensate).
+// The compensating write reloads the current revision (the synchronous path
+// already bumped it in step 1) so CAS succeeds; on a concurrent writer the
+// reconciler still converges the row on its next tick.
 func (uc *NamespaceUsecase) compensateVisibility(ctx context.Context, id, priorVisibility string, cause error) {
 	compensateCtx := context.WithoutCancel(ctx)
-	_, err := uc.namespaces.UpdateNamespaceVisibility(compensateCtx, id, 0 /* skip CAS by loading first */, priorVisibility, VisibilitySyncFailed)
+	current, err := uc.namespaces.GetNamespace(compensateCtx, id)
 	if err != nil {
-		// CAS with revision 0 won't match; do a best-effort unconditional stamp.
-		uc.log.WithContext(ctx).Warn("visibility compensate CAS failed; stamping SYNC_FAILED unconditionally",
+		uc.log.WithContext(ctx).Warn("visibility compensate: reload failed; reconciler will converge",
 			logx.String("namespace_id", id), logx.Err(err))
+		return
+	}
+	if _, err := uc.namespaces.UpdateNamespaceVisibility(compensateCtx, id, current.Revision, priorVisibility, VisibilitySyncFailed); err != nil {
+		uc.log.WithContext(ctx).Warn("visibility compensate CAS failed; reconciler will converge",
+			logx.String("namespace_id", id), logx.Err(err))
+		return
 	}
 	uc.log.WithContext(ctx).Warn("visibility SpiceDB projection failed; marked SYNC_FAILED for reconciler",
 		logx.String("namespace_id", id), logx.Err(cause))
