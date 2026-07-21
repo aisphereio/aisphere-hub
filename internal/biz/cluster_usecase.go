@@ -143,23 +143,51 @@ func (uc *ClusterUsecase) CreateCluster(ctx context.Context, principal authn.Pri
 	c.OwnerID = subject.ID
 	c.CreatedByType = subject.Type
 	c.CreatedBy = subject.ID
-
-	// Step 2: store credential with the cluster's ID (revision=1 for create).
-	locator, err := uc.creds.Put(ctx, c.ID, 1, cred)
-	if err != nil {
-		return nil, fmt.Errorf("store credential: %w", err)
-	}
-	c.CredentialRef = locator.CredentialRef
-	c.CredentialRevision = locator.CredentialRevision
 	c.Status = ClusterStatusCreating
 	c.Revision = 1
 
-	// Step 3: INSERT cluster row. Compensate credStore.Delete on failure.
-	created, err := uc.clusters.CreateCluster(ctx, c)
+	// Steps 2 + 3 run in a single DB transaction. Ordering constraint:
+	// k8s_cluster_credentials.cluster_id has a FK to k8s_clusters(id), and
+	// Postgres checks FKs immediately (even inside a tx), so the cluster row
+	// MUST be inserted before the credential row. But k8s_clusters.credential_ref
+	// is NOT NULL, so the ref must be allocated first. Safe order:
+	//   (a) NewCredentialRef → ref (no DB write)
+	//   (b) set c.CredentialRef + c.CredentialRevision=1, INSERT cluster row
+	//   (c) PutWithRef writes the credential row in the same tx (FK satisfied)
+	// InTx injects the tx into ctx so both clusterRepo.CreateCluster and
+	// credStore.PutWithRef pick it up via DB.GORM(ctx) (design §5.7.2).
+	ref, err := uc.creds.NewCredentialRef()
 	if err != nil {
-		compensateCtx := context.WithoutCancel(ctx)
-		_ = uc.creds.Delete(compensateCtx, locator.CredentialRef)
-		return nil, err
+		return nil, fmt.Errorf("allocate credential ref: %w", err)
+	}
+	c.CredentialRef = ref
+	c.CredentialRevision = 1
+
+	var (
+		locator CredentialLocator
+		created *Cluster
+		txErr   error
+	)
+	txErr = uc.clusters.InTx(ctx, func(txCtx context.Context) error {
+		// Step 2: INSERT cluster row first so the credential row's FK is
+		// satisfied when PutWithRef runs. On tx failure the whole tx rolls
+		// back, so no explicit compensate needed for these two writes.
+		created, err = uc.clusters.CreateCluster(txCtx, c)
+		if err != nil {
+			return err
+		}
+
+		// Step 3: store credential (revision=1 for create) with the ref we
+		// pre-allocated. Same tx → atomic with the cluster INSERT.
+		loc, perr := uc.creds.PutWithRef(txCtx, c.ID, ref, 1, cred)
+		if perr != nil {
+			return fmt.Errorf("store credential: %w", perr)
+		}
+		locator = loc
+		return nil
+	})
+	if txErr != nil {
+		return nil, txErr
 	}
 
 	// Step 4: write SpiceDB relationships (zone + owner). Compensate on failure.

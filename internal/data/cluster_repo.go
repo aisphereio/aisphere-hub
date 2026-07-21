@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aisphereio/aisphere-hub/internal/biz"
+	"github.com/aisphereio/kernel/dbx"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -24,9 +25,10 @@ import (
 // partial unique indexes. Writes that should fail on conflict rely on those
 // partial unique indexes (uq_k8s_clusters_org_name, uq_k8s_clusters_uid).
 type clusterRepo struct {
-	db    func(context.Context) *gorm.DB
-	newID func() string
-	now   func() time.Time
+	db     func(context.Context) *gorm.DB
+	dbx    dbx.DB // for InTx (transaction support); nil in tests
+	newID  func() string
+	now    func() time.Time
 }
 
 // NewClusterRepo builds a biz.ClusterRepository from Resources.
@@ -38,6 +40,7 @@ func NewClusterRepo(resources *Resources) biz.ClusterRepository {
 			}
 			return resources.DB.GORM(ctx)
 		},
+		dbx:   resources.DB,
 		newID: func() string { return uuid.NewString() },
 		now:   func() time.Time { return time.Now().UTC() },
 	}
@@ -50,6 +53,32 @@ func newClusterRepoForDB(db *gorm.DB) *clusterRepo {
 		newID: func() string { return uuid.NewString() },
 		now:   func() time.Time { return time.Now().UTC() },
 	}
+}
+
+// InTx runs fn inside a single DB transaction. The tx is injected into the
+// context passed to fn via dbx.InjectTx, so any other repo/store that reads
+// DB.GORM(ctx) (e.g. the AEAD credStore) participates in the same tx. Used by
+// biz.CreateCluster to atomically insert the cluster row + its credential row
+// (the credential row has a FK to k8s_clusters). When dbx is nil (tests),
+// fn runs against the bare db closure (no transaction wrapping).
+func (r *clusterRepo) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	if r.dbx == nil {
+		// Test path: no dbx.DB, just run against the bare closure.
+		return fn(ctx)
+	}
+	tx, err := r.dbx.BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+	// Inject the tx into ctx so credStore.Put / clusterRepo.CreateCluster pick
+	// it up via DB.GORM(ctx) (db.GORM checks ctxKeyTx, see dbx.GORM impl).
+	txCtx := dbx.InjectTx(ctx, tx)
+	runErr := fn(txCtx)
+	if runErr != nil {
+		_ = tx.Rollback()
+		return runErr
+	}
+	return tx.Commit()
 }
 
 // k8sClusterModel maps to k8s_clusters (migration §8.1). labels_json is JSONB;

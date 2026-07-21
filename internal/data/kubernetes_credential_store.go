@@ -94,9 +94,29 @@ func NewCredentialStore(db func(context.Context) *gorm.DB, cfg conf.EncryptionCo
 // Returns the Locator so biz can store credential_ref + credential_revision.
 // credentialRevision is the *target* revision — Put does not increment it.
 func (s *aeadCredentialStore) Put(ctx context.Context, clusterID string, credentialRevision int64, value kubernetesx.Credential) (biz.CredentialLocator, error) {
-	ref, err := newCredentialRef()
+	ref, err := s.NewCredentialRef()
 	if err != nil {
 		return biz.CredentialLocator{}, fmt.Errorf("generate credential ref: %w", err)
+	}
+	return s.PutWithRef(ctx, clusterID, ref, credentialRevision, value)
+}
+
+// NewCredentialRef allocates a fresh UUIDv4 ref without persisting anything.
+// Used by CreateCluster so the cluster row can be INSERTed first inside a tx
+// (its credential_ref is NOT NULL), then PutWithRef writes the credential row
+// in the same tx — satisfying the FK (design §5.7.2).
+func (s *aeadCredentialStore) NewCredentialRef() (string, error) {
+	return newCredentialRef()
+}
+
+// PutWithRef is Put with a caller-allocated ref. The caller must ensure the
+// ref is unique (UUID). Used by CreateCluster so the k8s_clusters row (whose
+// credential_ref is NOT NULL) can be INSERTed first with the ref, satisfying
+// the k8s_cluster_credentials.cluster_id FK when PutWithRef runs in the same
+// transaction.
+func (s *aeadCredentialStore) PutWithRef(ctx context.Context, clusterID, ref string, credentialRevision int64, value kubernetesx.Credential) (biz.CredentialLocator, error) {
+	if ref == "" {
+		return biz.CredentialLocator{}, errors.New("kubernetes credStore: PutWithRef requires non-empty ref")
 	}
 	plaintext, err := marshalCredential(value)
 	if err != nil {

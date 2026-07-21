@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -41,6 +42,12 @@ func newFakeClusterRepo() *fakeClusterRepo {
 		softDeleted: map[string]bool{},
 		nsCount:     map[string]int64{},
 	}
+}
+
+func (r *fakeClusterRepo) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	// Tests don't use a real DB; just run fn against the bare ctx so the
+	// CreateCluster step-2/step-3 sequence executes without a transaction.
+	return fn(ctx)
 }
 
 func (r *fakeClusterRepo) CreateCluster(_ context.Context, c *Cluster) (*Cluster, error) {
@@ -153,25 +160,40 @@ func (r *fakeClusterRepo) CountNamespacesForCluster(_ context.Context, clusterID
 // fakeCredStore is a biz.ClusterCredentialStore stand-in. Put records refs so
 // tests assert compensate Delete; Get returns whatever was Put; Delete removes.
 type fakeCredStore struct {
-	mu        sync.Mutex
-	putCalls  int
-	deletes   []string
-	rows      map[string]kubernetesx.Credential
-	putErr    error
+	mu         sync.Mutex
+	putCalls   int
+	putErr     error
+	refCounter int
+	deletes    []string
+	rows       map[string]kubernetesx.Credential
 }
 
 func newFakeCredStore() *fakeCredStore {
 	return &fakeCredStore{rows: map[string]kubernetesx.Credential{}}
 }
 
-func (s *fakeCredStore) Put(_ context.Context, clusterID string, rev int64, value kubernetesx.Credential) (CredentialLocator, error) {
+func (s *fakeCredStore) NewCredentialRef() (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.refCounter++
+	return fmt.Sprintf("ref-%d", s.refCounter), nil
+}
+
+func (s *fakeCredStore) Put(ctx context.Context, clusterID string, rev int64, value kubernetesx.Credential) (CredentialLocator, error) {
+	ref, err := s.NewCredentialRef()
+	if err != nil {
+		return CredentialLocator{}, err
+	}
+	return s.PutWithRef(ctx, clusterID, ref, rev, value)
+}
+
+func (s *fakeCredStore) PutWithRef(_ context.Context, clusterID, ref string, rev int64, value kubernetesx.Credential) (CredentialLocator, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.putErr != nil {
 		return CredentialLocator{}, s.putErr
 	}
 	s.putCalls++
-	ref := "ref-" + clusterID + "-rev" + revString(rev)
 	s.rows[ref] = value
 	return CredentialLocator{ClusterID: clusterID, CredentialRef: ref, CredentialRevision: rev}, nil
 }
@@ -299,19 +321,6 @@ func (r *fakeClusterRels) LookupResources(context.Context, AuthzLookupResourcesR
 }
 func (r *fakeClusterRels) ReadRelationships(context.Context, AuthzRelationshipFilter, int, string) ([]AuthzRelationship, string, error) {
 	return nil, "", nil
-}
-
-// revString is a tiny int→string helper to avoid strconv import.
-func revString(n int64) string {
-	if n == 0 {
-		return "0"
-	}
-	var b []byte
-	for n > 0 {
-		b = append([]byte{byte('0' + n%10)}, b...)
-		n /= 10
-	}
-	return string(b)
 }
 
 func testClusterUsecase(t *testing.T, repo *fakeClusterRepo, store *fakeCredStore, provider *fakeProvider, rels *fakeClusterRels, outbox *fakeOutbox) *ClusterUsecase {
