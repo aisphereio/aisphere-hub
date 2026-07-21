@@ -67,12 +67,22 @@ func main() {
 	bootstrapCtx = logx.Inject(bootstrapCtx, logger, logx.String("service", bc.Service.Name), logx.String("version", bc.Service.Version))
 	bootstrapCtx = metricsx.Inject(bootstrapCtx, metrics)
 
+	// The shared database requires deterministic migration ordering. Preserve
+	// Hub's migration config, prevent NewResources from applying it early, then
+	// run Soft Serve migrations before Kernel migrationx below.
+	hubMigration := bc.Data.Database.Migration
+	bc.Data.Database.Migration.Enabled = false
+
 	resources, cleanup, err := data.NewResources(bootstrapCtx, bc)
 	if err != nil {
 		logger.Error("resource initialization failed", logx.Err(err))
 		panic(err)
 	}
 	defer cleanup()
+	if err := data.ApplyStorageMigrations(bootstrapCtx, resources.DB, hubMigration); err != nil {
+		logger.Error("storage migration failed", logx.Err(err))
+		panic(err)
+	}
 
 	// Wire the authn module.
 	authnRepo := data.NewAuthnRepo(resources, bc.Security.Authn)
