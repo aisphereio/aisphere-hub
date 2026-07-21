@@ -11,7 +11,7 @@ import (
 
 func TestSkillUsecaseCreateActivatesRepositoryAndOwner(t *testing.T) {
 	skills := newMemoryGitSkillRepo()
-	git := &fakeSkillGitEngine{}
+	git := &fakeSkillGitEngine{skills: skills}
 	rels := &fakeSkillRelationships{}
 	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), git, rels)
 	principal := authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}
@@ -40,7 +40,7 @@ func TestSkillUsecaseCreateActivatesRepositoryAndOwner(t *testing.T) {
 
 func TestSkillUsecaseCreateCompensatesAfterRelationshipFailure(t *testing.T) {
 	skills := newMemoryGitSkillRepo()
-	git := &fakeSkillGitEngine{}
+	git := &fakeSkillGitEngine{skills: skills}
 	rels := &fakeSkillRelationships{writeErr: errors.New("iam unavailable")}
 	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), git, rels)
 
@@ -58,7 +58,7 @@ func TestSkillUsecaseCreateCompensatesAfterRelationshipFailure(t *testing.T) {
 
 func TestSkillUsecaseCreateSucceedsWithoutProject(t *testing.T) {
 	skills := newMemoryGitSkillRepo()
-	git := &fakeSkillGitEngine{}
+	git := &fakeSkillGitEngine{skills: skills}
 	rels := &fakeSkillRelationships{}
 	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), git, rels)
 	created, err := uc.CreateSkill(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}, &GitSkill{Name: "search", OrgID: "org-1"})
@@ -285,23 +285,31 @@ func (r *memoryPullRequestRepo) MergePullRequest(_ context.Context, skill, id, e
 }
 
 type fakeSkillGitEngine struct {
+	skills  *memoryGitSkillRepo
 	created map[string]bool
 	deleted map[string]bool
 	refs    map[string]string
 }
 
-func (e *fakeSkillGitEngine) CreateRepository(_ context.Context, name string) error {
+func (e *fakeSkillGitEngine) CreateSkill(ctx context.Context, in *GitSkill) (*GitSkill, error) {
 	if e.created == nil {
 		e.created = map[string]bool{}
 	}
-	e.created[name] = true
-	return nil
+	e.created[in.Name] = true
+	if e.skills != nil {
+		return e.skills.CreateSkill(ctx, in)
+	}
+	out := *in
+	return &out, nil
 }
 func (e *fakeSkillGitEngine) DeleteRepository(_ context.Context, name string) error {
 	if e.deleted == nil {
 		e.deleted = map[string]bool{}
 	}
 	e.deleted[name] = true
+	if e.skills != nil {
+		delete(e.skills.items, name)
+	}
 	return nil
 }
 func (e *fakeSkillGitEngine) ResolveRef(_ context.Context, skill, ref string) (string, error) {
@@ -315,54 +323,54 @@ func (e *fakeSkillGitEngine) ListReleases(context.Context, string) ([]SkillRelea
 }
 
 type fakeSkillRelationships struct {
-		ownerResource AuthzObjectRef
-		ownerSubject  AuthzSubjectRef
-		zoneResource  AuthzObjectRef
-		zoneSubject   AuthzSubjectRef
-		written       []AuthzRelationship
-		writeErr      error
-		grantOwnerErr error
-		grantZoneErr  error
-		viewAllowed   map[string]bool
-	}
+	ownerResource AuthzObjectRef
+	ownerSubject  AuthzSubjectRef
+	zoneResource  AuthzObjectRef
+	zoneSubject   AuthzSubjectRef
+	written       []AuthzRelationship
+	writeErr      error
+	grantOwnerErr error
+	grantZoneErr  error
+	viewAllowed   map[string]bool
+}
 
 func (r *fakeSkillRelationships) BatchCheck(_ context.Context, req AuthzBatchCheckRequest) (AuthzBatchCheckResult, error) {
-		decisions := make([]AuthzDecision, 0, len(req.Checks))
-		for _, check := range req.Checks {
-			allowed := r.viewAllowed == nil || r.viewAllowed[check.Resource.ID]
-			decisions = append(decisions, AuthzDecision{Allowed: allowed})
-		}
-		return AuthzBatchCheckResult{Decisions: decisions}, nil
+	decisions := make([]AuthzDecision, 0, len(req.Checks))
+	for _, check := range req.Checks {
+		allowed := r.viewAllowed == nil || r.viewAllowed[check.Resource.ID]
+		decisions = append(decisions, AuthzDecision{Allowed: allowed})
 	}
+	return AuthzBatchCheckResult{Decisions: decisions}, nil
+}
 
 func (r *fakeSkillRelationships) WriteRelationships(_ context.Context, rels ...AuthzRelationship) (AuthzWriteResult, error) {
-		r.written = append(r.written, rels...)
-		for _, rel := range rels {
-			if rel.Relation == "owner" {
-				r.ownerResource, r.ownerSubject = rel.Resource, rel.Subject
-			}
-			if rel.Relation == "zone" {
-				r.zoneResource, r.zoneSubject = rel.Resource, rel.Subject
-			}
+	r.written = append(r.written, rels...)
+	for _, rel := range rels {
+		if rel.Relation == "owner" {
+			r.ownerResource, r.ownerSubject = rel.Resource, rel.Subject
 		}
-		return AuthzWriteResult{Written: len(rels)}, r.writeErr
+		if rel.Relation == "zone" {
+			r.zoneResource, r.zoneSubject = rel.Resource, rel.Subject
+		}
 	}
+	return AuthzWriteResult{Written: len(rels)}, r.writeErr
+}
 
 func (r *fakeSkillRelationships) GrantOwner(_ context.Context, resource AuthzObjectRef, subject AuthzSubjectRef) error {
-		r.ownerResource, r.ownerSubject = resource, subject
-		return r.grantOwnerErr
-	}
+	r.ownerResource, r.ownerSubject = resource, subject
+	return r.grantOwnerErr
+}
 func (r *fakeSkillRelationships) GrantZone(_ context.Context, resource AuthzObjectRef, subject AuthzSubjectRef) error {
-		r.zoneResource, r.zoneSubject = resource, subject
-		return r.grantZoneErr
-	}
+	r.zoneResource, r.zoneSubject = resource, subject
+	return r.grantZoneErr
+}
 func (r *fakeSkillRelationships) GrantRole(context.Context, AuthzObjectRef, string, AuthzSubjectRef) error {
-		return nil
-	}
+	return nil
+}
 func (r *fakeSkillRelationships) RevokeAll(context.Context, AuthzObjectRef, AuthzSubjectRef) error {
-		return nil
-	}
+	return nil
+}
 func (r *fakeSkillRelationships) RevokeResource(context.Context, AuthzObjectRef) error { return nil }
 func (r *fakeSkillRelationships) ReadRelationships(context.Context, AuthzRelationshipFilter, int, string) ([]AuthzRelationship, string, error) {
-		return nil, "", nil
-	}
+	return nil, "", nil
+}

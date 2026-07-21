@@ -52,3 +52,21 @@ func TestSkillSetMigrationGuardsQuotedSemicolonComments(t *testing.T) {
 		t.Fatal("quoted comments containing semicolons must be guarded from statement splitting")
 	}
 }
+
+func TestRepositoryBackedSkillMigrationUsesCanonicalRepos(t *testing.T) {
+	path := filepath.Join("..", "..", "migrations", "postgres", "202607210001_create_hub_skill_profiles.sql")
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(body)
+	for _, fragment := range []string{
+		"repository_id      BIGINT PRIMARY KEY REFERENCES repos(id) ON DELETE CASCADE",
+		"FOREIGN KEY (skill_name) REFERENCES repos(name) ON DELETE CASCADE",
+		"JOIN repos r ON r.name = s.name",
+	} {
+		if !strings.Contains(sql, fragment) {
+			t.Fatalf("repository-backed migration missing %q", fragment)
+		}
+	}
+}

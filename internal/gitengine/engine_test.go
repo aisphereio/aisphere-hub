@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authz"
 	"github.com/glebarez/sqlite"
@@ -38,8 +39,33 @@ func TestEngineCreatesRepositoryUsingSharedDatabase(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = engine.Close() })
 
-	if err := engine.CreateRepository(context.Background(), "search"); err != nil {
-		t.Fatalf("CreateRepository() error = %v", err)
+	if err := database.Exec(`CREATE TABLE hub_skill_profiles (
+		repository_id INTEGER PRIMARY KEY REFERENCES repos(id) ON DELETE CASCADE,
+		display_name TEXT NOT NULL DEFAULT '', org_id TEXT NOT NULL, project_id TEXT NOT NULL DEFAULT '',
+		created_by_type TEXT NOT NULL, created_by_id TEXT NOT NULL, visibility TEXT NOT NULL,
+		lifecycle_status TEXT NOT NULL, default_branch TEXT NOT NULL, provision_error TEXT NOT NULL DEFAULT '',
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`).Error; err != nil {
+		t.Fatalf("create profile table: %v", err)
+	}
+
+	created, err := engine.CreateSkill(context.Background(), &biz.GitSkill{
+		Name: "search", DisplayName: "Search", Description: "Search tools",
+		OwnerID: "owner-1", OwnerType: "user", OrgID: "org-1",
+		Visibility: biz.SkillVisibilityPrivate, Status: biz.SkillStatusProvisioning,
+	})
+	if err != nil {
+		t.Fatalf("CreateSkill() error = %v", err)
+	}
+	if created.RepositoryID == 0 {
+		t.Fatal("CreateSkill() did not return canonical repository id")
+	}
+	var profileCount int64
+	if err := database.Table("hub_skill_profiles").Where("repository_id = ?", created.RepositoryID).Count(&profileCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if profileCount != 1 {
+		t.Fatalf("profile rows = %d, want 1", profileCount)
 	}
 	if _, err := engine.backend.Repository(context.Background(), "search"); err != nil {
 		t.Fatalf("Repository() error = %v", err)

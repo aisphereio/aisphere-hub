@@ -21,25 +21,25 @@ type skillSetHTTPHandler struct {
 }
 
 type skillSetRow struct {
-	ID          int64      `gorm:"column:id" json:"-"`
-	Name        string     `gorm:"column:name" json:"name"`
-	DisplayName string     `gorm:"column:display_name" json:"displayName,omitempty"`
-	Description string     `gorm:"column:description" json:"description,omitempty"`
-	Visibility  string     `gorm:"column:visibility" json:"scope"`
-	OwnerID     string     `gorm:"column:owner_id" json:"owner,omitempty"`
-	OrgID       string     `gorm:"column:org_id" json:"orgId,omitempty"`
-	CreatedAt   time.Time  `gorm:"column:created_at" json:"createdAt"`
-	UpdatedAt   time.Time  `gorm:"column:updated_at" json:"updatedAt"`
-	DeletedAt   *time.Time `gorm:"column:deleted_at" json:"-"`
+	ID          int64            `gorm:"column:id" json:"-"`
+	Name        string           `gorm:"column:name" json:"name"`
+	DisplayName string           `gorm:"column:display_name" json:"displayName,omitempty"`
+	Description string           `gorm:"column:description" json:"description,omitempty"`
+	Visibility  string           `gorm:"column:visibility" json:"scope"`
+	OwnerID     string           `gorm:"column:owner_id" json:"owner,omitempty"`
+	OrgID       string           `gorm:"column:org_id" json:"orgId,omitempty"`
+	CreatedAt   time.Time        `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time        `gorm:"column:updated_at" json:"updatedAt"`
+	DeletedAt   *time.Time       `gorm:"column:deleted_at" json:"-"`
 	Members     []skillSetMember `gorm:"-" json:"members,omitempty"`
 }
 
 func (skillSetRow) TableName() string { return "aihub_skillsets" }
 
 type skillSetMember struct {
-	SkillName  string `gorm:"column:skill_name" json:"skillName"`
-	Order      int    `gorm:"column:sort_order" json:"order"`
-	Version    string `gorm:"column:version" json:"version,omitempty"`
+	SkillName   string `gorm:"column:skill_name" json:"skillName"`
+	Order       int    `gorm:"column:sort_order" json:"order"`
+	Version     string `gorm:"column:version" json:"version,omitempty"`
 	DisplayName string `gorm:"column:display_name" json:"displayName,omitempty"`
 }
 
@@ -236,8 +236,8 @@ func (h *skillSetHTTPHandler) update(w http.ResponseWriter, r *http.Request, nam
 	}
 	updates := map[string]any{
 		"display_name": strings.TrimSpace(req.DisplayName),
-		"description": strings.TrimSpace(req.Description),
-		"updated_at": time.Now(),
+		"description":  strings.TrimSpace(req.Description),
+		"updated_at":   time.Now(),
 	}
 	if strings.TrimSpace(req.Scope) != "" {
 		updates["visibility"] = normalizeVisibility(req.Scope)
@@ -290,13 +290,20 @@ func (h *skillSetHTTPHandler) bind(w http.ResponseWriter, r *http.Request, name 
 		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "SKILLSET_MEMBER_INVALID", "message": "valid skillName is required"})
 		return
 	}
-	err := h.db(r).Exec(`
+	result := h.db(r).Exec(`
 		INSERT INTO aihub_skillset_items(skillset_name, skill_name, sort_order)
-		VALUES (?, ?, ?)
+		SELECT ?, r.name, ?
+		FROM repos r
+		JOIN hub_skill_profiles p ON p.repository_id = r.id
+		WHERE r.name = ? AND p.lifecycle_status = 'active'
 		ON CONFLICT (skillset_name, skill_name)
-		DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = NOW()`, name, member.SkillName, member.Order).Error
-	if err != nil {
-		writeSkillSetError(w, err)
+		DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = NOW()`, name, member.Order, member.SkillName)
+	if result.Error != nil {
+		writeSkillSetError(w, result.Error)
+		return
+	}
+	if result.RowsAffected == 0 {
+		writeSkillSetError(w, gorm.ErrRecordNotFound)
 		return
 	}
 	writeJSON(w, http.StatusOK, member)
@@ -341,11 +348,12 @@ func (h *skillSetHTTPHandler) unbind(w http.ResponseWriter, r *http.Request, nam
 func (h *skillSetHTTPHandler) members(r *http.Request, name string) ([]skillSetMember, error) {
 	var members []skillSetMember
 	err := h.db(r).Raw(`
-		SELECT i.skill_name, i.sort_order, COALESCE(s.version, '') AS version,
-		       COALESCE(s.display_name, '') AS display_name
+		SELECT i.skill_name, i.sort_order, '' AS version,
+		       COALESCE(p.display_name, '') AS display_name
 		FROM aihub_skillset_items i
-		JOIN aihub_skills s ON s.name = i.skill_name AND s.deleted_at IS NULL
-		WHERE i.skillset_name = ?
+		JOIN repos r ON r.name = i.skill_name
+		JOIN hub_skill_profiles p ON p.repository_id = r.id
+		WHERE i.skillset_name = ? AND p.lifecycle_status = 'active'
 		ORDER BY i.sort_order ASC, i.skill_name ASC`, name).Scan(&members).Error
 	return members, err
 }
@@ -393,8 +401,17 @@ func replaceSkillSetMembers(tx *gorm.DB, name string, members []skillSetMember) 
 		if order == 0 && index > 0 {
 			order = index
 		}
-		if err := tx.Exec(`INSERT INTO aihub_skillset_items(skillset_name, skill_name, sort_order) VALUES (?, ?, ?)`, name, member.SkillName, order).Error; err != nil {
-			return err
+		result := tx.Exec(`
+			INSERT INTO aihub_skillset_items(skillset_name, skill_name, sort_order)
+			SELECT ?, r.name, ?
+			FROM repos r
+			JOIN hub_skill_profiles p ON p.repository_id = r.id
+			WHERE r.name = ? AND p.lifecycle_status = 'active'`, name, order, member.SkillName)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
 		}
 	}
 	return nil
