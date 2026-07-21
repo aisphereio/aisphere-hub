@@ -417,10 +417,14 @@ func replaceSkillSetMembers(tx *gorm.DB, name string, members []skillSetMember) 
 	return nil
 }
 
+// decodeJSON decodes the request body into out. Unknown JSON fields are
+// tolerated because the frontend SkillSet/SkillSetMember contracts carry
+// response-only fields (createdAt, updatedAt, owner, labels, member.label,
+// member.required) that are echoed back on the edit path; rejecting them
+// would break create/update/bind for the dialog.
 func decodeJSON(r *http.Request, out any) error {
 	defer r.Body.Close()
 	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 1<<20))
-	dec.DisallowUnknownFields()
 	return dec.Decode(out)
 }
 
