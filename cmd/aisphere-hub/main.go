@@ -94,37 +94,43 @@ func main() {
 	auditUsecase := biz.NewAuditUsecase(auditRepo, logger)
 	auditService := service.NewAuditService(auditUsecase)
 
-	// Wire the skill module.
+	// Wire the skill module. Kernel/dbx owns the PostgreSQL connection pool;
+	// the embedded Git engine reuses the same pool for Soft Serve metadata.
+	if resources.DB == nil {
+		logger.Error("embedded git engine requires the Kernel database")
+		panic("embedded git engine requires database")
+	}
 	gitEngine, err := gitengine.New(bootstrapCtx, gitengine.Config{
 		DataPath:      bc.Skill.Git.DataPath,
 		IAMEndpoint:   bc.Security.Authz.IAMGRPC.Endpoint,
 		IAMInsecure:   bc.Security.Authz.IAMGRPC.Insecure,
 		IAMCaller:     bc.Security.Authz.IAMGRPC.CallerService,
 		DefaultBranch: biz.SkillDefaultBranch,
-	})
+	}, resources.DB.GORM(bootstrapCtx))
 	if err != nil {
 		logger.Error("embedded git engine initialization failed", logx.Err(err))
 		panic(err)
 	}
 	defer gitEngine.Close()
-skillRepo := data.NewSkillRepo(resources)
-		pullRequestRepo := data.NewPullRequestRepo(resources)
-		skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
 
-		// Attach optional project validator when authz is enabled.
-		if bc.Security.Authz.Enabled && !bc.Security.Authz.DevAllowAll {
-			projectValidator, err := data.NewProjectValidator(
-				bc.Security.Authz.IAMGRPC.Endpoint,
-				bc.Security.Authz.IAMGRPC.CallerService,
-				bc.Security.Authz.IAMGRPC.Insecure,
-			)
-			if err != nil {
-				logger.Error("project validator initialization failed", logx.Err(err))
-				panic(err)
-			}
-			defer projectValidator.Close()
-			skillUsecase.WithProjectValidator(projectValidator)
+	skillRepo := data.NewSkillRepo(resources)
+	pullRequestRepo := data.NewPullRequestRepo(resources)
+	skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
+
+	// Attach optional project validator when authz is enabled.
+	if bc.Security.Authz.Enabled && !bc.Security.Authz.DevAllowAll {
+		projectValidator, err := data.NewProjectValidator(
+			bc.Security.Authz.IAMGRPC.Endpoint,
+			bc.Security.Authz.IAMGRPC.CallerService,
+			bc.Security.Authz.IAMGRPC.Insecure,
+		)
+		if err != nil {
+			logger.Error("project validator initialization failed", logx.Err(err))
+			panic(err)
 		}
+		defer projectValidator.Close()
+		skillUsecase.WithProjectValidator(projectValidator)
+	}
 	skillService := service.NewSkillService(skillUsecase)
 
 	// Repair durable owner relationships through IAM's runtime authorization API.
