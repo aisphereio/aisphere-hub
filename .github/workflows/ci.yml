@@ -24,6 +24,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout source branch
+        run: |
+          TARGET_BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git fetch origin "$TARGET_BRANCH"
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -31,7 +38,6 @@ jobs:
           cache: true
 
       - name: Update Soft Serve dependency
-        if: github.event_name == 'push'
         run: |
           go get github.com/aisphereio/soft-serve@v0.0.0-20260721003851-0306cce0db48
           go mod tidy
@@ -40,12 +46,8 @@ jobs:
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
             git add go.mod go.sum
             git commit -m "chore(deps): update embedded Soft Serve"
-            git push origin HEAD:${GITHUB_REF_NAME}
+            git push origin HEAD:"$TARGET_BRANCH"
           fi
-
-      - name: Download dependencies
-        if: github.event_name != 'push'
-        run: go mod download
 
       - name: Test
         run: go test ./... -count=1 -short
