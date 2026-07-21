@@ -2,6 +2,8 @@ package gitengine
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,6 +19,7 @@ import (
 	"github.com/aisphereio/soft-serve/pkg/config"
 	"github.com/aisphereio/soft-serve/pkg/db"
 	"github.com/aisphereio/soft-serve/pkg/db/migrate"
+	"github.com/aisphereio/soft-serve/pkg/db/models"
 	softproto "github.com/aisphereio/soft-serve/pkg/proto"
 	"github.com/aisphereio/soft-serve/pkg/store"
 	"github.com/aisphereio/soft-serve/pkg/store/database"
@@ -146,12 +149,85 @@ func (e *Engine) Handler() http.Handler {
 	if e == nil {
 		return http.NotFoundHandler()
 	}
-	return e.handler
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		described, err := softweb.DescribeRequest(r)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		name := strings.TrimSuffix(strings.TrimSpace(described.Repository), ".git")
+		status, err := e.lifecycleStatus(r.Context(), name)
+		if errors.Is(err, sql.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		if err != nil {
+			http.Error(w, "repository state unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		if status != biz.SkillStatusActive {
+			http.Error(w, "repository is not active", http.StatusConflict)
+			return
+		}
+		e.handler.ServeHTTP(w, r)
+	})
 }
 
-func (e *Engine) CreateRepository(ctx context.Context, name string) error {
-	_, err := e.backend.CreateRepository(e.operationContext(ctx), name, e.owner, softproto.RepositoryOptions{Private: true, LFS: true})
-	return err
+// CreateSkill creates the canonical Soft Serve repository row and the Hub
+// profile row in the same PostgreSQL transaction. Git filesystem creation is
+// part of Soft Serve's repository lifecycle and remains compensated by its
+// backend when the transaction fails.
+func (e *Engine) CreateSkill(ctx context.Context, skill *biz.GitSkill) (*biz.GitSkill, error) {
+	if skill == nil {
+		return nil, biz.ErrSkillInvalidArgument
+	}
+	item := *skill
+	item.Name = strings.TrimSpace(item.Name)
+	item.OrgID = strings.TrimSpace(item.OrgID)
+	item.ProjectID = strings.TrimSpace(item.ProjectID)
+	if item.DefaultBranch == "" {
+		item.DefaultBranch = biz.SkillDefaultBranch
+	}
+	if item.Visibility == "" {
+		item.Visibility = biz.SkillVisibilityPrivate
+	}
+	if item.Status == "" {
+		item.Status = biz.SkillStatusProvisioning
+	}
+	if item.OwnerType == "" {
+		item.OwnerType = authn.SubjectTypeUser
+	}
+
+	var canonical models.Repo
+	opCtx := store.WithRepositoryCreateExtension(e.operationContext(ctx), func(ctx context.Context, tx db.Handler, repo models.Repo) error {
+		canonical = repo
+		query := tx.Rebind(`INSERT INTO hub_skill_profiles (
+			repository_id, display_name, org_id, project_id,
+			created_by_type, created_by_id, visibility, lifecycle_status,
+			default_branch, provision_error, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`)
+		_, err := tx.ExecContext(ctx, query,
+			repo.ID, item.DisplayName, item.OrgID, item.ProjectID,
+			item.OwnerType, item.OwnerID, item.Visibility, item.Status, item.DefaultBranch,
+		)
+		return err
+	})
+	_, err := e.backend.CreateRepository(opCtx, item.Name, e.owner, softproto.RepositoryOptions{
+		ProjectName: item.ProjectID,
+		Description: item.Description,
+		Private:     item.Visibility != biz.SkillVisibilityPublic,
+		LFS:         true,
+	})
+	if err != nil {
+		if errors.Is(err, softproto.ErrRepoExist) {
+			return nil, biz.ErrSkillAlreadyExists
+		}
+		return nil, fmt.Errorf("%w: create repository: %v", biz.ErrSkillDependencyFailed, err)
+	}
+	item.RepositoryID = canonical.ID
+	item.CreateTime = canonical.CreatedAt
+	item.UpdateTime = canonical.UpdatedAt
+	return &item, nil
 }
 
 func (e *Engine) DeleteRepository(ctx context.Context, name string) error {
@@ -222,6 +298,16 @@ func (e *Engine) open(ctx context.Context, name string) (*softgit.Repository, er
 		return nil, err
 	}
 	return repo, nil
+}
+
+func (e *Engine) lifecycleStatus(ctx context.Context, name string) (string, error) {
+	var status string
+	query := e.db.Rebind(`SELECT p.lifecycle_status
+		FROM hub_skill_profiles p
+		JOIN repos r ON r.id = p.repository_id
+		WHERE r.name = ?`)
+	err := e.db.GetContext(ctx, &status, query, strings.TrimSpace(name))
+	return status, err
 }
 
 func (e *Engine) operationContext(ctx context.Context) context.Context {
