@@ -47,18 +47,18 @@ type Engine struct {
 
 // New embeds Soft Serve using the PostgreSQL connection pool already owned by
 // Kernel/dbx. The engine deliberately does not create or close a second pool.
-func New(ctx context.Context, in Config, database *gorm.DB) (*Engine, error) {
-	return newWithDatabase(ctx, in, database, postgresDriver)
+func New(ctx context.Context, in Config, gormDB *gorm.DB) (*Engine, error) {
+	return newWithDatabase(ctx, in, gormDB, postgresDriver)
 }
 
-func newWithDatabase(ctx context.Context, in Config, database *gorm.DB, driverName string) (*Engine, error) {
+func newWithDatabase(ctx context.Context, in Config, gormDB *gorm.DB, driverName string) (*Engine, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if database == nil {
+	if gormDB == nil {
 		return nil, fmt.Errorf("gitengine: Kernel database is required")
 	}
-	sqlDB, err := database.DB()
+	sqlDB, err := gormDB.DB()
 	if err != nil {
 		return nil, fmt.Errorf("gitengine: resolve Kernel SQL database: %w", err)
 	}
