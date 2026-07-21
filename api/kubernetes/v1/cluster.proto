@@ -1,0 +1,245 @@
+syntax = "proto3";
+
+package kubernetes.v1;
+
+import "aisphere/access/v1/access.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/kubernetes/v1;kubernetesv1";
+
+// ClusterService manages AISphere control-plane records for registered
+// Kubernetes clusters. The remote cluster is never destroyed by Hub; this
+// API only manages the control-plane row, credentials, SpiceDB tuples, and
+// probe/rotate lifecycle (see design §5).
+service ClusterService {
+  rpc CreateCluster(CreateClusterRequest) returns (CreateClusterResponse) {
+    option (google.api.http) = { post: "/v1/clusters" body: "*" response_body: "cluster" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "create_cluster" resource: "zone:{org_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.cluster.create" risk: "high" }
+    };
+  }
+
+  rpc ListClusters(ListClustersRequest) returns (ListClustersResponse) {
+    option (google.api.http) = { get: "/v1/clusters" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      gateway: { upstream_service: "hub-service" }
+      audit: { enabled: true event: "hub.cluster.list" risk: "low" }
+      reason: "handler batch-checks view permission for every concrete cluster"
+    };
+  }
+
+  rpc GetCluster(GetClusterRequest) returns (GetClusterResponse) {
+    option (google.api.http) = { get: "/v1/clusters/{id}" response_body: "cluster" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "k8s_cluster:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.cluster.get" risk: "low" }
+    };
+  }
+
+  rpc UpdateCluster(UpdateClusterRequest) returns (UpdateClusterResponse) {
+    option (google.api.http) = { put: "/v1/clusters/{id}" body: "*" response_body: "cluster" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_cluster:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.cluster.update" risk: "medium" }
+    };
+  }
+
+  rpc DeleteCluster(DeleteClusterRequest) returns (DeleteClusterResponse) {
+    option (google.api.http) = { delete: "/v1/clusters/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_cluster:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.cluster.delete" risk: "high" }
+    };
+  }
+
+  rpc ProbeCluster(ProbeClusterRequest) returns (ProbeClusterResponse) {
+    option (google.api.http) = { post: "/v1/clusters/{id}:probe" response_body: "cluster" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_cluster:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.cluster.probe" risk: "medium" }
+    };
+  }
+
+  rpc RotateCredential(RotateCredentialRequest) returns (RotateCredentialResponse) {
+    option (google.api.http) = { post: "/v1/clusters/{id}:rotate-credential" body: "*" response_body: "cluster" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_cluster:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.cluster.rotate_credential" risk: "high" }
+    };
+  }
+}
+
+// Cluster is the AISphere control-plane resource for a registered Kubernetes
+// cluster. It is NOT the kubeconfig file. Credential material is never
+// returned by any RPC (design §5.2).
+message Cluster {
+  string id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  string org_id = 5;
+  string server_url = 6;
+  string distribution = 7;
+  string kubernetes_version = 8;
+  ClusterStatus status = 9;
+  string health_message = 10;
+  google.protobuf.Timestamp last_probe_time = 11;
+  map<string, string> labels = 12;
+  ClusterPermissions permissions = 13;
+  google.protobuf.Timestamp create_time = 14;
+  google.protobuf.Timestamp update_time = 15;
+  int64 revision = 16;
+  string owner_type = 17;
+  string owner_id = 18;
+}
+
+// ClusterPermissions is derived from SpiceDB BatchCheck at read time
+// (design §7.6.2). can_delete is derived from can_manage. Cluster V1 has no
+// share API, so can_share is intentionally omitted (design §5.2).
+message ClusterPermissions {
+  bool can_view = 1;
+  bool can_operate = 2;
+  bool can_manage = 3;
+  bool can_create_namespace = 4;
+  bool can_delete = 5;
+}
+
+// ClusterStatus mirrors the lifecycle state machine in design §5.7.1.
+enum ClusterStatus {
+  CLUSTER_STATUS_UNSPECIFIED = 0;
+  CLUSTER_STATUS_CREATING = 1;
+  CLUSTER_STATUS_READY = 2;
+  CLUSTER_STATUS_PROBING = 3;
+  CLUSTER_STATUS_DEGRADED = 4;
+  CLUSTER_STATUS_DELETING = 5;
+  CLUSTER_STATUS_DELETED = 6;
+  CLUSTER_STATUS_FAILED = 7;
+}
+
+// DeletePolicy controls Namespace cleanup when a Cluster is deleted
+// (design §5.7.5). DETACH_ONLY keeps remote Namespaces; CASCADE removes
+// AISphere-managed Namespaces too.
+enum DeletePolicy {
+  DELETE_POLICY_UNSPECIFIED = 0;
+  DELETE_POLICY_DETACH_ONLY = 1;
+  DELETE_POLICY_CASCADE = 2;
+}
+
+// ClusterCredentialInput carries the credential supplied by the caller on
+// create/rotate. Hub never persists plaintext; this message only flows into
+// CredentialStore.Put. Logs must redact every field (design §5.4).
+message ClusterCredentialInput {
+  oneof source {
+    bytes kubeconfig = 1;
+    InClusterCredential in_cluster = 2;
+    ServiceAccountCredential service_account = 3;
+  }
+}
+
+message InClusterCredential {
+  // Uses the Hub pod's service account token. V1 requires AllowInsecureDev
+  // because Hub is not necessarily in-cluster; reserved for local dev.
+}
+
+message ServiceAccountCredential {
+  // Bearer token. Hub stores it AEAD-encrypted; never returned.
+  string token = 1;
+  // PEM-encoded CA bundle. Optional; when empty, system roots are used.
+  bytes ca_cert = 2;
+}
+
+message CreateClusterRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string org_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string server_url = 3 [(google.api.field_behavior) = REQUIRED];
+  ClusterCredentialInput credential = 4 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 5;
+  string description = 6;
+  string distribution = 7;
+  map<string, string> labels = 8;
+  string owner_type = 9;
+  string owner_id = 10;
+}
+
+message CreateClusterResponse {
+  Cluster cluster = 1;
+}
+
+message ListClustersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  // org_id overrides the principal's zone. Requires view_zone in that zone
+  // (design §7.6.4). V1 does not provide cross-zone aggregation; there is
+  // no all_orgs parameter.
+  string org_id = 3;
+}
+
+message ListClustersResponse {
+  repeated Cluster clusters = 1;
+  string next_page_token = 2;
+}
+
+message GetClusterRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetClusterResponse {
+  Cluster cluster = 1;
+}
+
+// UpdateClusterRequest uses FieldMask to avoid PUT clearing unset fields
+// (design §5.3.2/§5.7.4). expected_revision is the CAS guard; mismatch
+// returns REVISION_CONFLICT. Immutable fields in update_mask return
+// INVALID_ARGUMENT.
+message UpdateClusterRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+  Cluster cluster = 4;
+}
+
+message UpdateClusterResponse {
+  Cluster cluster = 1;
+}
+
+message DeleteClusterRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  DeletePolicy delete_policy = 3;
+}
+
+message DeleteClusterResponse {
+  Cluster cluster = 1;
+}
+
+message ProbeClusterRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ProbeClusterResponse {
+  Cluster cluster = 1;
+}
+
+// RotateCredentialRequest follows the six-step protocol in design §5.7.3:
+// Put new credential -> probe with temp client -> CAS switch -> invalidate
+// pool -> delayed old_ref cleanup. expected_revision guards CAS.
+message RotateCredentialRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  ClusterCredentialInput credential = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message RotateCredentialResponse {
+  Cluster cluster = 1;
+}

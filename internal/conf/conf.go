@@ -19,16 +19,17 @@ import (
 )
 
 type Bootstrap struct {
-	Service  ServiceConfig  `json:"service" yaml:"service"`
-	Server   ServerConfig   `json:"server" yaml:"server"`
-	Log      logx.Config    `json:"log" yaml:"log"`
-	Data     DataConfig     `json:"data" yaml:"data"`
-	Security SecurityConfig `json:"security" yaml:"security"`
-	Gateway  GatewayConfig  `json:"gateway" yaml:"gateway"`
-	Audit    AuditConfig    `json:"audit" yaml:"audit"`
-	Metrics  MetricsConfig  `json:"metrics" yaml:"metrics"`
-	DTM      dtmx.Config    `json:"dtm" yaml:"dtm"`
-	Skill    SkillConfig    `json:"skill" yaml:"skill"`
+	Service    ServiceConfig    `json:"service" yaml:"service"`
+	Server     ServerConfig     `json:"server" yaml:"server"`
+	Log        logx.Config      `json:"log" yaml:"log"`
+	Data       DataConfig       `json:"data" yaml:"data"`
+	Security   SecurityConfig   `json:"security" yaml:"security"`
+	Gateway    GatewayConfig    `json:"gateway" yaml:"gateway"`
+	Audit      AuditConfig      `json:"audit" yaml:"audit"`
+	Metrics    MetricsConfig    `json:"metrics" yaml:"metrics"`
+	DTM        dtmx.Config      `json:"dtm" yaml:"dtm"`
+	Skill      SkillConfig      `json:"skill" yaml:"skill"`
+	Kubernetes KubernetesConfig `json:"kubernetes" yaml:"kubernetes"`
 }
 
 type ServiceConfig struct {
@@ -163,4 +164,51 @@ type SkillConfig struct {
 
 type SkillGitConfig struct {
 	DataPath string `json:"data_path" yaml:"data_path"`
+}
+
+// KubernetesConfig controls the Kubernetes cluster management plane
+// (design §5/§12.4). When Enabled is false, the Cluster/Namespace services
+// are not wired and the migration tables remain unused. Master keys are
+// injected via env (configenv overlay); yaml only carries placeholders so
+// secrets never land in version control.
+type KubernetesConfig struct {
+	Enabled    bool                 `json:"enabled" yaml:"enabled"`
+	Encryption EncryptionConfig     `json:"encryption" yaml:"encryption"`
+	Endpoint   EndpointPolicyConfig `json:"endpoint" yaml:"endpoint"`
+	ClientPool ClientPoolConfig     `json:"client_pool" yaml:"client_pool"`
+	Reconcile  ReconcileConfig      `json:"reconcile" yaml:"reconcile"`
+}
+
+// EncryptionConfig holds versioned AEAD master keys (design §5.5 V1: no
+// KMS/Vault). MasterKeys maps key_version -> base64-encoded 32-byte AES key.
+// ActiveVersion is the version used for new Put calls. RotateKey re-encrypts
+// rows from an old version to ActiveVersion.
+type EncryptionConfig struct {
+	MasterKeys    map[string]string `json:"master_keys" yaml:"master_keys"`
+	ActiveVersion string            `json:"active_version" yaml:"active_version"`
+}
+
+// EndpointPolicyConfig is the Hub SSRF guard configuration (design §12.4).
+// ForbiddenCIDRs rejects loopback/link-local/private by default; setting
+// AllowPrivateClusterCIDRs true permits private CIDRs (for on-prem clusters).
+type EndpointPolicyConfig struct {
+	AllowedClusterEgress     []string `json:"allowed_cluster_egress" yaml:"allowed_cluster_egress"`
+	ForbiddenCIDRs           []string `json:"forbidden_cidrs" yaml:"forbidden_cidrs"`
+	AllowPrivateClusterCIDRs bool     `json:"allow_private_cluster_cidrs" yaml:"allow_private_cluster_cidrs"`
+	AllowInsecureDev         bool     `json:"allow_insecure_dev" yaml:"allow_insecure_dev"`
+}
+
+// ClientPoolConfig bounds the kubernetesx.Client cache (design §5.6).
+type ClientPoolConfig struct {
+	MaxActiveClients int           `json:"max_active_clients" yaml:"max_active_clients"`
+	TTL              time.Duration `json:"ttl_ns" yaml:"ttl_ns"`
+}
+
+// ReconcileConfig drives the taskx.Scheduler visibility reconciler and
+// bounds the List request hydration/refill loops (design §7.5.5/§7.6.1).
+type ReconcileConfig struct {
+	Interval         time.Duration `json:"interval_ns" yaml:"interval_ns"`
+	MaxHydrateRounds int           `json:"max_hydrate_rounds" yaml:"max_hydrate_rounds"`
+	MaxScan          int           `json:"max_scan" yaml:"max_scan"`
+	LeaseTTL         time.Duration `json:"lease_ttl_ns" yaml:"lease_ttl_ns"`
 }
