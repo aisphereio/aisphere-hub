@@ -37,8 +37,9 @@ var (
 )
 
 type GitSkill struct {
+	RepositoryID                               int64
 	Name, DisplayName, Description, Visibility string
-	OwnerID, OrgID, ProjectID                  string
+	OwnerID, OwnerType, OrgID, ProjectID       string
 	DefaultBranch, Status                      string
 	CreateTime, UpdateTime                     time.Time
 }
@@ -54,13 +55,11 @@ type GitSkillListResult struct {
 }
 
 type GitSkillRepository interface {
-	CreateSkill(context.Context, *GitSkill) (*GitSkill, error)
 	GetSkill(context.Context, string) (*GitSkill, error)
 	ListSkills(context.Context, GitSkillListOptions) (*GitSkillListResult, error)
 	UpdateSkill(context.Context, *GitSkill) (*GitSkill, error)
 	UpdateSkillVisibility(context.Context, string, string) (*GitSkill, error)
 	UpdateSkillStatus(context.Context, string, string, string) (*GitSkill, error)
-	DeleteSkill(context.Context, string) error
 }
 
 type SkillPullRequest struct {
