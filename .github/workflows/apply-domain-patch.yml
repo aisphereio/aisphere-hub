@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feat/repository-backed-skill-profiles
+  pull_request:
+    branches:
+      - feat/shared-postgres-git-engine
 
 permissions:
   contents: write
