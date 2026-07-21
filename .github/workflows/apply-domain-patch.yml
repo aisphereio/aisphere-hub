@@ -6,6 +6,7 @@ on:
       - feat/repository-backed-skill-profiles
   pull_request:
     branches:
+      - main
       - feat/shared-postgres-git-engine
 
 permissions:
