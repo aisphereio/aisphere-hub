@@ -24,7 +24,7 @@ import (
 // The 302 redirect routes (/v1/authn/login, /v1/authn/logout) are
 // HTTP-only by design (gRPC clients are SPAs/SDKs that should consume
 // the JSON RPCs directly), so they do not have gRPC equivalents.
-func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService) *kgrpc.Server {
+func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, fileSvc *service.FileService) *kgrpc.Server {
 	var opts []kgrpc.ServerOption
 	if c.GRPC.Addr != "" {
 		opts = append(opts, kgrpc.Address(c.GRPC.Addr))
@@ -61,6 +61,9 @@ func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resource
 	}
 	if namespaceSvc != nil {
 		kubernetesv1.RegisterNamespaceServiceServer(srv, namespaceSvc)
+	}
+	if fileSvc != nil {
+		skillv1.RegisterFileServiceServer(srv, fileSvc)
 	}
 	return srv
 }

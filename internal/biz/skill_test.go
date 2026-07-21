@@ -322,6 +322,25 @@ func (e *fakeSkillGitEngine) ListReleases(context.Context, string) ([]SkillRelea
 	return nil, nil
 }
 
+// The file-content API methods are stubbed because the skill tests do
+// not exercise them; they exist only so fakeSkillGitEngine keeps
+// satisfying the extended SkillGitEngine interface.
+func (e *fakeSkillGitEngine) ListFiles(context.Context, string, string, string) ([]*FileInfo, error) {
+	return nil, nil
+}
+func (e *fakeSkillGitEngine) GetFileContent(context.Context, string, string, string) (*FileContent, error) {
+	return nil, ErrFileNotFound
+}
+func (e *fakeSkillGitEngine) CreateFile(context.Context, string, string, string, string, string, string, string) (*FileContent, error) {
+	return nil, ErrFileAlreadyExists
+}
+func (e *fakeSkillGitEngine) UpdateFile(context.Context, string, string, string, string, string, string, string, string) (*FileContent, error) {
+	return nil, ErrFileNotFound
+}
+func (e *fakeSkillGitEngine) DeleteFile(context.Context, string, string, string, string, string, string, string) (string, string, error) {
+	return "", "", ErrFileNotFound
+}
+
 type fakeSkillRelationships struct {
 	ownerResource AuthzObjectRef
 	ownerSubject  AuthzSubjectRef

@@ -143,6 +143,11 @@ func main() {
 		skillUsecase.WithProjectValidator(projectValidator)
 	}
 	skillService := service.NewSkillService(skillUsecase)
+	// File-content API sits alongside the skill service as a convenience
+	// layer over the same bare git repo. Authz is enforced inside the
+	// usecase (writes bypass the receive-pack update hook).
+	fileUsecase := biz.NewFileUsecase(gitEngine, authzUsecase)
+	fileService := service.NewFileService(fileUsecase)
 
 	// Repair durable owner relationships through IAM's runtime authorization API.
 	if err := data.BootstrapAuthzRelationships(bootstrapCtx, resources, logger); err != nil {
@@ -225,8 +230,8 @@ func main() {
 		}
 	}
 
-	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, gitEngine, authnService, authzService, auditService, skillService, clusterService, namespaceService)
-	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService, clusterService, namespaceService)
+	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, gitEngine, authnService, authzService, auditService, skillService, clusterService, namespaceService, fileService)
+	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService, clusterService, namespaceService, fileService)
 
 	opts := []kernel.Option{
 		kernel.Name(bc.Service.Name),
