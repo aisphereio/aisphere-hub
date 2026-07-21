@@ -183,3 +183,31 @@ dtm:
 skill:
   git:
     data_path: ./data/git
+
+# Kubernetes cluster management plane (design §5/§12.4). Local dev stays
+# disabled; flip enabled only after running the k8s migrations locally and
+# exporting HUB_KUBERNETES_ENCRYPTION_MASTER_KEY_V1.
+kubernetes:
+  enabled: false
+  encryption:
+    master_keys:
+      v1: "<from-env>"
+    active_version: v1
+  endpoint:
+    allowed_cluster_egress: []
+    forbidden_cidrs:
+      - "127.0.0.0/8"
+      - "169.254.0.0/16"
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+      - "192.168.0.0/16"
+    allow_private_cluster_cidrs: false
+    allow_insecure_dev: true
+  client_pool:
+    max_active_clients: 16
+    ttl_ns: 1800000000000
+  reconcile:
+    interval_ns: 300000000000
+    max_hydrate_rounds: 3
+    max_scan: 1000
+    lease_ttl_ns: 120000000000

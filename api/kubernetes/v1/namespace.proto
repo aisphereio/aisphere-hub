@@ -1,0 +1,342 @@
+syntax = "proto3";
+
+package kubernetes.v1;
+
+import "aisphere/access/v1/access.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "kubernetes/v1/cluster.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/kubernetes/v1;kubernetesv1";
+
+// NamespaceService manages AISphere Namespace records. A Namespace record is
+// the control-plane object (design §6.1); the remote Kubernetes Namespace is
+// a separate resource synced via SSA. Visibility switches return 202 Accepted
+// because the SpiceDB projection is asynchronous (design §7.5.4a).
+service NamespaceService {
+  rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {
+    option (google.api.http) = { post: "/v1/clusters/{cluster_id}/namespaces" body: "*" response_body: "namespace" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "create_namespace" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.create" risk: "high" }
+    };
+  }
+
+  rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse) {
+    option (google.api.http) = { get: "/v1/namespaces" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      gateway: { upstream_service: "hub-service" }
+      audit: { enabled: true event: "hub.namespace.list" risk: "low" }
+      reason: "LookupResources computes the full authorized candidate set from SpiceDB"
+    };
+  }
+
+  rpc ListClusterNamespaces(ListClusterNamespacesRequest) returns (ListClusterNamespacesResponse) {
+    option (google.api.http) = { get: "/v1/clusters/{cluster_id}/namespaces" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.list_cluster" risk: "low" }
+    };
+  }
+
+  rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse) {
+    option (google.api.http) = { get: "/v1/namespaces/{id}" response_body: "namespace" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "k8s_namespace:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.get" risk: "low" }
+    };
+  }
+
+  rpc UpdateNamespace(UpdateNamespaceRequest) returns (UpdateNamespaceResponse) {
+    option (google.api.http) = { put: "/v1/namespaces/{id}" body: "*" response_body: "namespace" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "k8s_namespace:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.update" risk: "medium" }
+    };
+  }
+
+  rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {
+    option (google.api.http) = { delete: "/v1/namespaces/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_namespace:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.delete" risk: "high" }
+    };
+  }
+
+  rpc UpdateNamespaceVisibility(UpdateNamespaceVisibilityRequest) returns (UpdateNamespaceVisibilityResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{id}:visibility" body: "*" response_body: "namespace" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_namespace:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.visibility.update" risk: "high" }
+    };
+  }
+
+  rpc ListNamespaceShares(ListNamespaceSharesRequest) returns (ListNamespaceSharesResponse) {
+    option (google.api.http) = { get: "/v1/namespaces/{id}/shares" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_namespace:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.share.list" risk: "low" }
+    };
+  }
+
+  rpc CreateNamespaceShare(CreateNamespaceShareRequest) returns (CreateNamespaceShareResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{id}/shares" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_namespace:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.share.create" risk: "high" }
+    };
+  }
+
+  rpc DeleteNamespaceShare(DeleteNamespaceShareRequest) returns (DeleteNamespaceShareResponse) {
+    option (google.api.http) = { delete: "/v1/namespaces/{id}/shares/{relation}/{subject_type}/{subject_id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_namespace:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.share.delete" risk: "high" }
+    };
+  }
+
+  rpc SyncNamespaces(SyncNamespacesRequest) returns (SyncNamespacesResponse) {
+    option (google.api.http) = { post: "/v1/clusters/{cluster_id}/namespaces:sync" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.namespace.sync" risk: "medium" }
+    };
+  }
+}
+
+// Namespace is the AISphere control-plane record (design §6.3). visibility is
+// the desired value persisted in DB; effective_visibility reflects SpiceDB
+// state. Product UI MUST use effective_visibility + visibility_sync_status_enum,
+// never visibility alone (design §7.5.2).
+message Namespace {
+  string id = 1;
+  string cluster_id = 2;
+  string name = 3;
+  string display_name = 4;
+  string description = 5;
+  NamespaceVisibility visibility = 6;
+  NamespaceLifecycle lifecycle = 7;
+  bool managed = 8;
+  string kubernetes_uid = 9;
+  string resource_version = 10;
+  map<string, string> labels = 11;
+  NamespacePermissions permissions = 12;
+  string owner_id = 13;
+  google.protobuf.Timestamp last_sync_time = 14;
+  google.protobuf.Timestamp create_time = 15;
+  google.protobuf.Timestamp update_time = 16;
+  int64 revision = 17;
+  string owner_type = 18;
+  // visibility_sync_status is the legacy string form. New code uses
+  // visibility_sync_status_enum (field 23). Kept for backward compatibility.
+  string visibility_sync_status = 19 [deprecated = true];
+  EffectiveVisibility effective_visibility = 20;
+  string created_by_type = 21;
+  string created_by = 22;
+  VisibilitySyncStatus visibility_sync_status_enum = 23;
+}
+
+// NamespacePermissions is derived from SpiceDB BatchCheck (design §7.6.2).
+// can_share and can_delete derive from can_manage.
+message NamespacePermissions {
+  bool can_view = 1;
+  bool can_use = 2;
+  bool can_edit = 3;
+  bool can_manage = 4;
+  bool can_share = 5;
+  bool can_delete = 6;
+}
+
+enum NamespaceVisibility {
+  NAMESPACE_VISIBILITY_UNSPECIFIED = 0;
+  NAMESPACE_VISIBILITY_PRIVATE = 1;
+  NAMESPACE_VISIBILITY_PUBLIC = 2;
+}
+
+enum NamespaceLifecycle {
+  NAMESPACE_LIFECYCLE_UNSPECIFIED = 0;
+  NAMESPACE_LIFECYCLE_CREATING = 1;
+  NAMESPACE_LIFECYCLE_READY = 2;
+  NAMESPACE_LIFECYCLE_TERMINATING = 3;
+  NAMESPACE_LIFECYCLE_FAILED = 4;
+  NAMESPACE_LIFECYCLE_DELETED = 5;
+}
+
+// VisibilitySyncStatus records the SpiceDB projection state for visibility
+// (design §7.5). Reconcile converges non-SYNCED rows toward SYNCED along the
+// DB desired direction.
+enum VisibilitySyncStatus {
+  VISIBILITY_SYNC_UNSPECIFIED = 0;
+  VISIBILITY_SYNC_SYNCED = 1;
+  VISIBILITY_SYNC_PUBLISHING = 2;
+  VISIBILITY_SYNC_REVOKING = 3;
+  VISIBILITY_SYNC_FAILED = 4;
+}
+
+// EffectiveVisibility is the observed SpiceDB state (design §6.3). PARTIAL
+// covers partial-wildcard drift; UNKNOWN covers SpiceDB unreachable.
+enum EffectiveVisibility {
+  EFFECTIVE_VISIBILITY_UNSPECIFIED = 0;
+  EFFECTIVE_VISIBILITY_PUBLIC = 1;
+  EFFECTIVE_VISIBILITY_PRIVATE = 2;
+  EFFECTIVE_VISIBILITY_PARTIAL = 3;
+  EFFECTIVE_VISIBILITY_UNKNOWN = 4;
+}
+
+// DeletePolicy is defined in cluster.proto (same package kubernetes.v1) and
+// reused here for Namespace deletion semantics (design §6.6).
+
+enum NamespaceShareRelation {
+  NAMESPACE_SHARE_RELATION_UNSPECIFIED = 0;
+  NAMESPACE_SHARE_RELATION_VIEWER = 1;
+  NAMESPACE_SHARE_RELATION_USER = 2;
+  NAMESPACE_SHARE_RELATION_EDITOR = 3;
+}
+
+enum CreateMode {
+  CREATE_MODE_UNSPECIFIED = 0;
+  CREATE_MODE_CREATE_NEW = 1;
+  CREATE_MODE_IMPORT_EXISTING = 2;
+}
+
+message CreateNamespaceRequest {
+  string cluster_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  CreateMode create_mode = 3;
+  string display_name = 4;
+  string description = 5;
+  NamespaceVisibility visibility = 6;
+  map<string, string> labels = 7;
+  string owner_type = 8;
+  string owner_id = 9;
+}
+
+message CreateNamespaceResponse {
+  Namespace namespace = 1;
+}
+
+message ListNamespacesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string org_id = 3;
+}
+
+message ListNamespacesResponse {
+  repeated Namespace namespaces = 1;
+  string next_page_token = 2;
+}
+
+message ListClusterNamespacesRequest {
+  string cluster_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListClusterNamespacesResponse {
+  repeated Namespace namespaces = 1;
+  string next_page_token = 2;
+}
+
+message GetNamespaceRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetNamespaceResponse {
+  Namespace namespace = 1;
+}
+
+message UpdateNamespaceRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+  Namespace namespace = 4;
+}
+
+message UpdateNamespaceResponse {
+  Namespace namespace = 1;
+}
+
+message DeleteNamespaceRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  DeletePolicy delete_policy = 3;
+}
+
+message DeleteNamespaceResponse {
+  Namespace namespace = 1;
+}
+
+message UpdateNamespaceVisibilityRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  NamespaceVisibility visibility = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateNamespaceVisibilityResponse {
+  Namespace namespace = 1;
+}
+
+message ListNamespaceSharesRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message NamespaceShare {
+  string id = 1;
+  string namespace_id = 2;
+  NamespaceShareRelation relation = 3;
+  string subject_type = 4;
+  string subject_id = 5;
+  string subject_relation = 6;
+  VisibilitySyncStatus sync_status = 7;
+  string created_by_type = 8;
+  string created_by = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp update_time = 11;
+}
+
+message ListNamespaceSharesResponse {
+  repeated NamespaceShare shares = 1;
+}
+
+message CreateNamespaceShareRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  NamespaceShareRelation relation = 2 [(google.api.field_behavior) = REQUIRED];
+  string subject_type = 3 [(google.api.field_behavior) = REQUIRED];
+  string subject_id = 4 [(google.api.field_behavior) = REQUIRED];
+  string subject_relation = 5;
+}
+
+message CreateNamespaceShareResponse {
+  NamespaceShare share = 1;
+}
+
+message DeleteNamespaceShareRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  NamespaceShareRelation relation = 2 [(google.api.field_behavior) = REQUIRED];
+  string subject_type = 3 [(google.api.field_behavior) = REQUIRED];
+  string subject_id = 4 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteNamespaceShareResponse {}
+
+message SyncNamespacesRequest {
+  string cluster_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SyncNamespacesResponse {
+  int32 imported = 1;
+  int32 updated = 2;
+  int32 removed = 3;
+}
