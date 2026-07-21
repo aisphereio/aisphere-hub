@@ -34,7 +34,22 @@ jobs:
         run: go mod download
 
       - name: Test
-        run: go test ./... -count=1 -short
+        id: test
+        continue-on-error: true
+        run: go test ./... -count=1 -short > /tmp/go-test.log 2>&1
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation-go-test-log
+          path: /tmp/go-test.log
+
+      - name: Report test result
+        if: steps.test.outcome == 'failure'
+        run: |
+          cat /tmp/go-test.log
+          exit 1
 
       - name: Build
         run: go build ./...
