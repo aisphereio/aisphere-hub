@@ -40,7 +40,7 @@ import (
 // serverx/autowire mounts the standard authn middleware before access. Public
 // routes are configured through security.access.public_operations instead of a
 // Hub-specific authn filter.
-func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *khttp.Server {
+func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService) *khttp.Server {
 	addr := cfg.HTTP.Addr
 	if addr == "" {
 		addr = "0.0.0.0:8000"
@@ -89,6 +89,12 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	}
 	if skillSvc != nil {
 		skillSvc.RegisterHTTPServer(srv)
+	}
+	if clusterSvc != nil {
+		clusterSvc.RegisterHTTPServer(srv)
+	}
+	if namespaceSvc != nil {
+		namespaceSvc.RegisterHTTPServer(srv)
 	}
 	// SkillSet is intentionally a lightweight HTTP resource. It stores only
 	// ordered references to canonical Skills; version/release/runtime remain on Skill.

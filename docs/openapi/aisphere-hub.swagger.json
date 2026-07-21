@@ -15,6 +15,12 @@
       "name": "AuthzService"
     },
     {
+      "name": "ClusterService"
+    },
+    {
+      "name": "NamespaceService"
+    },
+    {
       "name": "SkillService"
     }
   ],
@@ -881,6 +887,684 @@
         ]
       }
     },
+    "/v1/clusters": {
+      "get": {
+        "operationId": "ClusterService_ListClusters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListClustersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "description": "org_id overrides the principal's zone. Requires view_zone in that zone\n(design §7.6.4). V1 does not provide cross-zone aggregation; there is\nno all_orgs parameter.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      },
+      "post": {
+        "operationId": "ClusterService_CreateCluster",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Cluster"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateClusterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      }
+    },
+    "/v1/clusters/{clusterId}/namespaces": {
+      "get": {
+        "operationId": "NamespaceService_ListClusterNamespaces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListClusterNamespacesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "clusterId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      },
+      "post": {
+        "operationId": "NamespaceService_CreateNamespace",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Namespace"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "clusterId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NamespaceServiceCreateNamespaceBody"
+            }
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      }
+    },
+    "/v1/clusters/{clusterId}/namespaces:sync": {
+      "post": {
+        "operationId": "NamespaceService_SyncNamespaces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncNamespacesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "clusterId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      }
+    },
+    "/v1/clusters/{id}": {
+      "get": {
+        "operationId": "ClusterService_GetCluster",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Cluster"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      },
+      "delete": {
+        "operationId": "ClusterService_DeleteCluster",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteClusterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "expectedRevision",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "deletePolicy",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DELETE_POLICY_UNSPECIFIED",
+              "DELETE_POLICY_DETACH_ONLY",
+              "DELETE_POLICY_CASCADE"
+            ],
+            "default": "DELETE_POLICY_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      },
+      "put": {
+        "operationId": "ClusterService_UpdateCluster",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Cluster"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterServiceUpdateClusterBody"
+            }
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      }
+    },
+    "/v1/clusters/{id}:probe": {
+      "post": {
+        "operationId": "ClusterService_ProbeCluster",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Cluster"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      }
+    },
+    "/v1/clusters/{id}:rotate-credential": {
+      "post": {
+        "operationId": "ClusterService_RotateCredential",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Cluster"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterServiceRotateCredentialBody"
+            }
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      }
+    },
+    "/v1/namespaces": {
+      "get": {
+        "operationId": "NamespaceService_ListNamespaces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNamespacesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      }
+    },
+    "/v1/namespaces/{id}": {
+      "get": {
+        "operationId": "NamespaceService_GetNamespace",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Namespace"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "NamespaceService_DeleteNamespace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteNamespaceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "expectedRevision",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "deletePolicy",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DELETE_POLICY_UNSPECIFIED",
+              "DELETE_POLICY_DETACH_ONLY",
+              "DELETE_POLICY_CASCADE"
+            ],
+            "default": "DELETE_POLICY_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      },
+      "put": {
+        "operationId": "NamespaceService_UpdateNamespace",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Namespace"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NamespaceServiceUpdateNamespaceBody"
+            }
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      }
+    },
+    "/v1/namespaces/{id}/shares": {
+      "get": {
+        "operationId": "NamespaceService_ListNamespaceShares",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNamespaceSharesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      },
+      "post": {
+        "operationId": "NamespaceService_CreateNamespaceShare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateNamespaceShareResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NamespaceServiceCreateNamespaceShareBody"
+            }
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      }
+    },
+    "/v1/namespaces/{id}/shares/{relation}/{subjectType}/{subjectId}": {
+      "delete": {
+        "operationId": "NamespaceService_DeleteNamespaceShare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteNamespaceShareResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "NAMESPACE_SHARE_RELATION_UNSPECIFIED",
+              "NAMESPACE_SHARE_RELATION_VIEWER",
+              "NAMESPACE_SHARE_RELATION_USER",
+              "NAMESPACE_SHARE_RELATION_EDITOR"
+            ]
+          },
+          {
+            "name": "subjectType",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      }
+    },
+    "/v1/namespaces/{id}:visibility": {
+      "post": {
+        "operationId": "NamespaceService_UpdateNamespaceVisibility",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Namespace"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NamespaceServiceUpdateNamespaceVisibilityBody"
+            }
+          }
+        ],
+        "tags": [
+          "NamespaceService"
+        ]
+      }
+    },
     "/v1/skills": {
       "get": {
         "operationId": "SkillService_ListSkills",
@@ -1491,6 +2175,130 @@
     }
   },
   "definitions": {
+    "ClusterServiceRotateCredentialBody": {
+      "type": "object",
+      "properties": {
+        "expectedRevision": {
+          "type": "string",
+          "format": "int64"
+        },
+        "credential": {
+          "$ref": "#/definitions/v1ClusterCredentialInput"
+        }
+      },
+      "description": "RotateCredentialRequest follows the six-step protocol in design §5.7.3:\nPut new credential -\u003e probe with temp client -\u003e CAS switch -\u003e invalidate\npool -\u003e delayed old_ref cleanup. expected_revision guards CAS.",
+      "required": [
+        "expectedRevision",
+        "credential"
+      ]
+    },
+    "ClusterServiceUpdateClusterBody": {
+      "type": "object",
+      "properties": {
+        "expectedRevision": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updateMask": {
+          "type": "string"
+        },
+        "cluster": {
+          "$ref": "#/definitions/v1Cluster"
+        }
+      },
+      "description": "UpdateClusterRequest uses FieldMask to avoid PUT clearing unset fields\n(design §5.3.2/§5.7.4). expected_revision is the CAS guard; mismatch\nreturns REVISION_CONFLICT. Immutable fields in update_mask return\nINVALID_ARGUMENT.",
+      "required": [
+        "expectedRevision",
+        "updateMask"
+      ]
+    },
+    "NamespaceServiceCreateNamespaceBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "createMode": {
+          "$ref": "#/definitions/v1CreateMode"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "visibility": {
+          "$ref": "#/definitions/v1NamespaceVisibility"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "ownerType": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "NamespaceServiceCreateNamespaceShareBody": {
+      "type": "object",
+      "properties": {
+        "relation": {
+          "$ref": "#/definitions/v1NamespaceShareRelation"
+        },
+        "subjectType": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "subjectRelation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation",
+        "subjectType",
+        "subjectId"
+      ]
+    },
+    "NamespaceServiceUpdateNamespaceBody": {
+      "type": "object",
+      "properties": {
+        "expectedRevision": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updateMask": {
+          "type": "string"
+        },
+        "namespace": {
+          "$ref": "#/definitions/v1Namespace"
+        }
+      },
+      "required": [
+        "expectedRevision",
+        "updateMask"
+      ]
+    },
+    "NamespaceServiceUpdateNamespaceVisibilityBody": {
+      "type": "object",
+      "properties": {
+        "visibility": {
+          "$ref": "#/definitions/v1NamespaceVisibility"
+        }
+      },
+      "required": [
+        "visibility"
+      ]
+    },
     "SkillServiceClosePullRequestBody": {
       "type": "object"
     },
@@ -1826,6 +2634,202 @@
         }
       }
     },
+    "v1Cluster": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "serverUrl": {
+          "type": "string"
+        },
+        "distribution": {
+          "type": "string"
+        },
+        "kubernetesVersion": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ClusterStatus"
+        },
+        "healthMessage": {
+          "type": "string"
+        },
+        "lastProbeTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "permissions": {
+          "$ref": "#/definitions/v1ClusterPermissions"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revision": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ownerType": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        }
+      },
+      "description": "Cluster is the AISphere control-plane resource for a registered Kubernetes\ncluster. It is NOT the kubeconfig file. Credential material is never\nreturned by any RPC (design §5.2)."
+    },
+    "v1ClusterCredentialInput": {
+      "type": "object",
+      "properties": {
+        "kubeconfig": {
+          "type": "string",
+          "format": "byte"
+        },
+        "inCluster": {
+          "$ref": "#/definitions/v1InClusterCredential"
+        },
+        "serviceAccount": {
+          "$ref": "#/definitions/v1ServiceAccountCredential"
+        }
+      },
+      "description": "ClusterCredentialInput carries the credential supplied by the caller on\ncreate/rotate. Hub never persists plaintext; this message only flows into\nCredentialStore.Put. Logs must redact every field (design §5.4)."
+    },
+    "v1ClusterPermissions": {
+      "type": "object",
+      "properties": {
+        "canView": {
+          "type": "boolean"
+        },
+        "canOperate": {
+          "type": "boolean"
+        },
+        "canManage": {
+          "type": "boolean"
+        },
+        "canCreateNamespace": {
+          "type": "boolean"
+        },
+        "canDelete": {
+          "type": "boolean"
+        }
+      },
+      "description": "ClusterPermissions is derived from SpiceDB BatchCheck at read time\n(design §7.6.2). can_delete is derived from can_manage. Cluster V1 has no\nshare API, so can_share is intentionally omitted (design §5.2)."
+    },
+    "v1ClusterStatus": {
+      "type": "string",
+      "enum": [
+        "CLUSTER_STATUS_UNSPECIFIED",
+        "CLUSTER_STATUS_CREATING",
+        "CLUSTER_STATUS_READY",
+        "CLUSTER_STATUS_PROBING",
+        "CLUSTER_STATUS_DEGRADED",
+        "CLUSTER_STATUS_DELETING",
+        "CLUSTER_STATUS_DELETED",
+        "CLUSTER_STATUS_FAILED"
+      ],
+      "default": "CLUSTER_STATUS_UNSPECIFIED",
+      "description": "ClusterStatus mirrors the lifecycle state machine in design §5.7.1."
+    },
+    "v1CreateClusterRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "serverUrl": {
+          "type": "string"
+        },
+        "credential": {
+          "$ref": "#/definitions/v1ClusterCredentialInput"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "distribution": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "ownerType": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "orgId",
+        "serverUrl",
+        "credential"
+      ]
+    },
+    "v1CreateClusterResponse": {
+      "type": "object",
+      "properties": {
+        "cluster": {
+          "$ref": "#/definitions/v1Cluster"
+        }
+      }
+    },
+    "v1CreateMode": {
+      "type": "string",
+      "enum": [
+        "CREATE_MODE_UNSPECIFIED",
+        "CREATE_MODE_CREATE_NEW",
+        "CREATE_MODE_IMPORT_EXISTING"
+      ],
+      "default": "CREATE_MODE_UNSPECIFIED"
+    },
+    "v1CreateNamespaceResponse": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "$ref": "#/definitions/v1Namespace"
+        }
+      }
+    },
+    "v1CreateNamespaceShareResponse": {
+      "type": "object",
+      "properties": {
+        "share": {
+          "$ref": "#/definitions/v1NamespaceShare"
+        }
+      }
+    },
     "v1CreatePullRequestResponse": {
       "type": "object",
       "properties": {
@@ -1877,6 +2881,35 @@
         }
       }
     },
+    "v1DeleteClusterResponse": {
+      "type": "object",
+      "properties": {
+        "cluster": {
+          "$ref": "#/definitions/v1Cluster"
+        }
+      }
+    },
+    "v1DeleteNamespaceResponse": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "$ref": "#/definitions/v1Namespace"
+        }
+      }
+    },
+    "v1DeleteNamespaceShareResponse": {
+      "type": "object"
+    },
+    "v1DeletePolicy": {
+      "type": "string",
+      "enum": [
+        "DELETE_POLICY_UNSPECIFIED",
+        "DELETE_POLICY_DETACH_ONLY",
+        "DELETE_POLICY_CASCADE"
+      ],
+      "default": "DELETE_POLICY_UNSPECIFIED",
+      "description": "DeletePolicy controls Namespace cleanup when a Cluster is deleted\n(design §5.7.5). DETACH_ONLY keeps remote Namespaces; CASCADE removes\nAISphere-managed Namespaces too."
+    },
     "v1DeleteRelationshipsRequest": {
       "type": "object",
       "properties": {
@@ -1905,6 +2938,18 @@
     },
     "v1DeleteSkillShareResponse": {
       "type": "object"
+    },
+    "v1EffectiveVisibility": {
+      "type": "string",
+      "enum": [
+        "EFFECTIVE_VISIBILITY_UNSPECIFIED",
+        "EFFECTIVE_VISIBILITY_PUBLIC",
+        "EFFECTIVE_VISIBILITY_PRIVATE",
+        "EFFECTIVE_VISIBILITY_PARTIAL",
+        "EFFECTIVE_VISIBILITY_UNKNOWN"
+      ],
+      "default": "EFFECTIVE_VISIBILITY_UNSPECIFIED",
+      "description": "EffectiveVisibility is the observed SpiceDB state (design §6.3). PARTIAL\ncovers partial-wildcard drift; UNKNOWN covers SpiceDB unreachable."
     },
     "v1ExchangeRequest": {
       "type": "object",
@@ -1959,6 +3004,22 @@
       },
       "description": "ExchangeResponse is the OAuth2/OIDC token set returned by Exchange.\r\n\r\n`expires_in` is seconds from issue time to expiry (OAuth2 standard). For a\r\nwall-clock expiry, callers can compute issued_at + expires_in, or use the\r\n`expires_at` field on Principal returned by Me/Introspect."
     },
+    "v1GetClusterResponse": {
+      "type": "object",
+      "properties": {
+        "cluster": {
+          "$ref": "#/definitions/v1Cluster"
+        }
+      }
+    },
+    "v1GetNamespaceResponse": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "$ref": "#/definitions/v1Namespace"
+        }
+      }
+    },
     "v1GetPullRequestResponse": {
       "type": "object",
       "properties": {
@@ -1981,6 +3042,10 @@
           "$ref": "#/definitions/v1Skill"
         }
       }
+    },
+    "v1InClusterCredential": {
+      "type": "object",
+      "description": "Uses the Hub pod's service account token. V1 requires AllowInsecureDev\n because Hub is not necessarily in-cluster; reserved for local dev."
     },
     "v1IntrospectRequest": {
       "type": "object",
@@ -2041,6 +3106,63 @@
         }
       },
       "description": "IntrospectResponse mirrors RFC 7662 token introspection."
+    },
+    "v1ListClusterNamespacesResponse": {
+      "type": "object",
+      "properties": {
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Namespace"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListClustersResponse": {
+      "type": "object",
+      "properties": {
+        "clusters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Cluster"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListNamespaceSharesResponse": {
+      "type": "object",
+      "properties": {
+        "shares": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NamespaceShare"
+          }
+        }
+      }
+    },
+    "v1ListNamespacesResponse": {
+      "type": "object",
+      "properties": {
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Namespace"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
     },
     "v1ListPullRequestsResponse": {
       "type": "object",
@@ -2164,6 +3286,184 @@
         }
       }
     },
+    "v1Namespace": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "clusterId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "visibility": {
+          "$ref": "#/definitions/v1NamespaceVisibility"
+        },
+        "lifecycle": {
+          "$ref": "#/definitions/v1NamespaceLifecycle"
+        },
+        "managed": {
+          "type": "boolean"
+        },
+        "kubernetesUid": {
+          "type": "string"
+        },
+        "resourceVersion": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "permissions": {
+          "$ref": "#/definitions/v1NamespacePermissions"
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revision": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ownerType": {
+          "type": "string"
+        },
+        "visibilitySyncStatus": {
+          "type": "string",
+          "description": "visibility_sync_status is the legacy string form. New code uses\nvisibility_sync_status_enum (field 23). Kept for backward compatibility."
+        },
+        "effectiveVisibility": {
+          "$ref": "#/definitions/v1EffectiveVisibility"
+        },
+        "createdByType": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "visibilitySyncStatusEnum": {
+          "$ref": "#/definitions/v1VisibilitySyncStatus"
+        }
+      },
+      "description": "Namespace is the AISphere control-plane record (design §6.3). visibility is\nthe desired value persisted in DB; effective_visibility reflects SpiceDB\nstate. Product UI MUST use effective_visibility + visibility_sync_status_enum,\nnever visibility alone (design §7.5.2)."
+    },
+    "v1NamespaceLifecycle": {
+      "type": "string",
+      "enum": [
+        "NAMESPACE_LIFECYCLE_UNSPECIFIED",
+        "NAMESPACE_LIFECYCLE_CREATING",
+        "NAMESPACE_LIFECYCLE_READY",
+        "NAMESPACE_LIFECYCLE_TERMINATING",
+        "NAMESPACE_LIFECYCLE_FAILED",
+        "NAMESPACE_LIFECYCLE_DELETED"
+      ],
+      "default": "NAMESPACE_LIFECYCLE_UNSPECIFIED"
+    },
+    "v1NamespacePermissions": {
+      "type": "object",
+      "properties": {
+        "canView": {
+          "type": "boolean"
+        },
+        "canUse": {
+          "type": "boolean"
+        },
+        "canEdit": {
+          "type": "boolean"
+        },
+        "canManage": {
+          "type": "boolean"
+        },
+        "canShare": {
+          "type": "boolean"
+        },
+        "canDelete": {
+          "type": "boolean"
+        }
+      },
+      "description": "NamespacePermissions is derived from SpiceDB BatchCheck (design §7.6.2).\ncan_share and can_delete derive from can_manage."
+    },
+    "v1NamespaceShare": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "namespaceId": {
+          "type": "string"
+        },
+        "relation": {
+          "$ref": "#/definitions/v1NamespaceShareRelation"
+        },
+        "subjectType": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "subjectRelation": {
+          "type": "string"
+        },
+        "syncStatus": {
+          "$ref": "#/definitions/v1VisibilitySyncStatus"
+        },
+        "createdByType": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1NamespaceShareRelation": {
+      "type": "string",
+      "enum": [
+        "NAMESPACE_SHARE_RELATION_UNSPECIFIED",
+        "NAMESPACE_SHARE_RELATION_VIEWER",
+        "NAMESPACE_SHARE_RELATION_USER",
+        "NAMESPACE_SHARE_RELATION_EDITOR"
+      ],
+      "default": "NAMESPACE_SHARE_RELATION_UNSPECIFIED"
+    },
+    "v1NamespaceVisibility": {
+      "type": "string",
+      "enum": [
+        "NAMESPACE_VISIBILITY_UNSPECIFIED",
+        "NAMESPACE_VISIBILITY_PRIVATE",
+        "NAMESPACE_VISIBILITY_PUBLIC"
+      ],
+      "default": "NAMESPACE_VISIBILITY_UNSPECIFIED"
+    },
     "v1ObjectRef": {
       "type": "object",
       "properties": {
@@ -2250,6 +3550,14 @@
         }
       },
       "description": "Principal is the normalized identity of the current caller.\r\n\r\nField set is aligned with kernel authn.Principal (github.com/aisphereio/\r\nkernel/authn.Principal). The kernel type has additional internal fields\r\n(Provider, ExternalID, Issuer, Audience, TenantID, AppID, IssuedAt) that\r\nare not exposed here because they are not useful to typical frontend\r\nconsumers; if a future use case needs them, add fields rather than\r\nexposing the kernel struct verbatim."
+    },
+    "v1ProbeClusterResponse": {
+      "type": "object",
+      "properties": {
+        "cluster": {
+          "$ref": "#/definitions/v1Cluster"
+        }
+      }
     },
     "v1PullRequest": {
       "type": "object",
@@ -2515,6 +3823,28 @@
       },
       "description": "RevokeResponse returns the outcome of a Revoke call.\r\n\r\nWe do not use google.protobuf.Empty so callers can distinguish\r\n\"IdP-side revoked\" from \"only local blacklist updated\" — important for\r\nsecurity-sensitive flows where the caller needs to know whether the token\r\nmay still be valid against other Resource Servers."
     },
+    "v1RotateCredentialResponse": {
+      "type": "object",
+      "properties": {
+        "cluster": {
+          "$ref": "#/definitions/v1Cluster"
+        }
+      }
+    },
+    "v1ServiceAccountCredential": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Bearer token. Hub stores it AEAD-encrypted; never returned."
+        },
+        "caCert": {
+          "type": "string",
+          "format": "byte",
+          "description": "PEM-encoded CA bundle. Optional; when empty, system roots are used."
+        }
+      }
+    },
     "v1Skill": {
       "type": "object",
       "properties": {
@@ -2616,6 +3946,47 @@
         "id"
       ]
     },
+    "v1SyncNamespacesResponse": {
+      "type": "object",
+      "properties": {
+        "imported": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "updated": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "removed": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1UpdateClusterResponse": {
+      "type": "object",
+      "properties": {
+        "cluster": {
+          "$ref": "#/definitions/v1Cluster"
+        }
+      }
+    },
+    "v1UpdateNamespaceResponse": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "$ref": "#/definitions/v1Namespace"
+        }
+      }
+    },
+    "v1UpdateNamespaceVisibilityResponse": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "$ref": "#/definitions/v1Namespace"
+        }
+      }
+    },
     "v1UpdateSkillResponse": {
       "type": "object",
       "properties": {
@@ -2631,6 +4002,18 @@
           "$ref": "#/definitions/v1Skill"
         }
       }
+    },
+    "v1VisibilitySyncStatus": {
+      "type": "string",
+      "enum": [
+        "VISIBILITY_SYNC_UNSPECIFIED",
+        "VISIBILITY_SYNC_SYNCED",
+        "VISIBILITY_SYNC_PUBLISHING",
+        "VISIBILITY_SYNC_REVOKING",
+        "VISIBILITY_SYNC_FAILED"
+      ],
+      "default": "VISIBILITY_SYNC_UNSPECIFIED",
+      "description": "VisibilitySyncStatus records the SpiceDB projection state for visibility\n(design §7.5). Reconcile converges non-SYNCED rows toward SYNCED along the\nDB desired direction."
     },
     "v1WriteRelationshipsRequest": {
       "type": "object",

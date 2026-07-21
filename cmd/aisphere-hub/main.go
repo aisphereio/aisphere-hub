@@ -20,6 +20,7 @@ import (
 	"github.com/aisphereio/kernel/configx/file"
 	"github.com/aisphereio/kernel/logx"
 	"github.com/aisphereio/kernel/metricsx"
+	"github.com/aisphereio/kernel/taskx"
 )
 
 var (
@@ -148,8 +149,84 @@ func main() {
 		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
 	}
 
-	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, gitEngine, authnService, authzService, auditService, skillService)
-	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService)
+	// Wire the Kubernetes cluster management plane (design §5/§6/§7.5.5).
+	// Only when kubernetes.enabled is true. PR③ ships the full CRUD + Probe +
+	// Rotate + Namespace + visibility reconcile path. The scheduler runs the
+	// visibility reconciler on a fixed interval; V1 uses an in-process
+	// taskx.Scheduler (no Dapr sidecar). Cross-replica singleton via RedisLocker
+	// is a V2 follow-up (test server runs a single Hub replica for V1).
+	var clusterService *service.ClusterService
+	var namespaceService *service.NamespaceService
+	var k8sScheduler *taskx.Scheduler
+	if bc.Kubernetes.Enabled {
+		clusterRepo := data.NewClusterRepo(resources)
+		namespaceRepo := data.NewNamespaceRepo(resources)
+		outboxRepo := data.NewOutboxRepo(resources.DB.GORM)
+
+		// Outbox adapter so biz.OutboxEnqueuer is satisfied by data.OutboxRepo.
+		clusterUC := biz.NewClusterUsecase(
+			clusterRepo,
+			resources.KubernetesCredStore,
+			resources.KubernetesEndpointPolicy,
+			resources.KubernetesClientPool,
+			outboxRepo,
+			authzUsecase,
+			logger,
+			biz.ClusterUsecaseOptions{
+				MaxScan:          bc.Kubernetes.Reconcile.MaxScan,
+				MaxHydrateRounds: bc.Kubernetes.Reconcile.MaxHydrateRounds,
+				ProbeTimeout:     30 * time.Second,
+			},
+		)
+		namespaceUC := biz.NewNamespaceUsecase(
+			namespaceRepo,
+			clusterRepo,
+			resources.KubernetesClientPool,
+			outboxRepo,
+			authzUsecase,
+			logger,
+			biz.ClusterUsecaseOptions{
+				MaxScan:          bc.Kubernetes.Reconcile.MaxScan,
+				MaxHydrateRounds: bc.Kubernetes.Reconcile.MaxHydrateRounds,
+			},
+		)
+		clusterService = service.NewClusterService(clusterUC)
+		namespaceService = service.NewNamespaceService(namespaceUC)
+
+		// Visibility reconciler + taskx.Scheduler (design §7.5.5 / decision 4).
+		// V1: in-process scheduler, no distributed lock (single replica). When
+		// multi-replica lands, wrap WithLocker(taskx.NewRedisLocker(...)).
+		if bc.Kubernetes.Reconcile.Interval > 0 {
+			reconciler := biz.NewVisibilityReconciler(namespaceRepo, authzUsecase, nil, logger, 100)
+			k8sScheduler = taskx.NewScheduler()
+			if err := k8sScheduler.Register(taskx.Job{
+				Name:       "k8s-visibility-reconciler",
+				Schedule:   taskx.Every(bc.Kubernetes.Reconcile.Interval),
+				Handler:    reconciler.Run,
+				RunOnStart: true,
+				Timeout:    2 * time.Minute,
+				Retry: taskx.RetryPolicy{
+					MaxAttempts:    3,
+					InitialBackoff: 5 * time.Second,
+					MaxBackoff:     1 * time.Minute,
+					Multiplier:     2,
+				},
+			}); err != nil {
+				logger.Error("k8s reconciler registration failed", logx.Err(err))
+				panic(err)
+			}
+		}
+
+		// Bootstrap k8s SpiceDB relationships (warn, not fatal — design §7.6.6).
+		// V1: gather org IDs from configured orgs (none configured → skip). A
+		// future operator-config or DB scan supplies org IDs.
+		if err := biz.BootstrapClusterRelationships(bootstrapCtx, clusterRepo, authzUsecase, logger); err != nil {
+			logger.Warn("k8s cluster authz bootstrap failed; historical cluster permissions may be incomplete", logx.Err(err))
+		}
+	}
+
+	httpServer := server.NewHTTPServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, gitEngine, authnService, authzService, auditService, skillService, clusterService, namespaceService)
+	grpcServer := server.NewGRPCServer(bc.Server, bc.Log.AccessLog, resources, bc.Security, authnService, authzService, auditService, skillService, clusterService, namespaceService)
 
 	opts := []kernel.Option{
 		kernel.Name(bc.Service.Name),
@@ -159,6 +236,16 @@ func main() {
 		kernel.Metrics(metrics),
 		kernel.Server(httpServer, grpcServer),
 		kernel.StopTimeout(10 * time.Second),
+	}
+	// Start the k8s visibility reconciler after the app is up (design §7.5.5).
+	if k8sScheduler != nil {
+		opts = append(opts, kernel.AfterStart(func(ctx context.Context) error {
+			if err := k8sScheduler.Start(ctx); err != nil {
+				logger.Error("k8s scheduler start failed", logx.Err(err))
+				return err
+			}
+			return nil
+		}))
 	}
 	if bc.Metrics.Enabled && bc.Metrics.Addr != "" {
 		opts = append(opts, kernel.PrometheusMetrics(bc.Metrics.Addr))

@@ -171,3 +171,219 @@ type ClusterUsecaseOptions struct {
 	MaxHydrateRounds int
 	ProbeTimeout     time.Duration
 }
+
+// --- Domain types (PR③) ---
+//
+// These are the biz-layer views of k8s_clusters / k8s_namespaces /
+// k8s_namespace_shares rows (design §8). The data layer (cluster_repo.go,
+// namespace_repo.go) translates between these and GORM models; the service
+// layer translates between these and proto messages. Status / visibility /
+// lifecycle fields are uppercase strings matching the DB CHECK constraints
+// and proto enums (design decision 1).
+
+// ClusterStatus mirrors the k8s_clusters.status CHECK constraint and the
+// proto ClusterStatus enum (design §8.1).
+const (
+	ClusterStatusCreating  = "CREATING"
+	ClusterStatusReady     = "READY"
+	ClusterStatusProbing   = "PROBING"
+	ClusterStatusDegraded  = "DEGRADED"
+	ClusterStatusDeleting  = "DELETING"
+	ClusterStatusDeleted   = "DELETED"
+	ClusterStatusFailed    = "FAILED"
+)
+
+// NamespaceVisibility mirrors k8s_namespaces.visibility (design §8.3).
+const (
+	NamespaceVisibilityPrivate = "PRIVATE"
+	NamespaceVisibilityPublic  = "PUBLIC"
+)
+
+// VisibilitySyncStatus mirrors k8s_namespaces.visibility_sync_status.
+const (
+	VisibilitySyncSynced      = "SYNCED"
+	VisibilitySyncPublishing  = "PUBLISHING"
+	VisibilitySyncRevoking    = "REVOKING"
+	VisibilitySyncFailed      = "SYNC_FAILED"
+)
+
+// NamespaceLifecycle mirrors k8s_namespaces.lifecycle.
+const (
+	NamespaceLifecycleCreating    = "CREATING"
+	NamespaceLifecycleReady       = "READY"
+	NamespaceLifecycleTerminating = "TERMINATING"
+	NamespaceLifecycleFailed      = "FAILED"
+	NamespaceLifecycleDeleted     = "DELETED"
+)
+
+// ShareRelation mirrors k8s_namespace_shares.relation CHECK constraint.
+const (
+	ShareRelationViewer = "viewer"
+	ShareRelationUser   = "user"
+	ShareRelationEditor = "editor"
+)
+
+// DeletePolicy mirrors the proto DeletePolicy enum (design §5.7.5 / §6.6).
+const (
+	DeletePolicyDetachOnly = "DETACH_ONLY"
+	DeletePolicyCascade    = "CASCADE"
+)
+
+// Cluster is the biz-layer view of a k8s_clusters row. CredentialRef +
+// CredentialRevision identify the stored credential (via CredentialLocator);
+// ServerURL is the user-supplied API server URL (already validated by
+// EndpointPolicy at create time). ClusterUID is the probe-discovered UID
+// used to detect identity drift across rotate (design §5.7.3 step 3).
+type Cluster struct {
+	ID                string
+	OrgID             string
+	Name              string
+	DisplayName       string
+	Description       string
+	ServerURL         string
+	CredentialRef     string
+	CredentialRevision int64
+	Distribution      string
+	KubernetesVersion string
+	ClusterUID        string
+	Status            string
+	HealthMessage     string
+	Labels            map[string]string
+	LastProbeAt       time.Time
+	OwnerType         string
+	OwnerID           string
+	CreatedByType     string
+	CreatedBy         string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	Revision          int64
+}
+
+// Namespace is the biz-layer view of a k8s_namespaces row.
+type Namespace struct {
+	ID                 string
+	ClusterID          string
+	KubeName           string
+	DisplayName        string
+	Description        string
+	Visibility         string
+	VisibilitySyncStatus string
+	Lifecycle          string
+	Managed            bool
+	KubernetesUID      string
+	ResourceVersion    string
+	Labels             map[string]string
+	Annotations        map[string]string
+	OwnerType          string
+	OwnerID            string
+	CreatedByType      string
+	CreatedBy          string
+	LastSyncAt         time.Time
+	LastErrorCode      string
+	LastErrorMessage   string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Revision           int64
+}
+
+// NamespaceShare is the biz-layer view of a k8s_namespace_shares row.
+type NamespaceShare struct {
+	ID              string
+	NamespaceID     string
+	Relation        string
+	SubjectType     string
+	SubjectID       string
+	SubjectRelation string
+	SyncStatus      string
+	CreatedByType   string
+	CreatedBy       string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+// ClusterRepository is the persistence interface for k8s_clusters (design §5.3).
+// Implementations live in internal/data/cluster_repo.go. CAS methods return
+// ErrClusterRevisionConflict when expected_revision mismatches; status-machine
+// methods return ErrClusterNotFound when the row is missing or the expected
+// status guard fails (RowsAffected == 0).
+type ClusterRepository interface {
+	// CreateCluster inserts a new cluster row with status=CREATING and
+	// revision=1. Returns the stored row.
+	CreateCluster(ctx context.Context, c *Cluster) (*Cluster, error)
+
+	// GetCluster loads a non-deleted cluster by id. Returns ErrClusterNotFound
+	// when missing or soft-deleted.
+	GetCluster(ctx context.Context, id string) (*Cluster, error)
+
+	// GetClusterByOrgName loads by (org_id, name) for the unique partial index.
+	GetClusterByOrgName(ctx context.Context, orgID, name string) (*Cluster, error)
+
+	// ListClusterCandidates scans k8s_clusters by (org_id, name > cursor)
+	// ordered by (org_id, name), limit maxScan, soft-deleted excluded. This is
+	// the candidate feed for ListClusters' BatchCheck authorization filter
+	// (design §5.3.1 / §7.6.3). Returns clusters and the next cursor (empty
+	// when exhausted).
+	ListClusterCandidates(ctx context.Context, orgID, cursor string, maxScan int) ([]*Cluster, string, error)
+
+	// UpdateClusterWithCAS applies field-masked updates guarded by
+	// expected_revision. On success revision is incremented and the row
+	// returned. RowsAffected==0 → ErrClusterRevisionConflict. allowedFields
+	// is the caller-supplied whitelist (design §5.7.4 FieldMask); immutable
+	// fields (id, org_id, credential_ref, revision, created_*) are rejected
+	// by the caller before calling.
+	UpdateClusterWithCAS(ctx context.Context, id string, expectedRevision int64, updates map[string]any) (*Cluster, error)
+
+	// UpdateClusterStatus is the state-machine CAS (design §5.7.2 status
+	// transitions): UPDATE WHERE id=? AND status=expected. RowsAffected==0 →
+	// ErrClusterNotFound (the row is missing or not in the expected state).
+	// extraUpdates lets the caller stamp probe results (cluster_uid,
+	// kubernetes_version, last_probe_at, health_message) atomically with the
+	// status flip.
+	UpdateClusterStatus(ctx context.Context, id, expected, next string, extraUpdates map[string]any) (*Cluster, error)
+
+	// UpdateClusterCredential stamps a new credential_ref + credential_revision
+	// guarded by expected_revision (design §5.7.3 rotate step 4). Used by
+	// RotateCredential after the new credential is probed.
+	UpdateClusterCredential(ctx context.Context, id string, expectedRevision, newRevision int64, newRef string) (*Cluster, error)
+
+	// SoftDeleteCluster sets deleted_at + status=DELETING/DELETED. Used by
+	// DeleteCluster (design §5.7.5).
+	SoftDeleteCluster(ctx context.Context, id string) error
+
+	// CountNamespacesForCluster returns the count of non-deleted namespaces
+	// on a cluster, for the DeleteCluster hard-delete guard (design §5.7.5:
+	// clusters with namespaces cannot be hard-deleted → ErrFailedPrecondition).
+	CountNamespacesForCluster(ctx context.Context, clusterID string) (int64, error)
+
+	// ListClustersByOrg loads all non-deleted clusters for BatchCheck bootstrap
+	// (authz_bootstrap_k8s.go). Not paginated; bounded by org size.
+	ListClustersByOrg(ctx context.Context, orgID string) ([]*Cluster, error)
+}
+
+// NamespaceRepository is the persistence interface for k8s_namespaces +
+// k8s_namespace_shares (design §6). CAS / status semantics mirror
+// ClusterRepository.
+type NamespaceRepository interface {
+	CreateNamespace(ctx context.Context, ns *Namespace) (*Namespace, error)
+	GetNamespace(ctx context.Context, id string) (*Namespace, error)
+	GetNamespaceByClusterKubeName(ctx context.Context, clusterID, kubeName string) (*Namespace, error)
+	ListNamespacesByCluster(ctx context.Context, clusterID string) ([]*Namespace, error)
+	ListNamespacesByOwner(ctx context.Context, ownerType, ownerID, cursor string, maxScan int) ([]*Namespace, string, error)
+	UpdateNamespaceWithCAS(ctx context.Context, id string, expectedRevision int64, updates map[string]any) (*Namespace, error)
+	UpdateNamespaceVisibility(ctx context.Context, id string, expectedRevision int64, visibility, syncStatus string) (*Namespace, error)
+	UpdateNamespaceStatus(ctx context.Context, id, expected, next string, extraUpdates map[string]any) (*Namespace, error)
+	SoftDeleteNamespace(ctx context.Context, id string) error
+
+	// Share CRUD (design §7.4).
+	CreateShare(ctx context.Context, share *NamespaceShare) (*NamespaceShare, error)
+	DeleteShare(ctx context.Context, id string) error
+	ListSharesByNamespace(ctx context.Context, namespaceID string) ([]*NamespaceShare, error)
+
+	// ListNamespacesBySyncStatus returns namespaces with a given
+	// visibility_sync_status for the reconciler (design §7.5.5).
+	ListNamespacesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*Namespace, error)
+
+	// ListSharesBySyncStatus returns shares with a given sync_status for the
+	// reconciler.
+	ListSharesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*NamespaceShare, error)
+}
