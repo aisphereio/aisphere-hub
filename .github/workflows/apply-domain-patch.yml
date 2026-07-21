@@ -22,6 +22,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feat/repository-backed-skill-profiles
+          fetch-depth: 0
+
+      - name: Merge latest foundation branch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin feat/shared-postgres-git-engine
+          git merge --no-edit origin/feat/shared-postgres-git-engine
 
       - uses: actions/setup-go@v5
         with:
@@ -60,8 +68,6 @@ jobs:
         if: steps.test.outcome == 'success'
         run: |
           git rm .github/domain-remaining.patch.gz.b64 .github/domain-fix.patch .github/workflows/apply-domain-patch.yml
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git commit -m "refactor(skill): persist repository-backed profiles"
           git push origin HEAD:feat/repository-backed-skill-profiles
 
