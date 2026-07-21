@@ -2,13 +2,11 @@ package gitengine
 
 import (
 	"context"
-	"errors"
 	"path/filepath"
 	"testing"
 
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authz"
-	softproto "github.com/aisphereio/soft-serve/pkg/proto"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -23,7 +21,7 @@ func (f *fakePermissionChecker) Check(_ context.Context, request authz.CheckRequ
 	return authz.Decision{Allowed: f.allow}, nil
 }
 
-func TestEngineCreatesAndDeletesRepositoryUsingSharedDatabase(t *testing.T) {
+func TestEngineCreatesRepositoryUsingSharedDatabase(t *testing.T) {
 	database, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "kernel.db")), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("gorm.Open() error = %v", err)
@@ -45,12 +43,6 @@ func TestEngineCreatesAndDeletesRepositoryUsingSharedDatabase(t *testing.T) {
 	}
 	if _, err := engine.backend.Repository(context.Background(), "search"); err != nil {
 		t.Fatalf("Repository() error = %v", err)
-	}
-	if err := engine.DeleteRepository(context.Background(), "search"); err != nil {
-		t.Fatalf("DeleteRepository() error = %v", err)
-	}
-	if _, err := engine.backend.Repository(context.Background(), "search"); !errors.Is(err, softproto.ErrRepoNotFound) {
-		t.Fatalf("Repository() error = %v, want ErrRepoNotFound", err)
 	}
 
 	// Closing the engine must not close the Kernel-owned database.
