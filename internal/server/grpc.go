@@ -4,6 +4,7 @@ import (
 	auditv1 "github.com/aisphereio/aisphere-hub/api/audit/v1"
 	authnv1 "github.com/aisphereio/aisphere-hub/api/authn/v1"
 	authzv1 "github.com/aisphereio/aisphere-hub/api/authz/v1"
+	kubernetesv1 "github.com/aisphereio/aisphere-hub/api/kubernetes/v1"
 	skillv1 "github.com/aisphereio/aisphere-hub/api/skill/v1"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
@@ -23,7 +24,7 @@ import (
 // The 302 redirect routes (/v1/authn/login, /v1/authn/logout) are
 // HTTP-only by design (gRPC clients are SPAs/SDKs that should consume
 // the JSON RPCs directly), so they do not have gRPC equivalents.
-func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService) *kgrpc.Server {
+func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService) *kgrpc.Server {
 	var opts []kgrpc.ServerOption
 	if c.GRPC.Addr != "" {
 		opts = append(opts, kgrpc.Address(c.GRPC.Addr))
@@ -54,6 +55,12 @@ func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resource
 	}
 	if skillSvc != nil {
 		skillv1.RegisterSkillServiceServer(srv, skillSvc)
+	}
+	if clusterSvc != nil {
+		kubernetesv1.RegisterClusterServiceServer(srv, clusterSvc)
+	}
+	if namespaceSvc != nil {
+		kubernetesv1.RegisterNamespaceServiceServer(srv, namespaceSvc)
 	}
 	return srv
 }
