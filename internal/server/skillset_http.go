@@ -202,14 +202,22 @@ func replaceSkillSetMembers(tx *gorm.DB, name string, members []skillSetMember) 
 	return nil
 }
 
+// normalizeVisibility maps a free-form scope string to one of the three
+// canonical visibility values. The default (empty / unknown) is "public":
+// SkillSets are catalog groupings, not access boundaries — the referenced
+// Skills carry their own authorization — so creation defaults to openly
+// discoverable unless the caller explicitly opts into a narrower scope.
+// See docs/skillsets.md "Authorization model" for the rationale.
 func normalizeVisibility(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "public":
 		return "public"
 	case "internal":
 		return "internal"
-	default:
+	case "private":
 		return "private"
+	default:
+		return "public"
 	}
 }
 
