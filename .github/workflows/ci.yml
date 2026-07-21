@@ -39,7 +39,7 @@ jobs:
 
       - name: Update Soft Serve dependency
         run: |
-          go get github.com/aisphereio/soft-serve@v0.0.0-20260721010705-4047afdf7dcc
+          go get github.com/aisphereio/soft-serve@v0.0.0-20260721011708-31d466419f2b
           go mod tidy
           if ! git diff --quiet -- go.mod go.sum; then
             git config user.name github-actions[bot]
