@@ -460,9 +460,12 @@ func (uc *ClusterUsecase) RotateCredential(ctx context.Context, principal authn.
 	if err := newCred.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrClusterCredentialInvalid, err)
 	}
-	if _, err := uc.endpoint.Validate(ctx, newCred.Host); err != nil {
-		return nil, err
-	}
+	// No endpoint.Validate here: the cluster's server_url was SSRF-validated
+	// at CreateCluster time and does not change on rotate. For kubeconfig
+	// credentials newCred.Host is empty (the server is embedded in the
+	// kubeconfig), so endpoint.Validate would wrongly reject it. The new
+	// credential's reachability + cluster identity are verified by the
+	// Probe in step 3 (design §5.7.3).
 
 	c, err := uc.clusters.GetCluster(ctx, id)
 	if err != nil {
