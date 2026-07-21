@@ -385,7 +385,7 @@ func TestUpdateNamespaceVisibility_PrivateToPublic_StepsAndSynced(t *testing.T) 
 	defer rels.mu.Unlock()
 	var wildcardWritten bool
 	for _, rel := range rels.written {
-		if rel.Relation == "viewer" && rel.Subject.Relation == "..." {
+		if rel.Relation == "viewer" && rel.Subject.Type == "user" && rel.Subject.ID == "*" {
 			wildcardWritten = true
 		}
 	}
@@ -435,8 +435,8 @@ func TestUpdateNamespaceVisibility_PublicToPrivate_StepsAndSynced(t *testing.T) 
 		t.Fatalf("deletedFilters = %d, want 1", len(rels.deletedFilters))
 	}
 	f := rels.deletedFilters[0]
-	if f.Relation != "viewer" || f.SubjectRelation != "..." {
-		t.Fatalf("delete filter = %+v, want viewer/... wildcard", f)
+	if f.Relation != "viewer" || f.SubjectType != "user" || f.SubjectID != "*" {
+		t.Fatalf("delete filter = %+v, want viewer/user:* wildcard", f)
 	}
 }
 
@@ -510,7 +510,7 @@ func TestReconciler_ConvergesPublishing_ProjectsPublicWildcard(t *testing.T) {
 	defer rels.mu.Unlock()
 	var wildcardWritten bool
 	for _, rel := range rels.written {
-		if rel.Relation == "viewer" && rel.Subject.Relation == "..." && rel.Resource.ID == "ns-r1" {
+		if rel.Relation == "viewer" && rel.Subject.Type == "user" && rel.Subject.ID == "*" && rel.Resource.ID == "ns-r1" {
 			wildcardWritten = true
 		}
 	}

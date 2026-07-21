@@ -122,7 +122,7 @@ func clusterBootstrapRelationships(rows []*Cluster) []AuthzRelationship {
 }
 
 // BootstrapNamespaceRelationships TOUCHes k8s_namespace:{id}#owner@{owner} and
-// k8s_namespace:{id}#parent@k8s_cluster:{cluster_id} for every non-deleted
+// k8s_namespace:{id}#cluster@k8s_cluster:{cluster_id} for every non-deleted
 // namespace. Caller passes org IDs; we load namespaces per-cluster.
 func BootstrapNamespaceRelationshipsForOrgs(ctx context.Context, clusters ClusterRepository, namespaces NamespaceRepository, rels NamespaceRelationships, orgIDs []string, log logx.Logger) error {
 	if rels == nil || clusters == nil || namespaces == nil {
@@ -189,7 +189,7 @@ func namespaceBootstrapRelationships(rows []*Namespace) []AuthzRelationship {
 		if ns.ClusterID != "" {
 			rels = append(rels, AuthzRelationship{
 				Resource: resource,
-				Relation: "parent",
+				Relation: "cluster", // design §7.2.2: k8s_namespace:{id}#cluster@k8s_cluster:{cluster_id}
 				Subject:  AuthzSubjectRef{Type: "k8s_cluster", ID: ns.ClusterID},
 			})
 		}

@@ -115,7 +115,7 @@ func (r *VisibilityReconciler) Run(ctx context.Context) error {
 // stamps SYNCED on success (design §7.5.5 single-direction converge).
 func (r *VisibilityReconciler) convergeOne(ctx context.Context, ns *Namespace) error {
 	resource := namespaceResource(ns.ID)
-	wildcard := AuthzSubjectRef{Type: "user", Relation: "..."}
+	wildcard := AuthzSubjectRef{Type: "user", ID: "*"} // SpiceDB user:* (design §7.5 line 1010)
 	if ns.Visibility == NamespaceVisibilityPublic {
 		// Ensure wildcard viewer exists (idempotent TOUCH).
 		if _, err := r.rels.WriteRelationships(ctx, AuthzRelationship{
@@ -126,11 +126,11 @@ func (r *VisibilityReconciler) convergeOne(ctx context.Context, ns *Namespace) e
 	} else {
 		// Ensure no wildcard viewer (idempotent delete).
 		if _, err := r.rels.DeleteRelationships(ctx, AuthzRelationshipFilter{
-			ResourceType:    "k8s_namespace",
-			ResourceID:      ns.ID,
-			Relation:        "viewer",
-			SubjectType:     "user",
-			SubjectRelation: "...",
+			ResourceType: "k8s_namespace",
+			ResourceID:   ns.ID,
+			Relation:     "viewer",
+			SubjectType:  "user",
+			SubjectID:    "*",
 		}); err != nil {
 			return fmt.Errorf("project PRIVATE (revoke wildcard): %w", err)
 		}

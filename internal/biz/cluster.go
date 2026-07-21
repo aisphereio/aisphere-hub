@@ -15,11 +15,10 @@ import (
 // (Cluster CRUD) can build against it without touching PR 2/3 internals.
 
 // CredentialLocator identifies a stored credential revision. CredentialRef is
-// allocated internally by ClusterCredentialStore.Put; the biz layer never
-// invents refs. AAD is reconstructed by the Store from {ClusterID, Ref,
-// CredentialRevision} — callers never supply AAD (design §5.5, avoids the
-// circular dependency where the caller would have to know the ref before Put
-// allocates it).
+// allocated by ClusterCredentialStore (via NewCredentialRef / Put); the biz
+// layer never invents refs itself. AAD is reconstructed by the Store from
+// {ClusterID, Ref, CredentialRevision} — callers never supply AAD
+// (design §5.5).
 type CredentialLocator struct {
 	ClusterID          string
 	CredentialRef      string
@@ -31,6 +30,15 @@ type CredentialLocator struct {
 // logs; AAD binds cluster_id + ref + credential_revision so ciphertext cannot
 // be replayed against a different credential revision or cluster.
 type ClusterCredentialStore interface {
+	// NewCredentialRef allocates a fresh UUIDv4 ref without persisting
+	// anything. Used by CreateCluster so the k8s_clusters row (whose
+	// credential_ref is NOT NULL) can be INSERTed first inside a tx; the
+	// matching credential row is then written via PutWithRef in the same tx,
+	// satisfying the k8s_cluster_credentials.cluster_id FK (Postgres checks
+	// FKs immediately, even inside a tx, so the cluster row must exist before
+	// the credential row is inserted — design §5.7.2).
+	NewCredentialRef() (string, error)
+
 	// Put encrypts value under a freshly allocated ref, using
 	// {clusterID, newRef, credentialRevision} as AAD. Returns the full
 	// Locator so the biz layer can persist credential_ref + credential_revision
@@ -38,6 +46,13 @@ type ClusterCredentialStore interface {
 	// (Put does not increment it; the caller chooses 1 for create, current+1
 	// for rotate — design §5.5).
 	Put(ctx context.Context, clusterID string, credentialRevision int64, value kubernetesx.Credential) (CredentialLocator, error)
+
+	// PutWithRef is Put with a caller-allocated ref. Used by CreateCluster to
+	// satisfy the k8s_cluster_credentials.cluster_id FK: the caller allocates
+	// the ref, INSERTs the k8s_clusters row (whose credential_ref is NOT NULL)
+	// first, then calls PutWithRef inside the same tx so the credential row's
+	// FK is satisfied. AAD = {clusterID, ref, credentialRevision}.
+	PutWithRef(ctx context.Context, clusterID, ref string, credentialRevision int64, value kubernetesx.Credential) (CredentialLocator, error)
 
 	// Get reconstructs AAD from locator, reads the DB row, verifies the row's
 	// cluster_id/ref/credential_revision match the locator (drift →
@@ -307,6 +322,15 @@ type NamespaceShare struct {
 // methods return ErrClusterNotFound when the row is missing or the expected
 // status guard fails (RowsAffected == 0).
 type ClusterRepository interface {
+	// InTx runs fn inside a single DB transaction. The implementation injects
+	// the tx into the context passed to fn so that other repos / stores that
+	// share the same DB.GORM(ctx) closure (e.g. ClusterCredentialStore.Put)
+	// participate in the same tx. Used by CreateCluster to atomically insert
+	// the cluster row + its credential row (the credential row has a FK to
+	// k8s_clusters, so both inserts must commit together). Nested InTx reuses
+	// the outer tx (no-op wrapper).
+	InTx(ctx context.Context, fn func(ctx context.Context) error) error
+
 	// CreateCluster inserts a new cluster row with status=CREATING and
 	// revision=1. Returns the stored row.
 	CreateCluster(ctx context.Context, c *Cluster) (*Cluster, error)

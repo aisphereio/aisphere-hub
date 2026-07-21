@@ -143,11 +143,13 @@ func (uc *NamespaceUsecase) CreateNamespace(ctx context.Context, principal authn
 		return nil, err
 	}
 
-	// Step 4: SpiceDB owner + parent relationships.
+	// Step 4: SpiceDB owner + cluster relationships (design §7.2.2 line 993:
+	// k8s_namespace:{id}#cluster@k8s_cluster:{cluster_id} — the relation is
+	// "cluster", not "parent", matching the SpiceDB schema definition).
 	resource := namespaceResource(created.ID)
 	if _, err := uc.rels.WriteRelationships(ctx,
 		AuthzRelationship{Resource: resource, Relation: "owner", Subject: subject},
-		AuthzRelationship{Resource: resource, Relation: "parent", Subject: AuthzSubjectRef{Type: "k8s_cluster", ID: created.ClusterID}},
+		AuthzRelationship{Resource: resource, Relation: "cluster", Subject: AuthzSubjectRef{Type: "k8s_cluster", ID: created.ClusterID}},
 	); err != nil {
 		compensateCtx := context.WithoutCancel(ctx)
 		_ = uc.rels.RevokeResource(compensateCtx, resource)
@@ -326,8 +328,9 @@ func (uc *NamespaceUsecase) UpdateNamespaceVisibility(ctx context.Context, princ
 	}
 
 	// Step 2: synchronous SpiceDB projection. The wildcard subject represents
-	// "all authenticated principals" for PUBLIC visibility.
-	wildcard := AuthzSubjectRef{Type: "user", Relation: "..."}
+	// "all users" for PUBLIC visibility — SpiceDB subject `user:*` (design
+	// §7.5 line 1010: k8s_namespace:{id}#viewer@user:*).
+	wildcard := AuthzSubjectRef{Type: "user", ID: "*"}
 	resource := namespaceResource(id)
 	if desired == NamespaceVisibilityPublic {
 		if _, err := uc.rels.WriteRelationships(ctx, AuthzRelationship{
@@ -339,11 +342,11 @@ func (uc *NamespaceUsecase) UpdateNamespaceVisibility(ctx context.Context, princ
 		}
 	} else {
 		if _, err := uc.rels.DeleteRelationships(ctx, AuthzRelationshipFilter{
-			ResourceType: "k8s_namespace",
-			ResourceID:   id,
-			Relation:     "viewer",
-			SubjectType:  "user",
-			SubjectRelation: "...",
+			ResourceType:    "k8s_namespace",
+			ResourceID:      id,
+			Relation:        "viewer",
+			SubjectType:     "user",
+			SubjectID:       "*",
 		}); err != nil {
 			uc.compensateVisibility(ctx, id, ns.Visibility, err)
 			return uc.namespaces.GetNamespace(ctx, id)
@@ -366,13 +369,21 @@ func (uc *NamespaceUsecase) UpdateNamespaceVisibility(ctx context.Context, princ
 
 // compensateVisibility reverses the DB visibility to the prior value and
 // stamps SYNC_FAILED so the reconciler can retry (design §7.5.3 compensate).
+// The compensating write reloads the current revision (the synchronous path
+// already bumped it in step 1) so CAS succeeds; on a concurrent writer the
+// reconciler still converges the row on its next tick.
 func (uc *NamespaceUsecase) compensateVisibility(ctx context.Context, id, priorVisibility string, cause error) {
 	compensateCtx := context.WithoutCancel(ctx)
-	_, err := uc.namespaces.UpdateNamespaceVisibility(compensateCtx, id, 0 /* skip CAS by loading first */, priorVisibility, VisibilitySyncFailed)
+	current, err := uc.namespaces.GetNamespace(compensateCtx, id)
 	if err != nil {
-		// CAS with revision 0 won't match; do a best-effort unconditional stamp.
-		uc.log.WithContext(ctx).Warn("visibility compensate CAS failed; stamping SYNC_FAILED unconditionally",
+		uc.log.WithContext(ctx).Warn("visibility compensate: reload failed; reconciler will converge",
 			logx.String("namespace_id", id), logx.Err(err))
+		return
+	}
+	if _, err := uc.namespaces.UpdateNamespaceVisibility(compensateCtx, id, current.Revision, priorVisibility, VisibilitySyncFailed); err != nil {
+		uc.log.WithContext(ctx).Warn("visibility compensate CAS failed; reconciler will converge",
+			logx.String("namespace_id", id), logx.Err(err))
+		return
 	}
 	uc.log.WithContext(ctx).Warn("visibility SpiceDB projection failed; marked SYNC_FAILED for reconciler",
 		logx.String("namespace_id", id), logx.Err(cause))
@@ -389,7 +400,7 @@ func (uc *NamespaceUsecase) DeleteNamespace(ctx context.Context, principal authn
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   namespaceResource(id),
-		Permission: "delete",
+		Permission: "manage", // §7.6.2: can_delete = can_manage
 	})
 	if err != nil {
 		return err
@@ -434,7 +445,7 @@ func (uc *NamespaceUsecase) CreateShare(ctx context.Context, principal authn.Pri
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   namespaceResource(share.NamespaceID),
-		Permission: "share",
+		Permission: "manage", // §7.6.2: can_share = can_manage
 	})
 	if err != nil {
 		return nil, err
@@ -476,7 +487,7 @@ func (uc *NamespaceUsecase) DeleteShare(ctx context.Context, principal authn.Pri
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   namespaceResource(namespaceID),
-		Permission: "share",
+		Permission: "manage", // §7.6.2: can_share = can_manage
 	})
 	if err != nil {
 		return err
@@ -566,14 +577,16 @@ func (uc *NamespaceUsecase) SyncNamespaces(ctx context.Context, principal authn.
 }
 
 // computeNamespacePermissions BatchChecks the namespace permission set (design
-// §7.6.2): view, use, edit, manage, share, delete. Matches proto
-// NamespacePermissions fields 1-6.
+// §7.6.2). The SpiceDB schema defines four permissions on k8s_namespace
+// (view/use/edit/manage); can_share and can_delete are *derived* from
+// can_manage (design §7.6.2 "can_share = can_manage", "can_delete = can_manage"),
+// not separate SpiceDB permissions. Matches proto NamespacePermissions 1-6.
 func (uc *NamespaceUsecase) computeNamespacePermissions(ctx context.Context, principal authn.Principal, ns *Namespace) (*NamespacePermissions, error) {
 	subject, err := canonicalSubject(principal)
 	if err != nil {
 		return nil, err
 	}
-	perms := []string{"view", "use", "edit", "manage", "share", "delete"}
+	perms := []string{"view", "use", "edit", "manage"}
 	checks := make([]AuthzCheckRequest, len(perms))
 	for i, p := range perms {
 		checks[i] = AuthzCheckRequest{
@@ -597,10 +610,8 @@ func (uc *NamespaceUsecase) computeNamespacePermissions(ctx context.Context, pri
 			out.CanEdit = dec.Allowed
 		case "manage":
 			out.CanManage = dec.Allowed
-		case "share":
-			out.CanShare = dec.Allowed
-		case "delete":
-			out.CanDelete = dec.Allowed
+			out.CanShare = dec.Allowed  // §7.6.2: can_share = can_manage
+			out.CanDelete = dec.Allowed // §7.6.2: can_delete = can_manage
 		}
 	}
 	return out, nil

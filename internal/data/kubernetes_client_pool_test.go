@@ -52,14 +52,29 @@ func itoa(n int) string {
 type fakeStore struct {
 	mu   sync.Mutex
 	rows map[string]kubernetesx.Credential
+	n    int
 }
 
 func newFakeStore() *fakeStore { return &fakeStore{rows: map[string]kubernetesx.Credential{}} }
 
-func (s *fakeStore) Put(_ context.Context, clusterID string, rev int64, value kubernetesx.Credential) (biz.CredentialLocator, error) {
+func (s *fakeStore) NewCredentialRef() (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	ref := "ref-" + clusterID + "-" + itoa(int(rev))
+	s.n++
+	return "ref-" + itoa(s.n), nil
+}
+
+func (s *fakeStore) Put(ctx context.Context, clusterID string, rev int64, value kubernetesx.Credential) (biz.CredentialLocator, error) {
+	ref, err := s.NewCredentialRef()
+	if err != nil {
+		return biz.CredentialLocator{}, err
+	}
+	return s.PutWithRef(ctx, clusterID, ref, rev, value)
+}
+
+func (s *fakeStore) PutWithRef(_ context.Context, clusterID, ref string, rev int64, value kubernetesx.Credential) (biz.CredentialLocator, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.rows[ref] = value
 	return biz.CredentialLocator{ClusterID: clusterID, CredentialRef: ref, CredentialRevision: rev}, nil
 }
@@ -299,8 +314,12 @@ func TestPool_StoreErrorPropagates(t *testing.T) {
 // failingStore always errors on Get.
 type failingStore struct{}
 
+func (failingStore) NewCredentialRef() (string, error)                      { return "ref-fail", nil }
 func (failingStore) Put(context.Context, string, int64, kubernetesx.Credential) (biz.CredentialLocator, error) {
 	return biz.CredentialLocator{}, nil
+}
+func (failingStore) PutWithRef(_ context.Context, clusterID, ref string, rev int64, _ kubernetesx.Credential) (biz.CredentialLocator, error) {
+	return biz.CredentialLocator{ClusterID: clusterID, CredentialRef: ref, CredentialRevision: rev}, nil
 }
 func (failingStore) Get(context.Context, biz.CredentialLocator) (kubernetesx.Credential, error) {
 	return kubernetesx.Credential{}, errors.New("store unavailable")

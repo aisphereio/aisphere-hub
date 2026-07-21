@@ -143,23 +143,51 @@ func (uc *ClusterUsecase) CreateCluster(ctx context.Context, principal authn.Pri
 	c.OwnerID = subject.ID
 	c.CreatedByType = subject.Type
 	c.CreatedBy = subject.ID
-
-	// Step 2: store credential with the cluster's ID (revision=1 for create).
-	locator, err := uc.creds.Put(ctx, c.ID, 1, cred)
-	if err != nil {
-		return nil, fmt.Errorf("store credential: %w", err)
-	}
-	c.CredentialRef = locator.CredentialRef
-	c.CredentialRevision = locator.CredentialRevision
 	c.Status = ClusterStatusCreating
 	c.Revision = 1
 
-	// Step 3: INSERT cluster row. Compensate credStore.Delete on failure.
-	created, err := uc.clusters.CreateCluster(ctx, c)
+	// Steps 2 + 3 run in a single DB transaction. Ordering constraint:
+	// k8s_cluster_credentials.cluster_id has a FK to k8s_clusters(id), and
+	// Postgres checks FKs immediately (even inside a tx), so the cluster row
+	// MUST be inserted before the credential row. But k8s_clusters.credential_ref
+	// is NOT NULL, so the ref must be allocated first. Safe order:
+	//   (a) NewCredentialRef → ref (no DB write)
+	//   (b) set c.CredentialRef + c.CredentialRevision=1, INSERT cluster row
+	//   (c) PutWithRef writes the credential row in the same tx (FK satisfied)
+	// InTx injects the tx into ctx so both clusterRepo.CreateCluster and
+	// credStore.PutWithRef pick it up via DB.GORM(ctx) (design §5.7.2).
+	ref, err := uc.creds.NewCredentialRef()
 	if err != nil {
-		compensateCtx := context.WithoutCancel(ctx)
-		_ = uc.creds.Delete(compensateCtx, locator.CredentialRef)
-		return nil, err
+		return nil, fmt.Errorf("allocate credential ref: %w", err)
+	}
+	c.CredentialRef = ref
+	c.CredentialRevision = 1
+
+	var (
+		locator CredentialLocator
+		created *Cluster
+		txErr   error
+	)
+	txErr = uc.clusters.InTx(ctx, func(txCtx context.Context) error {
+		// Step 2: INSERT cluster row first so the credential row's FK is
+		// satisfied when PutWithRef runs. On tx failure the whole tx rolls
+		// back, so no explicit compensate needed for these two writes.
+		created, err = uc.clusters.CreateCluster(txCtx, c)
+		if err != nil {
+			return err
+		}
+
+		// Step 3: store credential (revision=1 for create) with the ref we
+		// pre-allocated. Same tx → atomic with the cluster INSERT.
+		loc, perr := uc.creds.PutWithRef(txCtx, c.ID, ref, 1, cred)
+		if perr != nil {
+			return fmt.Errorf("store credential: %w", perr)
+		}
+		locator = loc
+		return nil
+	})
+	if txErr != nil {
+		return nil, txErr
 	}
 
 	// Step 4: write SpiceDB relationships (zone + owner). Compensate on failure.
@@ -308,7 +336,7 @@ func (uc *ClusterUsecase) DeleteCluster(ctx context.Context, principal authn.Pri
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   clusterResource(id),
-		Permission: "delete",
+		Permission: "manage", // §7.6.2: can_delete = can_manage
 	})
 	if err != nil {
 		return err
@@ -432,9 +460,12 @@ func (uc *ClusterUsecase) RotateCredential(ctx context.Context, principal authn.
 	if err := newCred.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrClusterCredentialInvalid, err)
 	}
-	if _, err := uc.endpoint.Validate(ctx, newCred.Host); err != nil {
-		return nil, err
-	}
+	// No endpoint.Validate here: the cluster's server_url was SSRF-validated
+	// at CreateCluster time and does not change on rotate. For kubeconfig
+	// credentials newCred.Host is empty (the server is embedded in the
+	// kubeconfig), so endpoint.Validate would wrongly reject it. The new
+	// credential's reachability + cluster identity are verified by the
+	// Probe in step 3 (design §5.7.3).
 
 	c, err := uc.clusters.GetCluster(ctx, id)
 	if err != nil {
@@ -490,14 +521,16 @@ func (uc *ClusterUsecase) RotateCredential(ctx context.Context, principal authn.
 }
 
 // computeClusterPermissions BatchChecks the cluster permission set (design
-// §7.6.2): view, operate, manage, create_namespace, delete. Matches the proto
-// ClusterPermissions fields 1-5.
+// §7.6.2). The SpiceDB schema defines four permissions on k8s_cluster
+// (view/operate/manage/create_namespace); can_delete is *derived* from
+// can_manage (design §7.6.2 "can_delete = can_manage"), not a separate
+// SpiceDB permission. Matches the proto ClusterPermissions fields 1-5.
 func (uc *ClusterUsecase) computeClusterPermissions(ctx context.Context, principal authn.Principal, c *Cluster) (*ClusterPermissions, error) {
 	subject, err := canonicalSubject(principal)
 	if err != nil {
 		return nil, err
 	}
-	perms := []string{"view", "operate", "manage", "create_namespace", "delete"}
+	perms := []string{"view", "operate", "manage", "create_namespace"}
 	checks := make([]AuthzCheckRequest, len(perms))
 	for i, p := range perms {
 		checks[i] = AuthzCheckRequest{
@@ -520,10 +553,9 @@ func (uc *ClusterUsecase) computeClusterPermissions(ctx context.Context, princip
 			out.CanOperate = dec.Allowed
 		case "manage":
 			out.CanManage = dec.Allowed
+			out.CanDelete = dec.Allowed // §7.6.2: can_delete = can_manage
 		case "create_namespace":
 			out.CanCreateNamespace = dec.Allowed
-		case "delete":
-			out.CanDelete = dec.Allowed
 		}
 	}
 	return out, nil
