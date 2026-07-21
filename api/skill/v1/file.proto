@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package skill.v1;
+
+import "aisphere/access/v1/access.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
+
+// FileService is a convenience content layer over the Git-native skill
+// repository, mirroring the GitLab/Gitea repository-files REST shape so
+// the Hub UI can host an in-browser editor without forcing every author
+// through git clone/push. Content still lives in the embedded Soft Serve
+// bare repo; these RPCs commit directly via go-git and the biz layer
+// enforces authz (Require) since writes bypass the update hook.
+service FileService {
+  rpc ListFiles(ListFilesRequest) returns (FileContents) {
+    option (google.api.http) = { get: "/v1/skills/{skill_name}/contents/**" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{skill_name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.file.list" risk: "low" }
+    };
+  }
+  rpc GetFile(GetFileRequest) returns (FileContent) {
+    option (google.api.http) = { get: "/v1/skills/{skill_name}/raw/{path=**}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{skill_name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.file.get" risk: "low" }
+    };
+  }
+  rpc CreateFile(CreateFileRequest) returns (FileContent) {
+    option (google.api.http) = { post: "/v1/skills/{skill_name}/contents/{path=**}" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "skill:{skill_name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.file.create" risk: "medium" }
+    };
+  }
+  rpc UpdateFile(UpdateFileRequest) returns (FileContent) {
+    option (google.api.http) = { put: "/v1/skills/{skill_name}/contents/{path=**}" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "skill:{skill_name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.file.update" risk: "medium" }
+    };
+  }
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse) {
+    option (google.api.http) = { delete: "/v1/skills/{skill_name}/contents/{path=**}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "skill:{skill_name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.file.delete" risk: "high" }
+    };
+  }
+}
+
+message FileInfo {
+  string name = 1;
+  string path = 2;
+  string type = 3;
+  int64 size = 4;
+  string mode = 5;
+  string sha = 6;
+  google.protobuf.Timestamp last_modified = 7;
+}
+message FileContents {
+  repeated FileInfo entries = 1;
+  string ref = 2;
+  string path = 3;
+}
+message FileContent {
+  string name = 1;
+  string path = 2;
+  string sha = 3;
+  int64 size = 4;
+  string content = 5;
+  string encoding = 6;
+  string ref = 7;
+  string commit_sha = 8;
+  string commit_message = 9;
+  google.protobuf.Timestamp last_modified = 10;
+}
+message ListFilesRequest {
+  string skill_name = 1 [(google.api.field_behavior) = REQUIRED];
+  string path = 2;
+  string ref = 3;
+}
+message GetFileRequest {
+  string skill_name = 1 [(google.api.field_behavior) = REQUIRED];
+  string path = 2 [(google.api.field_behavior) = REQUIRED];
+  string ref = 3;
+}
+message CreateFileRequest {
+  string skill_name = 1 [(google.api.field_behavior) = REQUIRED];
+  string path = 2 [(google.api.field_behavior) = REQUIRED];
+  string content = 3 [(google.api.field_behavior) = REQUIRED];
+  string message = 4;
+  string branch = 5;
+  string committer_name = 6;
+  string committer_email = 7;
+}
+message UpdateFileRequest {
+  string skill_name = 1 [(google.api.field_behavior) = REQUIRED];
+  string path = 2 [(google.api.field_behavior) = REQUIRED];
+  string content = 3 [(google.api.field_behavior) = REQUIRED];
+  string message = 4;
+  string sha = 5;
+  string branch = 6;
+  string committer_name = 7;
+  string committer_email = 8;
+}
+message DeleteFileRequest {
+  string skill_name = 1 [(google.api.field_behavior) = REQUIRED];
+  string path = 2 [(google.api.field_behavior) = REQUIRED];
+  string message = 3;
+  string sha = 4;
+  string branch = 5;
+  string committer_name = 6;
+  string committer_email = 7;
+}
+message DeleteFileResponse {
+  string commit_sha = 1;
+  string commit_message = 2;
+}

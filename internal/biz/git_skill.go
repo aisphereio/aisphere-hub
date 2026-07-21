@@ -34,6 +34,15 @@ var (
 	ErrPullRequestStale        = errorx.Conflict(errorx.Code("PULL_REQUEST_STALE"), "pull request target changed")
 	ErrPullRequestNotApproved  = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_APPROVED"), "pull request is not approved")
 	ErrPullRequestReviewExists = errorx.Conflict(errorx.Code("PULL_REQUEST_REVIEW_EXISTS"), "pull request review already exists")
+
+	// File-content API errors. These mirror the GitLab/Gitea repository-files
+	// REST shape; the underlying store is still the bare git repo, so the codes
+	// align with what the in-browser editor surfaces to the user.
+	ErrFileNotFound       = errorx.NotFound(errorx.Code("SKILL_FILE_NOT_FOUND"), "skill file not found")
+	ErrFileAlreadyExists  = errorx.Conflict(errorx.Code("SKILL_FILE_ALREADY_EXISTS"), "skill file already exists")
+	ErrFilePathInvalid    = errorx.BadRequest(errorx.Code("SKILL_FILE_PATH_INVALID"), "invalid skill file path")
+	ErrBranchNotFound     = errorx.NotFound(errorx.Code("SKILL_BRANCH_NOT_FOUND"), "skill branch not found")
+	ErrGitOperationFailed = errorx.Internal(errorx.Code("SKILL_GIT_OPERATION_FAILED"), "skill git operation failed")
 )
 
 type GitSkill struct {
@@ -98,3 +107,30 @@ type SkillRelease struct {
 	CreateTime                     time.Time
 }
 type SkillShare struct{ SkillName, Relation, SubjectType, SubjectID, SubjectRelation string }
+
+// FileInfo describes a single entry (file or directory) inside a skill
+// repository tree, in the GitLab/Gitea repository-contents REST shape.
+type FileInfo struct {
+	Name         string
+	Path         string
+	Type         string // "file" | "dir" | "symlink" | "commit"
+	Size         int64
+	Mode         string
+	SHA          string
+	LastModified time.Time
+}
+
+// FileContent is the full content of a single file plus the commit metadata
+// needed for optimistic-concurrency writes (SHA must be echoed back on update).
+type FileContent struct {
+	Name          string
+	Path          string
+	SHA           string
+	Size          int64
+	Content       string
+	Encoding      string // always "base64"
+	Ref           string
+	CommitSHA     string
+	CommitMessage string
+	LastModified  time.Time
+}

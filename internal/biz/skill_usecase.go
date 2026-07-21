@@ -17,6 +17,16 @@ type SkillGitEngine interface {
 	ResolveRef(context.Context, string, string) (string, error)
 	Merge(context.Context, string, string, string, string) (string, error)
 	ListReleases(context.Context, string) ([]SkillRelease, error)
+
+	// File-content API. Reads use the Soft Serve SDK; writes go through
+	// go-git PlainOpen on the same bare repo. Authz is enforced by the
+	// biz layer before these are called, since writes bypass the update
+	// hook that receive-pack normally relies on.
+	ListFiles(ctx context.Context, name, path, ref string) ([]*FileInfo, error)
+	GetFileContent(ctx context.Context, name, path, ref string) (*FileContent, error)
+	CreateFile(ctx context.Context, name, path, content, message, branch, committerName, committerEmail string) (*FileContent, error)
+	UpdateFile(ctx context.Context, name, path, content, message, sha, branch, committerName, committerEmail string) (*FileContent, error)
+	DeleteFile(ctx context.Context, name, path, message, sha, branch, committerName, committerEmail string) (commitSHA, commitMessage string, err error)
 }
 
 type SkillRelationships interface {
