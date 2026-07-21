@@ -90,12 +90,18 @@ data:
           metrics_enabled: true
 
     security:
-      # Envoy performs browser OIDC and forwards the Casdoor access token.
-      # Hub verifies the forwarded JWT again with Casdoor JWKS.
+      # Envoy Gateway terminates browser OIDC, verifies the Casdoor JWT, and
+      # injects x-aisphere-external-* claim headers (see hub-security-policy.yaml
+      # claimToHeaders). The hub runs in gateway_trusted mode: it trusts those
+      # gateway-injected headers and does NOT re-run JWKS verification itself,
+      # which keeps cert/rotation handling entirely at the Gateway layer.
+      # internal_call is disabled because the gateway does not (yet) inject
+      # X-Aisphere-Internal-Token; the trust boundary relies on the cluster
+      # network policy preventing bypass of Envoy.
       authn:
         enabled: true
         provider: casdoor
-        mode: casdoor_jwt
+        mode: gateway_trusted
         cache_ttl_ns: 300000000000
         oidc:
           provider: casdoor
