@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/observability"
 
@@ -86,6 +87,16 @@ type Resources struct {
 	// used. Business layers should type-check (authn.LoginService,
 	// authn.TokenService) before using it.
 	Casdoor *casdoor.Client
+
+	// Kubernetes cluster management plane (design §5/§12.4). The three fields
+	// below are wired only when cfg.Kubernetes.Enabled is true; otherwise they
+	// stay zero-valued and the Cluster/Namespace services are not registered.
+	// PR② ships the infrastructure (AEAD store + SSRF guard + client pool);
+	// PR③ wires the biz/service layers on top.
+	KubernetesCredStore      biz.ClusterCredentialStore
+	KubernetesEndpointPolicy biz.EndpointPolicy
+	KubernetesClientPool     biz.KubernetesProvider
+	KubernetesConfig         conf.KubernetesConfig
 
 	closers []func() error
 }
@@ -288,6 +299,49 @@ func NewResources(ctx context.Context, cfg conf.Bootstrap) (*Resources, func(), 
 	}
 
 	r.Access = accessx.New(r.Authn, r.Authz, r.Audit)
+
+	observability.ComponentConfigured(metrics, "kubernetes", cfg.Kubernetes.Enabled)
+	if cfg.Kubernetes.Enabled {
+		start := time.Now()
+		k8sCfg := cfg.Kubernetes
+		r.KubernetesConfig = k8sCfg
+
+		// 1. AEAD credential store (design §5.5). Master keys come from env
+		// (configenv overlay); yaml only carries placeholders. Construction
+		// fails closed on missing/short keys or an unknown active_version —
+		// a misconfigured crypto layer must never boot.
+		credStore, err := NewCredentialStore(r.DB.GORM, k8sCfg.Encryption, logger.Named("k8s.credstore"))
+		if err != nil {
+			logger.Error("kubernetes credential store init failed", logx.Err(err))
+			r.Close()
+			return nil, nil, err
+		}
+		r.KubernetesCredStore = credStore
+
+		// 2. SSRF endpoint policy (design §12.4). Fail closed on bad CIDRs.
+		endpointPolicy, err := NewEndpointPolicy(k8sCfg.Endpoint)
+		if err != nil {
+			logger.Error("kubernetes endpoint policy init failed", logx.Err(err))
+			r.Close()
+			return nil, nil, err
+		}
+		r.KubernetesEndpointPolicy = endpointPolicy
+
+		// 3. Client pool (design §5.6). Caches kubernetesx.Client per cluster
+		// by credential revision; singleflight dedupes concurrent cold-cache
+		// builds. Close empties the cache at shutdown.
+		clientPool := NewClientPool(credStore, endpointPolicy, logger.Named("k8s.clientpool"))
+		r.KubernetesClientPool = clientPool
+		r.closers = append(r.closers, clientPool.Close)
+
+		observability.ComponentInit(ctx, metrics, "kubernetes", start, nil)
+		logger.Info("kubernetes control plane initialized",
+			logx.String("active_key_version", k8sCfg.Encryption.ActiveVersion),
+			logx.Int("master_keys", len(k8sCfg.Encryption.MasterKeys)),
+			logx.Bool("allow_private_cidrs", k8sCfg.Endpoint.AllowPrivateClusterCIDRs),
+		)
+	}
+
 	return r, func() { _ = r.Close() }, pingEnabled(ctx, r)
 }
 
