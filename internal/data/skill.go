@@ -10,21 +10,68 @@ import (
 	"gorm.io/gorm"
 )
 
-type skillModel struct {
-	Name          string    `gorm:"primaryKey;column:name;size:128"`
-	DisplayName   string    `gorm:"column:display_name;size:256;not null;default:''"`
-	Description   string    `gorm:"column:description;type:text;not null;default:''"`
-	Visibility    string    `gorm:"column:visibility;size:32;not null;default:'private';index"`
-	OwnerID       string    `gorm:"column:owner_id;size:128;not null;index"`
-	OrgID         string    `gorm:"column:org_id;size:128;not null;default:'';index"`
-	ProjectID     string    `gorm:"column:project_id;size:128;not null;default:'';index"`
-	DefaultBranch string    `gorm:"column:default_branch;size:128;not null;default:'main'"`
-	Status        string    `gorm:"column:status;size:32;not null;default:'provisioning';index"`
-	CreatedAt     time.Time `gorm:"column:created_at;not null;autoCreateTime"`
-	UpdatedAt     time.Time `gorm:"column:updated_at;not null;autoUpdateTime"`
+const skillSelectColumns = `
+	r.id AS repository_id,
+	r.name,
+	p.display_name,
+	r.description,
+	p.visibility,
+	p.created_by_id AS owner_id,
+	p.created_by_type AS owner_type,
+	p.org_id,
+	p.project_id,
+	p.default_branch,
+	p.lifecycle_status AS status,
+	r.created_at,
+	r.updated_at`
+
+// softRepoModel is intentionally only a compatibility model for data-layer
+// tests and joins. Soft Serve owns the real repos migration and lifecycle.
+type softRepoModel struct {
+	ID          int64     `gorm:"primaryKey;column:id;autoIncrement"`
+	Name        string    `gorm:"column:name;size:255;uniqueIndex;not null"`
+	Description string    `gorm:"column:description;type:text;not null;default:''"`
+	Private     bool      `gorm:"column:private;not null;default:true"`
+	Mirror      bool      `gorm:"column:mirror;not null;default:false"`
+	Hidden      bool      `gorm:"column:hidden;not null;default:false"`
+	CreatedAt   time.Time `gorm:"column:created_at;not null;autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"column:updated_at;not null;autoUpdateTime"`
 }
 
-func (skillModel) TableName() string { return "skills" }
+func (softRepoModel) TableName() string { return "repos" }
+
+type skillProfileModel struct {
+	RepositoryID   int64     `gorm:"primaryKey;column:repository_id"`
+	DisplayName    string    `gorm:"column:display_name;size:256;not null;default:''"`
+	OrgID          string    `gorm:"column:org_id;size:128;not null;index"`
+	ProjectID      string    `gorm:"column:project_id;size:128;not null;default:'';index"`
+	CreatedByType  string    `gorm:"column:created_by_type;size:32;not null;default:'user'"`
+	CreatedByID    string    `gorm:"column:created_by_id;size:128;not null;index"`
+	Visibility     string    `gorm:"column:visibility;size:32;not null;default:'private';index"`
+	Status         string    `gorm:"column:lifecycle_status;size:32;not null;default:'provisioning';index"`
+	DefaultBranch  string    `gorm:"column:default_branch;size:128;not null;default:'main'"`
+	ProvisionError string    `gorm:"column:provision_error;type:text;not null;default:''"`
+	CreatedAt      time.Time `gorm:"column:created_at;not null;autoCreateTime"`
+	UpdatedAt      time.Time `gorm:"column:updated_at;not null;autoUpdateTime"`
+}
+
+func (skillProfileModel) TableName() string { return "hub_skill_profiles" }
+
+type skillRecord struct {
+	RepositoryID  int64     `gorm:"column:repository_id"`
+	Name          string    `gorm:"column:name"`
+	DisplayName   string    `gorm:"column:display_name"`
+	Description   string    `gorm:"column:description"`
+	Visibility    string    `gorm:"column:visibility"`
+	OwnerID       string    `gorm:"column:owner_id"`
+	OwnerType     string    `gorm:"column:owner_type"`
+	OrgID         string    `gorm:"column:org_id"`
+	ProjectID     string    `gorm:"column:project_id"`
+	DefaultBranch string    `gorm:"column:default_branch"`
+	Status        string    `gorm:"column:status"`
+	CreatedAt     time.Time `gorm:"column:created_at"`
+	UpdatedAt     time.Time `gorm:"column:updated_at"`
+}
 
 type skillRepo struct {
 	db func(context.Context) *gorm.DB
@@ -43,48 +90,28 @@ func newSkillRepoForDB(db *gorm.DB) *skillRepo {
 	return &skillRepo{db: func(ctx context.Context) *gorm.DB { return db.WithContext(ctx) }}
 }
 
-func (r *skillRepo) CreateSkill(ctx context.Context, skill *biz.GitSkill) (*biz.GitSkill, error) {
-	db := r.database(ctx)
-	if db == nil {
-		return nil, errors.New("skill repository database is not configured")
-	}
-	row := skillModelFromBiz(skill)
-	if row.DefaultBranch == "" {
-		row.DefaultBranch = biz.SkillDefaultBranch
-	}
-	if row.Visibility == "" {
-		row.Visibility = biz.SkillVisibilityPrivate
-	}
-	if row.Status == "" {
-		row.Status = biz.SkillStatusProvisioning
-	}
-	if err := db.Create(&row).Error; err != nil {
-		if isDuplicateError(err) {
-			return nil, biz.ErrSkillAlreadyExists
-		}
-		return nil, err
-	}
-	return row.toBiz(), nil
-}
-
 func (r *skillRepo) GetSkill(ctx context.Context, name string) (*biz.GitSkill, error) {
-	db := r.database(ctx)
-	if db == nil {
+	database := r.database(ctx)
+	if database == nil {
 		return nil, errors.New("skill repository database is not configured")
 	}
-	var row skillModel
-	if err := db.Where("name = ?", strings.TrimSpace(name)).First(&row).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, biz.ErrSkillNotFound
-		}
-		return nil, err
+	var row skillRecord
+	result := skillQuery(database).
+		Where("r.name = ?", strings.TrimSpace(name)).
+		Limit(1).
+		Scan(&row)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, biz.ErrSkillNotFound
 	}
 	return row.toBiz(), nil
 }
 
 func (r *skillRepo) ListSkills(ctx context.Context, opts biz.GitSkillListOptions) (*biz.GitSkillListResult, error) {
-	db := r.database(ctx)
-	if db == nil {
+	database := r.database(ctx)
+	if database == nil {
 		return nil, errors.New("skill repository database is not configured")
 	}
 	limit := opts.Limit
@@ -94,19 +121,19 @@ func (r *skillRepo) ListSkills(ctx context.Context, opts biz.GitSkillListOptions
 	if limit > 100 {
 		limit = 100
 	}
-	query := db.Model(&skillModel{})
+	query := skillQuery(database)
 	if value := strings.TrimSpace(opts.Query); value != "" {
 		like := "%" + value + "%"
-		query = query.Where("name LIKE ? OR display_name LIKE ?", like, like)
+		query = query.Where("r.name LIKE ? OR p.display_name LIKE ?", like, like)
 	}
 	if opts.Visibility != "" {
-		query = query.Where("visibility = ?", opts.Visibility)
+		query = query.Where("p.visibility = ?", opts.Visibility)
 	}
 	if opts.Status != "" {
-		query = query.Where("status = ?", opts.Status)
+		query = query.Where("p.lifecycle_status = ?", opts.Status)
 	}
-	var rows []skillModel
-	if err := query.Order("name ASC").Offset(opts.Offset).Limit(limit + 1).Find(&rows).Error; err != nil {
+	var rows []skillRecord
+	if err := query.Order("r.name ASC").Offset(opts.Offset).Limit(limit + 1).Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 	hasMore := len(rows) > limit
@@ -121,37 +148,69 @@ func (r *skillRepo) ListSkills(ctx context.Context, opts biz.GitSkillListOptions
 }
 
 func (r *skillRepo) UpdateSkill(ctx context.Context, skill *biz.GitSkill) (*biz.GitSkill, error) {
-	db := r.database(ctx)
-	if db == nil {
+	if skill == nil {
+		return nil, biz.ErrSkillInvalidArgument
+	}
+	database := r.database(ctx)
+	if database == nil {
 		return nil, errors.New("skill repository database is not configured")
 	}
-	result := db.Model(&skillModel{}).Where("name = ?", strings.TrimSpace(skill.Name)).Updates(map[string]any{
-		"display_name": skill.DisplayName,
-		"description":  skill.Description,
+	name := strings.TrimSpace(skill.Name)
+	err := database.Transaction(func(tx *gorm.DB) error {
+		profile := tx.Table("hub_skill_profiles").
+			Where("repository_id = (SELECT id FROM repos WHERE name = ?)", name).
+			Update("display_name", skill.DisplayName)
+		if profile.Error != nil {
+			return profile.Error
+		}
+		if profile.RowsAffected == 0 {
+			return biz.ErrSkillNotFound
+		}
+		return tx.Table("repos").Where("name = ?", name).Update("description", skill.Description).Error
 	})
-	if result.Error != nil {
-		return nil, result.Error
+	if err != nil {
+		return nil, err
 	}
-	if result.RowsAffected == 0 {
-		return nil, biz.ErrSkillNotFound
-	}
-	return r.GetSkill(ctx, skill.Name)
+	return r.GetSkill(ctx, name)
 }
 
 func (r *skillRepo) UpdateSkillVisibility(ctx context.Context, name, visibility string) (*biz.GitSkill, error) {
-	return r.updateOne(ctx, name, map[string]any{"visibility": visibility})
+	database := r.database(ctx)
+	if database == nil {
+		return nil, errors.New("skill repository database is not configured")
+	}
+	name = strings.TrimSpace(name)
+	err := database.Transaction(func(tx *gorm.DB) error {
+		profile := tx.Table("hub_skill_profiles").
+			Where("repository_id = (SELECT id FROM repos WHERE name = ?)", name).
+			Update("visibility", visibility)
+		if profile.Error != nil {
+			return profile.Error
+		}
+		if profile.RowsAffected == 0 {
+			return biz.ErrSkillNotFound
+		}
+		// Soft Serve's private flag is only a coarse protocol projection. The
+		// authoritative authorization decision remains in SpiceDB.
+		return tx.Table("repos").Where("name = ?", name).Update("private", visibility != biz.SkillVisibilityPublic).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return r.GetSkill(ctx, name)
 }
 
 func (r *skillRepo) UpdateSkillStatus(ctx context.Context, name, expected, next string) (*biz.GitSkill, error) {
-	db := r.database(ctx)
-	if db == nil {
+	database := r.database(ctx)
+	if database == nil {
 		return nil, errors.New("skill repository database is not configured")
 	}
-	query := db.Model(&skillModel{}).Where("name = ?", strings.TrimSpace(name))
+	query := database.Table("hub_skill_profiles").
+		Where("repository_id = (SELECT id FROM repos WHERE name = ?)", strings.TrimSpace(name))
 	if expected != "" {
-		query = query.Where("status = ?", expected)
+		query = query.Where("lifecycle_status = ?", expected)
 	}
-	result := query.Update("status", next)
+	result := query.Update("lifecycle_status", next)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -161,34 +220,10 @@ func (r *skillRepo) UpdateSkillStatus(ctx context.Context, name, expected, next 
 	return r.GetSkill(ctx, name)
 }
 
-func (r *skillRepo) DeleteSkill(ctx context.Context, name string) error {
-	db := r.database(ctx)
-	if db == nil {
-		return errors.New("skill repository database is not configured")
-	}
-	result := db.Where("name = ?", strings.TrimSpace(name)).Delete(&skillModel{})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return biz.ErrSkillNotFound
-	}
-	return nil
-}
-
-func (r *skillRepo) updateOne(ctx context.Context, name string, values map[string]any) (*biz.GitSkill, error) {
-	db := r.database(ctx)
-	if db == nil {
-		return nil, errors.New("skill repository database is not configured")
-	}
-	result := db.Model(&skillModel{}).Where("name = ?", strings.TrimSpace(name)).Updates(values)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if result.RowsAffected == 0 {
-		return nil, biz.ErrSkillNotFound
-	}
-	return r.GetSkill(ctx, name)
+func skillQuery(db *gorm.DB) *gorm.DB {
+	return db.Table("repos AS r").
+		Select(skillSelectColumns).
+		Joins("JOIN hub_skill_profiles AS p ON p.repository_id = r.id")
 }
 
 func (r *skillRepo) database(ctx context.Context) *gorm.DB {
@@ -198,32 +233,15 @@ func (r *skillRepo) database(ctx context.Context) *gorm.DB {
 	return r.db(ctx)
 }
 
-func skillModelFromBiz(skill *biz.GitSkill) skillModel {
-	if skill == nil {
-		return skillModel{}
-	}
-	return skillModel{
-		Name:          strings.TrimSpace(skill.Name),
-		DisplayName:   skill.DisplayName,
-		Description:   skill.Description,
-		Visibility:    skill.Visibility,
-		OwnerID:       skill.OwnerID,
-		OrgID:         skill.OrgID,
-		ProjectID:     skill.ProjectID,
-		DefaultBranch: skill.DefaultBranch,
-		Status:        skill.Status,
-		CreatedAt:     skill.CreateTime,
-		UpdatedAt:     skill.UpdateTime,
-	}
-}
-
-func (m skillModel) toBiz() *biz.GitSkill {
+func (m skillRecord) toBiz() *biz.GitSkill {
 	return &biz.GitSkill{
+		RepositoryID:  m.RepositoryID,
 		Name:          m.Name,
 		DisplayName:   m.DisplayName,
 		Description:   m.Description,
 		Visibility:    m.Visibility,
 		OwnerID:       m.OwnerID,
+		OwnerType:     m.OwnerType,
 		OrgID:         m.OrgID,
 		ProjectID:     m.ProjectID,
 		DefaultBranch: m.DefaultBranch,
