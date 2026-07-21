@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   apply:
+    # The base-branch validator is the visible source of truth; this push path
+    # keeps the branch self-healing when it is updated outside a PR event.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
