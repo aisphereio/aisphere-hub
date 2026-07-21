@@ -21,9 +21,12 @@ import (
 	"github.com/aisphereio/soft-serve/pkg/store"
 	"github.com/aisphereio/soft-serve/pkg/store/database"
 	softweb "github.com/aisphereio/soft-serve/pkg/web"
+	"gorm.io/gorm"
 )
 
 const ZeroHash = "0000000000000000000000000000000000000000"
+
+const postgresDriver = "postgres"
 
 type Config struct {
 	DataPath      string
@@ -42,10 +45,28 @@ type Engine struct {
 	handler http.Handler
 }
 
-func New(ctx context.Context, in Config) (*Engine, error) {
+// New embeds Soft Serve using the PostgreSQL connection pool already owned by
+// Kernel/dbx. The engine deliberately does not create or close a second pool.
+func New(ctx context.Context, in Config, database *gorm.DB) (*Engine, error) {
+	return newWithDatabase(ctx, in, database, postgresDriver)
+}
+
+func newWithDatabase(ctx context.Context, in Config, database *gorm.DB, driverName string) (*Engine, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if database == nil {
+		return nil, fmt.Errorf("gitengine: Kernel database is required")
+	}
+	sqlDB, err := database.DB()
+	if err != nil {
+		return nil, fmt.Errorf("gitengine: resolve Kernel SQL database: %w", err)
+	}
+	driverName = strings.TrimSpace(driverName)
+	if driverName == "" {
+		return nil, fmt.Errorf("gitengine: database driver is required")
+	}
+
 	dataPath := strings.TrimSpace(in.DataPath)
 	if dataPath == "" {
 		dataPath = filepath.Join("data", "git")
@@ -53,19 +74,23 @@ func New(ctx context.Context, in Config) (*Engine, error) {
 	if err := os.MkdirAll(dataPath, 0o755); err != nil {
 		return nil, fmt.Errorf("gitengine: create data path: %w", err)
 	}
+
 	cfg := config.DefaultConfig()
 	cfg.DataPath = dataPath
-	cfg.DB.Driver = "sqlite"
-	cfg.DB.DataSource = filepath.Join(dataPath, "soft-serve.db")
+	cfg.DB.Driver = driverName
+	cfg.DB.DataSource = ""
 	engineCtx := config.WithContext(ctx, cfg)
-	dbx, err := db.Open(engineCtx, cfg.DB.Driver, cfg.DB.DataSource)
+
+	// Kernel owns sqlDB. Soft Serve only wraps it with sqlx and therefore must
+	// not close it when the embedded engine stops.
+	dbx, err := db.NewWithSQLDB(engineCtx, sqlDB, driverName, false)
 	if err != nil {
-		return nil, fmt.Errorf("gitengine: open metadata database: %w", err)
+		return nil, fmt.Errorf("gitengine: wrap Kernel database: %w", err)
 	}
 	if err := migrate.Migrate(engineCtx, dbx); err != nil {
-		_ = dbx.Close()
 		return nil, fmt.Errorf("gitengine: migrate metadata database: %w", err)
 	}
+
 	st := database.New(engineCtx, dbx)
 	engineCtx = db.WithContext(engineCtx, dbx)
 	engineCtx = store.WithContext(engineCtx, st)
@@ -82,7 +107,6 @@ func New(ctx context.Context, in Config) (*Engine, error) {
 		owner, err = be.CreateUser(engineCtx, "skillhub", softproto.UserOptions{Admin: true})
 	}
 	if err != nil {
-		_ = dbx.Close()
 		return nil, fmt.Errorf("gitengine: initialize repository owner: %w", err)
 	}
 	return &Engine{cfg: cfg, db: dbx, store: st, backend: be, owner: owner, handler: softweb.NewProtocolRouter(engineCtx)}, nil
@@ -109,6 +133,8 @@ func hookEnvironment(cfg Config) softweb.ProtocolEnvironment {
 	}
 }
 
+// Close releases engine-local resources. The shared SQL pool remains owned by
+// Kernel; db.Close is a no-op for the non-owning wrapper.
 func (e *Engine) Close() error {
 	if e == nil || e.db == nil {
 		return nil
