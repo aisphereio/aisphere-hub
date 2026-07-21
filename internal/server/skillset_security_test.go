@@ -1,8 +1,7 @@
 package server
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"context"
 	"testing"
 
 	"github.com/aisphereio/aisphere-hub/internal/data"
@@ -10,86 +9,69 @@ import (
 	"github.com/aisphereio/kernel/authz"
 )
 
-func TestSkillSetSecurityUsesContextPrincipal(t *testing.T) {
-	h := &skillSetHTTPHandler{resources: &data.Resources{Authz: authz.AllowAllForDevOnly()}}
-	req := httptest.NewRequest(http.MethodGet, "/v1/skillsets", nil)
-	req.Header.Set("X-Aisphere-Principal", "spoofed-user")
-	req.Header.Set("X-Aisphere-Org", "spoofed-zone")
-	req = req.WithContext(authn.ContextWithPrincipal(req.Context(), authn.Principal{
-		SubjectID:   "user-1",
+// principalForTest builds an authenticated Principal matching the shape
+// gateway_trusted reconstruction would produce from gateway claim headers.
+func principalForTest(subjectID, orgID string) authn.Principal {
+	return authn.Principal{
+		SubjectID:   subjectID,
 		SubjectType: authz.SubjectTypeUser,
-		OrgID:       "zone-1",
-		AuthMethod:  authn.AuthMethodJWT,
-	}))
-
-	called := false
-	handler := h.withSkillSetSecurity(func(w http.ResponseWriter, r *http.Request) {
-		called = true
-		principal, org := requestIdentity(r)
-		if principal != "user-1" {
-			t.Fatalf("principal = %q, want user-1", principal)
-		}
-		if org != "zone-1" {
-			t.Fatalf("org = %q, want zone-1", org)
-		}
-	})
-	handler.ServeHTTP(httptest.NewRecorder(), req)
-	if !called {
-		t.Fatal("wrapped handler was not called")
-	}
+		OrgID:       orgID,
+		AuthMethod:  authn.AuthMethodOIDC,
+	}.Normalize()
 }
 
-func TestSkillSetSecurityRejectsAnonymousCreate(t *testing.T) {
+func TestAllowCreateRequiresZoneMember(t *testing.T) {
 	h := &skillSetHTTPHandler{resources: &data.Resources{Authz: authz.AllowAllForDevOnly()}}
-	req := httptest.NewRequest(http.MethodPost, "/v1/skillsets", nil)
-	req.Header.Set("X-Aisphere-Principal", "spoofed-user")
-	req.Header.Set("X-Aisphere-Org", "spoofed-zone")
-	recorder := httptest.NewRecorder()
-
-	h.withSkillSetSecurity(func(http.ResponseWriter, *http.Request) {
-		t.Fatal("anonymous create reached handler")
-	}).ServeHTTP(recorder, req)
-
-	if recorder.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	ctx := context.Background()
+	p := principalForTest("user-1", "zone-1")
+	if !h.allowCreate(ctx, p) {
+		t.Fatal("AllowAll authorizer + zone-1 principal should permit create")
 	}
 }
 
-func TestSkillSetSecurityAllowsZoneMemberCapability(t *testing.T) {
+func TestAllowCreateDeniesMissingZone(t *testing.T) {
 	h := &skillSetHTTPHandler{resources: &data.Resources{Authz: authz.AllowAllForDevOnly()}}
-	req := httptest.NewRequest(http.MethodPost, "/v1/skillsets", nil)
-	req = req.WithContext(authn.ContextWithPrincipal(req.Context(), authn.Principal{
-		SubjectID:   "user-1",
-		SubjectType: authz.SubjectTypeUser,
-		OrgID:       "zone-1",
-		AuthMethod:  authn.AuthMethodJWT,
-	}))
-
-	called := false
-	h.withSkillSetSecurity(func(http.ResponseWriter, *http.Request) {
-		called = true
-	}).ServeHTTP(httptest.NewRecorder(), req)
-	if !called {
-		t.Fatal("authorized Zone member did not reach handler")
+	ctx := context.Background()
+	// No OrgID → SKILLSET_ZONE_REQUIRED contract: allowCreate returns false.
+	p := principalForTest("user-1", "")
+	if h.allowCreate(ctx, p) {
+		t.Fatal("principal without a zone must not be allowed to create")
 	}
 }
 
-func TestSkillSetSecurityDeniesMissingZoneCapability(t *testing.T) {
+func TestAllowCreateDeniesWhenAuthzDenies(t *testing.T) {
 	h := &skillSetHTTPHandler{resources: &data.Resources{Authz: authz.DenyAll()}}
-	req := httptest.NewRequest(http.MethodPost, "/v1/skillsets", nil)
-	req = req.WithContext(authn.ContextWithPrincipal(req.Context(), authn.Principal{
-		SubjectID:   "user-1",
-		SubjectType: authz.SubjectTypeUser,
-		OrgID:       "zone-1",
-		AuthMethod:  authn.AuthMethodJWT,
-	}))
-	recorder := httptest.NewRecorder()
+	ctx := context.Background()
+	p := principalForTest("user-1", "zone-1")
+	if h.allowCreate(ctx, p) {
+		t.Fatal("DenyAll authorizer must not permit create even with a zone")
+	}
+}
 
-	h.withSkillSetSecurity(func(http.ResponseWriter, *http.Request) {
-		t.Fatal("denied principal reached handler")
-	}).ServeHTTP(recorder, req)
+func TestAllowCreateDeniesWhenAuthzUnavailable(t *testing.T) {
+	// Authz nil → SKILLSET_AUTHZ_UNAVAILABLE contract: allowCreate returns false.
+	h := &skillSetHTTPHandler{resources: &data.Resources{Authz: nil}}
+	ctx := context.Background()
+	p := principalForTest("user-1", "zone-1")
+	if h.allowCreate(ctx, p) {
+		t.Fatal("nil authorizer must not permit create")
+	}
+}
 
-	if recorder.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusForbidden)
+func TestPrincipalFromCtxReadsContextPrincipal(t *testing.T) {
+	ctx := authn.ContextWithPrincipal(context.Background(), principalForTest("user-1", "zone-1"))
+	p, ok := principalFromCtx(ctx)
+	if !ok {
+		t.Fatal("authenticated principal not recovered from context")
+	}
+	if p.SubjectID != "user-1" || p.OrgID != "zone-1" {
+		t.Fatalf("principal = {%s, %s}, want {user-1, zone-1}", p.SubjectID, p.OrgID)
+	}
+}
+
+func TestPrincipalFromCtxRejectsAnonymous(t *testing.T) {
+	// No principal in context → anonymous, ok=false.
+	if _, ok := principalFromCtx(context.Background()); ok {
+		t.Fatal("empty context must not authenticate")
 	}
 }
