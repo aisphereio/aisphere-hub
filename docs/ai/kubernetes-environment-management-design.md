@@ -917,7 +917,7 @@ definition k8s_namespace {
 
   permission manage = owner + cluster->manage + custom_binding->manage
   permission edit = manage + editor + custom_binding->edit
-  permission use = edit + user + custom_binding->operate
+  permission use = edit + user + custom_binding->use
   permission view = use + viewer + custom_binding->view
 }
 ```
@@ -931,9 +931,12 @@ definition k8s_namespace {
 3. `zone`：`permission create_cluster` + `permission manage_clusters`（见下）；
 4. `configs/resource/defaults.yaml` 的 `zone` `permissions:` 数组追加 `create_cluster, manage_clusters`（`permission-manifest-check` CI 强制 set-equal，遗漏即失败）。
 
-由于 `k8s_cluster` 标 `grantable: true`（cluster 级需 custom_role 细粒度授权），IAM `TestGrantableResourcesExposeCustomRoleBindings` 强制每个 permission 表达式含 `custom_binding-><perm>`。`create_namespace` permission 也走 custom_binding，因此需额外镜像 `create_namespace` 能力（第五处加法）：
+由于 `k8s_cluster` 与 `k8s_namespace` 均标 `grantable: true`，IAM `TestGrantableResourcesExposeCustomRoleBindings` 强制每个 permission 表达式含 `custom_binding-><同名 permission>`。因此 `create_namespace` 与 `use` 两个 permission 也需走同名 custom_binding，需额外镜像这两项能力（第五、六处加法）：
 
-5. `custom_role`：`relation create_namespace: user:*` + `permission can_create_namespace = create_namespace`；`role_binding`：`permission create_namespace = role->can_create_namespace & grantee`。`zone` 无需 `create_namespace`（namespace 创建授权在 cluster 级，不在 zone 级）；`defaults.yaml` 的 `custom_role`/`role_binding` 资源 `permissions` 数组追加 `create_namespace`/`can_create_namespace` 对应项以保持 manifest set-equal。
+5. `custom_role`：`relation create_namespace: user:*` + `permission can_create_namespace = create_namespace`；`role_binding`：`permission create_namespace = role->can_create_namespace & grantee`。`zone` 无需 `create_namespace`（namespace 创建授权在 cluster 级，不在 zone 级）。
+6. `custom_role`：`relation use: user:*` + `permission can_use = use`；`role_binding`：`permission use = role->can_use & grantee`。`k8s_namespace.use` 表达式用 `custom_binding->use`（不是 `custom_binding->operate`），与同名 permission 断言一致。`zone` 无需 `use`（namespace 使用授权在 cluster/namespace 级）。
+
+`defaults.yaml` 的 `custom_role`/`role_binding` 不在 `resource_types`（它们是授权机制不是被授权资源），manifest set-equal 只检查 `resource_types` 条目与 schema definitions，因此这两处加法不涉及 `defaults.yaml` 的 `resource_types` 数组，仅 schema 侧。
 
 建议权限：
 
