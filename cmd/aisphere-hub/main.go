@@ -79,7 +79,7 @@ func main() {
 		panic(err)
 	}
 	defer cleanup()
-	if err := data.ApplyStorageMigrations(bootstrapCtx, resources.DB, hubMigration); err != nil {
+	if err := data.ApplyStorageMigrations(bootstrapCtx, resources.DB, bc.Skill.Git.DataPath, hubMigration); err != nil {
 		logger.Error("storage migration failed", logx.Err(err))
 		panic(err)
 	}
