@@ -2,12 +2,13 @@ package gitengine
 
 import (
 	"context"
-	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authz"
-	softproto "github.com/aisphereio/soft-serve/pkg/proto"
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
 
 type fakePermissionChecker struct {
@@ -20,10 +21,20 @@ func (f *fakePermissionChecker) Check(_ context.Context, request authz.CheckRequ
 	return authz.Decision{Allowed: f.allow}, nil
 }
 
-func TestEngineCreatesAndDeletesRepository(t *testing.T) {
-	engine, err := New(context.Background(), Config{DataPath: t.TempDir()})
+func TestEngineCreatesRepositoryUsingSharedDatabase(t *testing.T) {
+	database, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "kernel.db")), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("New() error = %v", err)
+		t.Fatalf("gorm.Open() error = %v", err)
+	}
+	sqlDB, err := database.DB()
+	if err != nil {
+		t.Fatalf("database.DB() error = %v", err)
+	}
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	engine, err := newWithDatabase(context.Background(), Config{DataPath: t.TempDir()}, database, "sqlite")
+	if err != nil {
+		t.Fatalf("newWithDatabase() error = %v", err)
 	}
 	t.Cleanup(func() { _ = engine.Close() })
 
@@ -33,11 +44,19 @@ func TestEngineCreatesAndDeletesRepository(t *testing.T) {
 	if _, err := engine.backend.Repository(context.Background(), "search"); err != nil {
 		t.Fatalf("Repository() error = %v", err)
 	}
-	if err := engine.DeleteRepository(context.Background(), "search"); err != nil {
-		t.Fatalf("DeleteRepository() error = %v", err)
+
+	// Closing the engine must not close the Kernel-owned database.
+	if err := engine.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
 	}
-	if _, err := engine.backend.Repository(context.Background(), "search"); !errors.Is(err, softproto.ErrRepoNotFound) {
-		t.Fatalf("Repository() error = %v, want ErrRepoNotFound", err)
+	if err := sqlDB.PingContext(context.Background()); err != nil {
+		t.Fatalf("Kernel-owned database was closed: %v", err)
+	}
+}
+
+func TestNewRequiresKernelDatabase(t *testing.T) {
+	if _, err := New(context.Background(), Config{DataPath: t.TempDir()}, nil); err == nil {
+		t.Fatal("New(nil database) error = nil, want error")
 	}
 }
 

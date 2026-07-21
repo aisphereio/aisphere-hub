@@ -67,12 +67,22 @@ func main() {
 	bootstrapCtx = logx.Inject(bootstrapCtx, logger, logx.String("service", bc.Service.Name), logx.String("version", bc.Service.Version))
 	bootstrapCtx = metricsx.Inject(bootstrapCtx, metrics)
 
+	// The shared database requires deterministic migration ordering. Preserve
+	// Hub's migration config, prevent NewResources from applying it early, then
+	// run Soft Serve migrations before Kernel migrationx below.
+	hubMigration := bc.Data.Database.Migration
+	bc.Data.Database.Migration.Enabled = false
+
 	resources, cleanup, err := data.NewResources(bootstrapCtx, bc)
 	if err != nil {
 		logger.Error("resource initialization failed", logx.Err(err))
 		panic(err)
 	}
 	defer cleanup()
+	if err := data.ApplyStorageMigrations(bootstrapCtx, resources.DB, hubMigration); err != nil {
+		logger.Error("storage migration failed", logx.Err(err))
+		panic(err)
+	}
 
 	// Wire the authn module.
 	authnRepo := data.NewAuthnRepo(resources, bc.Security.Authn)
@@ -94,37 +104,43 @@ func main() {
 	auditUsecase := biz.NewAuditUsecase(auditRepo, logger)
 	auditService := service.NewAuditService(auditUsecase)
 
-	// Wire the skill module.
+	// Wire the skill module. Kernel/dbx owns the PostgreSQL connection pool;
+	// the embedded Git engine reuses the same pool for Soft Serve metadata.
+	if resources.DB == nil {
+		logger.Error("embedded git engine requires the Kernel database")
+		panic("embedded git engine requires database")
+	}
 	gitEngine, err := gitengine.New(bootstrapCtx, gitengine.Config{
 		DataPath:      bc.Skill.Git.DataPath,
 		IAMEndpoint:   bc.Security.Authz.IAMGRPC.Endpoint,
 		IAMInsecure:   bc.Security.Authz.IAMGRPC.Insecure,
 		IAMCaller:     bc.Security.Authz.IAMGRPC.CallerService,
 		DefaultBranch: biz.SkillDefaultBranch,
-	})
+	}, resources.DB.GORM(bootstrapCtx))
 	if err != nil {
 		logger.Error("embedded git engine initialization failed", logx.Err(err))
 		panic(err)
 	}
 	defer gitEngine.Close()
-skillRepo := data.NewSkillRepo(resources)
-		pullRequestRepo := data.NewPullRequestRepo(resources)
-		skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
 
-		// Attach optional project validator when authz is enabled.
-		if bc.Security.Authz.Enabled && !bc.Security.Authz.DevAllowAll {
-			projectValidator, err := data.NewProjectValidator(
-				bc.Security.Authz.IAMGRPC.Endpoint,
-				bc.Security.Authz.IAMGRPC.CallerService,
-				bc.Security.Authz.IAMGRPC.Insecure,
-			)
-			if err != nil {
-				logger.Error("project validator initialization failed", logx.Err(err))
-				panic(err)
-			}
-			defer projectValidator.Close()
-			skillUsecase.WithProjectValidator(projectValidator)
+	skillRepo := data.NewSkillRepo(resources)
+	pullRequestRepo := data.NewPullRequestRepo(resources)
+	skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
+
+	// Attach optional project validator when authz is enabled.
+	if bc.Security.Authz.Enabled && !bc.Security.Authz.DevAllowAll {
+		projectValidator, err := data.NewProjectValidator(
+			bc.Security.Authz.IAMGRPC.Endpoint,
+			bc.Security.Authz.IAMGRPC.CallerService,
+			bc.Security.Authz.IAMGRPC.Insecure,
+		)
+		if err != nil {
+			logger.Error("project validator initialization failed", logx.Err(err))
+			panic(err)
 		}
+		defer projectValidator.Close()
+		skillUsecase.WithProjectValidator(projectValidator)
+	}
 	skillService := service.NewSkillService(skillUsecase)
 
 	// Repair durable owner relationships through IAM's runtime authorization API.
