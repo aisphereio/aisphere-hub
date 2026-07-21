@@ -27,10 +27,10 @@ func BootstrapAuthzSchema(ctx context.Context, _ *Resources, log logx.Logger) er
 const authzRelationshipBootstrapBatchSize = 100
 
 type skillOwnerRow struct {
-		Name    string
-		OwnerID string
-		OrgID   string
-	}
+	Name    string
+	OwnerID string
+	OrgID   string
+}
 
 // BootstrapAuthzRelationships repairs the SpiceDB projection for durable Hub
 // rows that already exist in PostgreSQL. The normal request path writes the
@@ -41,93 +41,94 @@ type skillOwnerRow struct {
 // SpiceDB writes are idempotent because kernel/authz/spicedb uses TOUCH for
 // WriteRelationships, so this function is safe to run on every startup.
 func BootstrapAuthzRelationships(ctx context.Context, resources *Resources, log logx.Logger) error {
-		if resources == nil || resources.AuthzService == nil {
-			if log != nil {
-				log.WithContext(ctx).Info("authz relationship bootstrap skipped: authz not configured")
-			}
-			return nil
+	if resources == nil || resources.AuthzService == nil {
+		if log != nil {
+			log.WithContext(ctx).Info("authz relationship bootstrap skipped: authz not configured")
 		}
-		if resources.DB == nil {
-			if log != nil {
-				log.WithContext(ctx).Info("authz relationship bootstrap skipped: db not configured")
-			}
-			return nil
+		return nil
+	}
+	if resources.DB == nil {
+		if log != nil {
+			log.WithContext(ctx).Info("authz relationship bootstrap skipped: db not configured")
 		}
-		if log == nil {
-			log = logx.Noop()
-		}
-		log = log.Named("authz.relationship_bootstrap")
+		return nil
+	}
+	if log == nil {
+		log = logx.Noop()
+	}
+	log = log.Named("authz.relationship_bootstrap")
 
-		var rows []skillOwnerRow
-		if err := resources.DB.GORM(ctx).
-			Model(&skillModel{}).
-			Select("name, owner_id, org_id").
-			Where("name <> '' AND owner_id <> ''").
-			Find(&rows).Error; err != nil {
-			log.WithContext(ctx).Error("load skill rows failed", logx.Err(err))
-			return err
-		}
+	var rows []skillOwnerRow
+	if err := resources.DB.GORM(ctx).
+		Table("repos AS r").
+		Select("r.name, p.created_by_id AS owner_id, p.org_id").
+		Joins("JOIN hub_skill_profiles AS p ON p.repository_id = r.id").
+		Where("r.name <> '' AND p.created_by_id <> ''").
+		Find(&rows).Error; err != nil {
+		log.WithContext(ctx).Error("load skill rows failed", logx.Err(err))
+		return err
+	}
 
-		rels := skillBootstrapRelationships(rows)
-		if len(rels) == 0 {
-			log.WithContext(ctx).Info("authz relationship bootstrap skipped: no skills found")
-			return nil
-		}
-
-		written := 0
-		for start := 0; start < len(rels); start += authzRelationshipBootstrapBatchSize {
-			end := start + authzRelationshipBootstrapBatchSize
-			if end > len(rels) {
-				end = len(rels)
-			}
-			result, err := resources.AuthzService.WriteRelationships(ctx, rels[start:end]...)
-			if err != nil {
-				log.WithContext(ctx).Error("write skill relationships failed",
-					logx.Int("batch_start", start),
-					logx.Int("batch_size", end-start),
-					logx.Err(err),
-				)
-				return err
-			}
-			written += result.Written
-		}
-
-		log.WithContext(ctx).Info("authz relationships bootstrapped",
-			logx.Int("skills", len(rows)),
-			logx.Int("written", written),
-		)
+	rels := skillBootstrapRelationships(rows)
+	if len(rels) == 0 {
+		log.WithContext(ctx).Info("authz relationship bootstrap skipped: no skills found")
 		return nil
 	}
 
+	written := 0
+	for start := 0; start < len(rels); start += authzRelationshipBootstrapBatchSize {
+		end := start + authzRelationshipBootstrapBatchSize
+		if end > len(rels) {
+			end = len(rels)
+		}
+		result, err := resources.AuthzService.WriteRelationships(ctx, rels[start:end]...)
+		if err != nil {
+			log.WithContext(ctx).Error("write skill relationships failed",
+				logx.Int("batch_start", start),
+				logx.Int("batch_size", end-start),
+				logx.Err(err),
+			)
+			return err
+		}
+		written += result.Written
+	}
+
+	log.WithContext(ctx).Info("authz relationships bootstrapped",
+		logx.Int("skills", len(rows)),
+		logx.Int("written", written),
+	)
+	return nil
+}
+
 func skillBootstrapRelationships(rows []skillOwnerRow) []authz.Relationship {
-		rels := make([]authz.Relationship, 0, len(rows)*2)
-		seen := make(map[string]struct{}, len(rows))
-		for _, row := range rows {
-			name := strings.TrimSpace(row.Name)
-			ownerID := strings.TrimSpace(row.OwnerID)
-			orgID := strings.TrimSpace(row.OrgID)
-			if name == "" || ownerID == "" {
-				continue
-			}
-			key := name + "\x00" + ownerID
-			if _, ok := seen[key]; ok {
-				continue
-			}
-			seen[key] = struct{}{}
-			resource := authz.ObjectRef{Type: "skill", ID: name}
+	rels := make([]authz.Relationship, 0, len(rows)*2)
+	seen := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		name := strings.TrimSpace(row.Name)
+		ownerID := strings.TrimSpace(row.OwnerID)
+		orgID := strings.TrimSpace(row.OrgID)
+		if name == "" || ownerID == "" {
+			continue
+		}
+		key := name + "\x00" + ownerID
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		resource := authz.ObjectRef{Type: "skill", ID: name}
+		rels = append(rels, authz.Relationship{
+			Resource: resource,
+			Relation: "owner",
+			Subject:  authz.SubjectRef{Type: authz.SubjectTypeUser, ID: ownerID},
+		})
+		// Write zone relationship for governance override when org_id is set.
+		if orgID != "" {
 			rels = append(rels, authz.Relationship{
 				Resource: resource,
-				Relation: "owner",
-				Subject:  authz.SubjectRef{Type: authz.SubjectTypeUser, ID: ownerID},
+				Relation: "zone",
+				Subject:  authz.SubjectRef{Type: "zone", ID: orgID},
 			})
-			// Write zone relationship for governance override when org_id is set.
-			if orgID != "" {
-				rels = append(rels, authz.Relationship{
-					Resource: resource,
-					Relation: "zone",
-					Subject:  authz.SubjectRef{Type: "zone", ID: orgID},
-				})
-			}
 		}
-		return rels
 	}
+	return rels
+}
