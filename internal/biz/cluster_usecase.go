@@ -336,7 +336,7 @@ func (uc *ClusterUsecase) DeleteCluster(ctx context.Context, principal authn.Pri
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   clusterResource(id),
-		Permission: "delete",
+		Permission: "manage", // §7.6.2: can_delete = can_manage
 	})
 	if err != nil {
 		return err
@@ -518,14 +518,16 @@ func (uc *ClusterUsecase) RotateCredential(ctx context.Context, principal authn.
 }
 
 // computeClusterPermissions BatchChecks the cluster permission set (design
-// §7.6.2): view, operate, manage, create_namespace, delete. Matches the proto
-// ClusterPermissions fields 1-5.
+// §7.6.2). The SpiceDB schema defines four permissions on k8s_cluster
+// (view/operate/manage/create_namespace); can_delete is *derived* from
+// can_manage (design §7.6.2 "can_delete = can_manage"), not a separate
+// SpiceDB permission. Matches the proto ClusterPermissions fields 1-5.
 func (uc *ClusterUsecase) computeClusterPermissions(ctx context.Context, principal authn.Principal, c *Cluster) (*ClusterPermissions, error) {
 	subject, err := canonicalSubject(principal)
 	if err != nil {
 		return nil, err
 	}
-	perms := []string{"view", "operate", "manage", "create_namespace", "delete"}
+	perms := []string{"view", "operate", "manage", "create_namespace"}
 	checks := make([]AuthzCheckRequest, len(perms))
 	for i, p := range perms {
 		checks[i] = AuthzCheckRequest{
@@ -548,10 +550,9 @@ func (uc *ClusterUsecase) computeClusterPermissions(ctx context.Context, princip
 			out.CanOperate = dec.Allowed
 		case "manage":
 			out.CanManage = dec.Allowed
+			out.CanDelete = dec.Allowed // §7.6.2: can_delete = can_manage
 		case "create_namespace":
 			out.CanCreateNamespace = dec.Allowed
-		case "delete":
-			out.CanDelete = dec.Allowed
 		}
 	}
 	return out, nil

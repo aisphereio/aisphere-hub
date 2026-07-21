@@ -389,7 +389,7 @@ func (uc *NamespaceUsecase) DeleteNamespace(ctx context.Context, principal authn
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   namespaceResource(id),
-		Permission: "delete",
+		Permission: "manage", // §7.6.2: can_delete = can_manage
 	})
 	if err != nil {
 		return err
@@ -434,7 +434,7 @@ func (uc *NamespaceUsecase) CreateShare(ctx context.Context, principal authn.Pri
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   namespaceResource(share.NamespaceID),
-		Permission: "share",
+		Permission: "manage", // §7.6.2: can_share = can_manage
 	})
 	if err != nil {
 		return nil, err
@@ -476,7 +476,7 @@ func (uc *NamespaceUsecase) DeleteShare(ctx context.Context, principal authn.Pri
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   namespaceResource(namespaceID),
-		Permission: "share",
+		Permission: "manage", // §7.6.2: can_share = can_manage
 	})
 	if err != nil {
 		return err
@@ -566,14 +566,16 @@ func (uc *NamespaceUsecase) SyncNamespaces(ctx context.Context, principal authn.
 }
 
 // computeNamespacePermissions BatchChecks the namespace permission set (design
-// §7.6.2): view, use, edit, manage, share, delete. Matches proto
-// NamespacePermissions fields 1-6.
+// §7.6.2). The SpiceDB schema defines four permissions on k8s_namespace
+// (view/use/edit/manage); can_share and can_delete are *derived* from
+// can_manage (design §7.6.2 "can_share = can_manage", "can_delete = can_manage"),
+// not separate SpiceDB permissions. Matches proto NamespacePermissions 1-6.
 func (uc *NamespaceUsecase) computeNamespacePermissions(ctx context.Context, principal authn.Principal, ns *Namespace) (*NamespacePermissions, error) {
 	subject, err := canonicalSubject(principal)
 	if err != nil {
 		return nil, err
 	}
-	perms := []string{"view", "use", "edit", "manage", "share", "delete"}
+	perms := []string{"view", "use", "edit", "manage"}
 	checks := make([]AuthzCheckRequest, len(perms))
 	for i, p := range perms {
 		checks[i] = AuthzCheckRequest{
@@ -597,10 +599,8 @@ func (uc *NamespaceUsecase) computeNamespacePermissions(ctx context.Context, pri
 			out.CanEdit = dec.Allowed
 		case "manage":
 			out.CanManage = dec.Allowed
-		case "share":
-			out.CanShare = dec.Allowed
-		case "delete":
-			out.CanDelete = dec.Allowed
+			out.CanShare = dec.Allowed  // §7.6.2: can_share = can_manage
+			out.CanDelete = dec.Allowed // §7.6.2: can_delete = can_manage
 		}
 	}
 	return out, nil
