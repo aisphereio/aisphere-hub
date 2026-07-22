@@ -82,6 +82,7 @@ func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Princip
 	item.ProjectID = strings.TrimSpace(item.ProjectID)
 	item.OwnerID = principal.SubjectID
 	item.OwnerType = principal.SubjectType
+	item.OwnerName = principal.Name
 	item.DefaultBranch = SkillDefaultBranch
 	item.Status = SkillStatusProvisioning
 	if item.Visibility == "" {

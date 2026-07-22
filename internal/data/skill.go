@@ -18,6 +18,7 @@ const skillSelectColumns = `
 	p.visibility,
 	p.created_by_id AS owner_id,
 	p.created_by_type AS owner_type,
+	p.created_by_name AS owner_name,
 	p.org_id,
 	p.project_id,
 	p.default_branch,
@@ -47,6 +48,7 @@ type skillProfileModel struct {
 	ProjectID      string    `gorm:"column:project_id;size:128;not null;default:'';index"`
 	CreatedByType  string    `gorm:"column:created_by_type;size:32;not null;default:'user'"`
 	CreatedByID    string    `gorm:"column:created_by_id;size:128;not null;index"`
+	CreatedByName  string    `gorm:"column:created_by_name;size:256;not null;default:''"`
 	Visibility     string    `gorm:"column:visibility;size:32;not null;default:'private';index"`
 	Status         string    `gorm:"column:lifecycle_status;size:32;not null;default:'provisioning';index"`
 	DefaultBranch  string    `gorm:"column:default_branch;size:128;not null;default:'main'"`
@@ -65,6 +67,7 @@ type skillRecord struct {
 	Visibility    string    `gorm:"column:visibility"`
 	OwnerID       string    `gorm:"column:owner_id"`
 	OwnerType     string    `gorm:"column:owner_type"`
+	OwnerName     string    `gorm:"column:owner_name"`
 	OrgID         string    `gorm:"column:org_id"`
 	ProjectID     string    `gorm:"column:project_id"`
 	DefaultBranch string    `gorm:"column:default_branch"`
@@ -242,6 +245,7 @@ func (m skillRecord) toBiz() *biz.GitSkill {
 		Visibility:    m.Visibility,
 		OwnerID:       m.OwnerID,
 		OwnerType:     m.OwnerType,
+		OwnerName:     m.OwnerName,
 		OrgID:         m.OrgID,
 		ProjectID:     m.ProjectID,
 		DefaultBranch: m.DefaultBranch,

@@ -48,7 +48,7 @@ var (
 type GitSkill struct {
 	RepositoryID                               int64
 	Name, DisplayName, Description, Visibility string
-	OwnerID, OwnerType, OrgID, ProjectID       string
+	OwnerID, OwnerType, OwnerName, OrgID, ProjectID string
 	DefaultBranch, Status                      string
 	CreateTime, UpdateTime                     time.Time
 }

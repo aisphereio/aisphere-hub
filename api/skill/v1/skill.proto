@@ -171,6 +171,10 @@ message Skill {
   string status = 9;
   google.protobuf.Timestamp create_time = 10;
   google.protobuf.Timestamp update_time = 11;
+  // Human-readable owner name (e.g. Casdoor displayName). Populated at skill
+  // creation from the authenticated principal; empty for skills created before
+  // this field existed (clients fall back to owner_id).
+  string owner_name = 12;
 }
 
 message CreateSkillRequest {

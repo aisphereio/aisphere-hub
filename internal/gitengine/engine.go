@@ -205,12 +205,12 @@ func (e *Engine) CreateSkill(ctx context.Context, skill *biz.GitSkill) (*biz.Git
 		canonical = repo
 		query := tx.Rebind(`INSERT INTO hub_skill_profiles (
 			repository_id, display_name, org_id, project_id,
-			created_by_type, created_by_id, visibility, lifecycle_status,
+			created_by_type, created_by_id, created_by_name, visibility, lifecycle_status,
 			default_branch, provision_error, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`)
 		_, err := tx.ExecContext(ctx, query,
 			repo.ID, item.DisplayName, item.OrgID, item.ProjectID,
-			item.OwnerType, item.OwnerID, item.Visibility, item.Status, item.DefaultBranch,
+			item.OwnerType, item.OwnerID, item.OwnerName, item.Visibility, item.Status, item.DefaultBranch,
 		)
 		return err
 	})

@@ -4272,6 +4272,10 @@
         "updateTime": {
           "type": "string",
           "format": "date-time"
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Human-readable owner name (e.g. Casdoor displayName). Populated at skill\ncreation from the authenticated principal; empty for skills created before\nthis field existed (clients fall back to owner_id)."
         }
       }
     },
