@@ -84,7 +84,11 @@ func (s *ClusterService) ListClusters(ctx context.Context, req *kubernetesv1.Lis
 	}
 	out := &kubernetesv1.ListClustersResponse{Clusters: make([]*kubernetesv1.Cluster, 0, len(clusters))}
 	for _, c := range clusters {
-		out.Clusters = append(out.Clusters, clusterToProto(c, nil))
+		perms, permErr := s.uc.ClusterPermissionsFor(ctx, principal, c)
+		if permErr != nil {
+			return nil, permErr
+		}
+		out.Clusters = append(out.Clusters, clusterToProto(c, perms))
 	}
 	out.NextPageToken = nextCursor
 	return out, nil
