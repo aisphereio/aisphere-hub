@@ -188,7 +188,7 @@ func skillToProto(item *biz.GitSkill) *skillv1.Skill {
 	if item == nil {
 		return nil
 	}
-	return &skillv1.Skill{Name: item.Name, DisplayName: item.DisplayName, Description: item.Description, Visibility: item.Visibility, OwnerId: item.OwnerID, OrgId: item.OrgID, ProjectId: item.ProjectID, DefaultBranch: item.DefaultBranch, Status: item.Status, CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime)}
+	return &skillv1.Skill{Name: item.Name, DisplayName: item.DisplayName, Description: item.Description, Visibility: item.Visibility, OwnerId: item.OwnerID, OwnerName: item.OwnerName, OrgId: item.OrgID, ProjectId: item.ProjectID, DefaultBranch: item.DefaultBranch, Status: item.Status, CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime)}
 }
 func shareToProto(item *biz.SkillShare) *skillv1.SkillShare {
 	if item == nil {
