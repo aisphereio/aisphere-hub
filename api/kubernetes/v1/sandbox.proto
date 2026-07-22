@@ -1,0 +1,539 @@
+syntax = "proto3";
+
+package kubernetes.v1;
+
+import "aisphere/access/v1/access.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+import "kubernetes/v1/cluster.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/kubernetes/v1;kubernetesv1";
+
+// SandboxService manages AISphere Agent Sandbox records backed by the upstream
+// agent-sandbox operator (CRDs: Sandbox, SandboxTemplate, SandboxWarmPool,
+// SandboxClaim — group agents.x-k8s.io, design §11). The resource hierarchy is
+// Cluster → Namespace → Sandbox. Namespace `use` permission is the base
+// authorization boundary for creating Sandboxes (design §11).
+service SandboxService {
+  // ---- SandboxTemplate CRUD ----
+
+  rpc CreateSandboxTemplate(CreateSandboxTemplateRequest) returns (CreateSandboxTemplateResponse) {
+    option (google.api.http) = { post: "/v1/clusters/{cluster_id}/sandbox-templates" body: "*" response_body: "template" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_template.create" risk: "high" }
+    };
+  }
+
+  rpc ListSandboxTemplates(ListSandboxTemplatesRequest) returns (ListSandboxTemplatesResponse) {
+    option (google.api.http) = { get: "/v1/clusters/{cluster_id}/sandbox-templates" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_template.list" risk: "low" }
+    };
+  }
+
+  rpc GetSandboxTemplate(GetSandboxTemplateRequest) returns (GetSandboxTemplateResponse) {
+    option (google.api.http) = { get: "/v1/sandbox-templates/{id}" response_body: "template" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_template.get" risk: "low" }
+    };
+  }
+
+  rpc DeleteSandboxTemplate(DeleteSandboxTemplateRequest) returns (DeleteSandboxTemplateResponse) {
+    option (google.api.http) = { delete: "/v1/sandbox-templates/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_template.delete" risk: "high" }
+    };
+  }
+
+  // ---- Sandbox CRUD + status sync ----
+
+  rpc CreateSandbox(CreateSandboxRequest) returns (CreateSandboxResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/sandboxes" body: "*" response_body: "sandbox" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.create" risk: "high" }
+    };
+  }
+
+  rpc ListSandboxes(ListSandboxesRequest) returns (ListSandboxesResponse) {
+    option (google.api.http) = { get: "/v1/namespaces/{namespace_id}/sandboxes" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.list" risk: "low" }
+    };
+  }
+
+  rpc GetSandbox(GetSandboxRequest) returns (GetSandboxResponse) {
+    option (google.api.http) = { get: "/v1/sandboxes/{id}" response_body: "sandbox" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.get" risk: "low" }
+    };
+  }
+
+  rpc DeleteSandbox(DeleteSandboxRequest) returns (DeleteSandboxResponse) {
+    option (google.api.http) = { delete: "/v1/sandboxes/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.delete" risk: "high" }
+    };
+  }
+
+  rpc SyncSandboxes(SyncSandboxesRequest) returns (SyncSandboxesResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/sandboxes:sync" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.sync" risk: "medium" }
+    };
+  }
+
+  // ---- WarmPool management ----
+
+  rpc CreateWarmPool(CreateWarmPoolRequest) returns (CreateWarmPoolResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/warm-pools" body: "*" response_body: "warm_pool" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.warm_pool.create" risk: "high" }
+    };
+  }
+
+  rpc ListWarmPools(ListWarmPoolsRequest) returns (ListWarmPoolsResponse) {
+    option (google.api.http) = { get: "/v1/namespaces/{namespace_id}/warm-pools" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.warm_pool.list" risk: "low" }
+    };
+  }
+
+  rpc DeleteWarmPool(DeleteWarmPoolRequest) returns (DeleteWarmPoolResponse) {
+    option (google.api.http) = { delete: "/v1/warm-pools/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.warm_pool.delete" risk: "high" }
+    };
+  }
+
+  // ---- SandboxClaim (claim from WarmPool) ----
+
+  rpc CreateSandboxClaim(CreateSandboxClaimRequest) returns (CreateSandboxClaimResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/sandbox-claims" body: "*" response_body: "claim" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_claim.create" risk: "high" }
+    };
+  }
+
+  rpc ListSandboxClaims(ListSandboxClaimsRequest) returns (ListSandboxClaimsResponse) {
+    option (google.api.http) = { get: "/v1/namespaces/{namespace_id}/sandbox-claims" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_claim.list" risk: "low" }
+    };
+  }
+
+  rpc DeleteSandboxClaim(DeleteSandboxClaimRequest) returns (DeleteSandboxClaimResponse) {
+    option (google.api.http) = { delete: "/v1/sandbox-claims/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_claim.delete" risk: "high" }
+    };
+  }
+
+  // ---- Sandbox operations (tool invocation) ----
+
+  rpc ListSandboxTools(ListSandboxToolsRequest) returns (ListSandboxToolsResponse) {
+    option (google.api.http) = { get: "/v1/sandboxes/{id}/tools" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.tools.list" risk: "low" }
+    };
+  }
+
+  rpc CallSandboxTool(CallSandboxToolRequest) returns (CallSandboxToolResponse) {
+    option (google.api.http) = { post: "/v1/sandboxes/{id}/tools:call" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "use" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.tool.call" risk: "medium" }
+    };
+  }
+}
+
+// ---- Core domain messages ----
+
+// Sandbox is the AISphere control-plane record for an Agent Sandbox instance
+// (design §11). The remote K8s Sandbox CRD (agents.x-k8s.io/v1beta1) is synced
+// via SSA; this row is the authoritative Hub-side record.
+message Sandbox {
+  string id = 1;
+  string namespace_id = 2;
+  string cluster_id = 3;
+  string name = 4;
+  string kubernetes_name = 5;
+  string template_id = 6;
+  string warm_pool_id = 7;
+  string claim_id = 8;
+  SandboxLifecycle lifecycle = 9;
+  string pod_name = 10;
+  string pod_ip = 11;
+  string node_name = 12;
+  string image = 13;
+  string workspace_pvc = 14;
+  SandboxNetworkMode network_mode = 15;
+  SandboxOperatingMode operating_mode = 16;
+  SandboxPermissions permissions = 17;
+  string owner_id = 18;
+  string owner_type = 19;
+  int64 revision = 20;
+  google.protobuf.Timestamp create_time = 21;
+  google.protobuf.Timestamp update_time = 22;
+  google.protobuf.Timestamp last_sync_time = 23;
+  string created_by_type = 24;
+  string created_by = 25;
+  string health_message = 26;
+}
+
+// SandboxTemplate defines a reusable Pod template for Sandboxes. It maps to a
+// K8s SandboxTemplate CRD (extensions.agents.x-k8s.io/v1beta1).
+message SandboxTemplate {
+  string id = 1;
+  string cluster_id = 2;
+  string org_id = 3;
+  string name = 4;
+  string display_name = 5;
+  string description = 6;
+  string kubernetes_name = 7;
+  string image = 8;
+  string container_command = 9; // JSON-encoded string array, e.g. ["sh","-c","sleep infinity"]
+  map<string, string> labels = 10;
+  SandboxTemplateStatus status = 11;
+  string owner_id = 12;
+  string owner_type = 13;
+  int64 revision = 14;
+  google.protobuf.Timestamp create_time = 15;
+  google.protobuf.Timestamp update_time = 16;
+  string created_by_type = 17;
+  string created_by = 18;
+  string health_message = 19;
+}
+
+// WarmPool pre-warms N sandbox pods for sub-5s allocation via SandboxClaim.
+message WarmPool {
+  string id = 1;
+  string namespace_id = 2;
+  string cluster_id = 3;
+  string name = 4;
+  string kubernetes_name = 5;
+  string template_id = 6;
+  int32 replicas = 7;
+  int32 ready_replicas = 8;
+  WarmPoolStatus status = 9;
+  string owner_id = 10;
+  string owner_type = 11;
+  int64 revision = 12;
+  google.protobuf.Timestamp create_time = 13;
+  google.protobuf.Timestamp update_time = 14;
+  string created_by_type = 15;
+  string created_by = 16;
+}
+
+// SandboxClaim claims a pre-warmed Sandbox from a WarmPool without specifying
+// an image (sub-5s allocation). Maps to SandboxClaim CRD.
+message SandboxClaim {
+  string id = 1;
+  string namespace_id = 2;
+  string cluster_id = 3;
+  string name = 4;
+  string kubernetes_name = 5;
+  string warm_pool_id = 6;
+  string sandbox_id = 7; // resolved sandbox once Ready
+  SandboxClaimStatus status = 8;
+  string sandbox_kube_name = 9;
+  string sandbox_pod_ip = 10;
+  string owner_id = 11;
+  string owner_type = 12;
+  int64 revision = 13;
+  google.protobuf.Timestamp create_time = 14;
+  google.protobuf.Timestamp update_time = 15;
+  string created_by_type = 16;
+  string created_by = 17;
+}
+
+// ---- Permissions ----
+
+message SandboxPermissions {
+  bool can_view = 1;
+  bool can_use = 2;
+  bool can_manage = 3;
+  bool can_delete = 4;
+}
+
+// ---- Enums ----
+
+enum SandboxLifecycle {
+  SANDBOX_LIFECYCLE_UNSPECIFIED = 0;
+  SANDBOX_LIFECYCLE_CREATING = 1;
+  SANDBOX_LIFECYCLE_READY = 2;
+  SANDBOX_LIFECYCLE_SUSPENDED = 3;
+  SANDBOX_LIFECYCLE_TERMINATING = 4;
+  SANDBOX_LIFECYCLE_FAILED = 5;
+  SANDBOX_LIFECYCLE_DELETED = 6;
+}
+
+enum SandboxNetworkMode {
+  SANDBOX_NETWORK_MODE_UNSPECIFIED = 0;
+  SANDBOX_NETWORK_MODE_OFFLINE = 1;
+  SANDBOX_NETWORK_MODE_ONLINE = 2;
+}
+
+enum SandboxOperatingMode {
+  SANDBOX_OPERATING_MODE_UNSPECIFIED = 0;
+  SANDBOX_OPERATING_MODE_RUNNING = 1;
+  SANDBOX_OPERATING_MODE_SUSPENDED = 2;
+}
+
+enum SandboxTemplateStatus {
+  SANDBOX_TEMPLATE_STATUS_UNSPECIFIED = 0;
+  SANDBOX_TEMPLATE_STATUS_CREATING = 1;
+  SANDBOX_TEMPLATE_STATUS_READY = 2;
+  SANDBOX_TEMPLATE_STATUS_FAILED = 3;
+  SANDBOX_TEMPLATE_STATUS_DELETED = 4;
+}
+
+enum WarmPoolStatus {
+  WARM_POOL_STATUS_UNSPECIFIED = 0;
+  WARM_POOL_STATUS_CREATING = 1;
+  WARM_POOL_STATUS_READY = 2;
+  WARM_POOL_STATUS_DEGRADED = 3;
+  WARM_POOL_STATUS_DELETED = 4;
+}
+
+enum SandboxClaimStatus {
+  SANDBOX_CLAIM_STATUS_UNSPECIFIED = 0;
+  SANDBOX_CLAIM_STATUS_PENDING = 1;
+  SANDBOX_CLAIM_STATUS_READY = 2;
+  SANDBOX_CLAIM_STATUS_FAILED = 3;
+  SANDBOX_CLAIM_STATUS_DELETED = 4;
+}
+
+// ---- SandboxTemplate request/response messages ----
+
+message CreateSandboxTemplateRequest {
+  string cluster_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 3;
+  string description = 4;
+  string image = 5 [(google.api.field_behavior) = REQUIRED];
+  string container_command = 6; // JSON array string
+  map<string, string> labels = 7;
+  string owner_type = 8;
+  string owner_id = 9;
+}
+
+message CreateSandboxTemplateResponse {
+  SandboxTemplate template = 1;
+}
+
+message ListSandboxTemplatesRequest {
+  string cluster_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListSandboxTemplatesResponse {
+  repeated SandboxTemplate templates = 1;
+  string next_page_token = 2;
+}
+
+message GetSandboxTemplateRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetSandboxTemplateResponse {
+  SandboxTemplate template = 1;
+}
+
+message DeleteSandboxTemplateRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteSandboxTemplateResponse {
+  SandboxTemplate template = 1;
+}
+
+// ---- Sandbox request/response messages ----
+
+message CreateSandboxRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  string template_id = 3; // Hub SandboxTemplate ID; creates from template if set
+  string warm_pool_id = 4; // alternative: claim from warm pool
+  SandboxOperatingMode operating_mode = 5;
+  map<string, string> labels = 6;
+  string owner_type = 7;
+  string owner_id = 8;
+}
+
+message CreateSandboxResponse {
+  Sandbox sandbox = 1;
+}
+
+message ListSandboxesRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListSandboxesResponse {
+  repeated Sandbox sandboxes = 1;
+  string next_page_token = 2;
+}
+
+message GetSandboxRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetSandboxResponse {
+  Sandbox sandbox = 1;
+}
+
+message DeleteSandboxRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  DeletePolicy delete_policy = 3;
+}
+
+message DeleteSandboxResponse {
+  Sandbox sandbox = 1;
+}
+
+message SyncSandboxesRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SyncSandboxesResponse {
+  int32 imported = 1;
+  int32 updated = 2;
+  int32 removed = 3;
+}
+
+// ---- WarmPool request/response messages ----
+
+message CreateWarmPoolRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  string template_id = 3 [(google.api.field_behavior) = REQUIRED];
+  int32 replicas = 4 [(google.api.field_behavior) = REQUIRED];
+  string owner_type = 5;
+  string owner_id = 6;
+}
+
+message CreateWarmPoolResponse {
+  WarmPool warm_pool = 1;
+}
+
+message ListWarmPoolsRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListWarmPoolsResponse {
+  repeated WarmPool warm_pools = 1;
+  string next_page_token = 2;
+}
+
+message DeleteWarmPoolRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteWarmPoolResponse {
+  WarmPool warm_pool = 1;
+}
+
+// ---- SandboxClaim request/response messages ----
+
+message CreateSandboxClaimRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  string warm_pool_id = 3 [(google.api.field_behavior) = REQUIRED];
+  string owner_type = 4;
+  string owner_id = 5;
+}
+
+message CreateSandboxClaimResponse {
+  SandboxClaim claim = 1;
+}
+
+message ListSandboxClaimsRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListSandboxClaimsResponse {
+  repeated SandboxClaim claims = 1;
+  string next_page_token = 2;
+}
+
+message DeleteSandboxClaimRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteSandboxClaimResponse {
+  SandboxClaim claim = 1;
+}
+
+// ---- Sandbox tool invocation messages ----
+
+message ListSandboxToolsRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SandboxToolSchema {
+  string name = 1;
+  string description = 2;
+  string input_schema_json = 3; // JSON Schema for the tool's input parameters
+}
+
+message ListSandboxToolsResponse {
+  repeated SandboxToolSchema tools = 1;
+}
+
+message CallSandboxToolRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string tool = 2 [(google.api.field_behavior) = REQUIRED];
+  string input_json = 3; // JSON-encoded input arguments
+  string trace_id = 4;
+}
+
+message CallSandboxToolResponse {
+  bool ok = 1;
+  string output_json = 2; // JSON-encoded result
+  string error = 3;
+  string trace_id = 4;
+}
