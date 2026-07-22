@@ -173,6 +173,14 @@ var (
 	// ErrNamespaceNotFound: namespace id does not exist (or is soft-deleted), 404.
 	ErrNamespaceNotFound = errorx.NotFound(errorx.Code("NAMESPACE_NOT_FOUND"), "namespace not found")
 
+	// Agent Sandbox NotFound sentinels (design §11). Each maps to a 404 for its
+	// control-plane record type; returned by SandboxRepository Get/Delete/Update
+	// methods when the row is missing or already soft-deleted.
+	ErrSandboxTemplateNotFound = errorx.NotFound(errorx.Code("SANDBOX_TEMPLATE_NOT_FOUND"), "sandbox template not found")
+	ErrSandboxNotFound         = errorx.NotFound(errorx.Code("SANDBOX_NOT_FOUND"), "sandbox not found")
+	ErrWarmPoolNotFound        = errorx.NotFound(errorx.Code("WARM_POOL_NOT_FOUND"), "warm pool not found")
+	ErrSandboxClaimNotFound    = errorx.NotFound(errorx.Code("SANDBOX_CLAIM_NOT_FOUND"), "sandbox claim not found")
+
 	// ErrClusterCredentialInvalid: kernel passthrough — the credential failed
 	// validation or probe (design §5.7.3 step 3). 400.
 	ErrClusterCredentialInvalid = errorx.BadRequest(errorx.Code("KUBERNETES_CREDENTIAL_INVALID"), "credential invalid: probe failed or cluster_uid mismatch")
@@ -316,6 +324,233 @@ type NamespaceShare struct {
 	UpdatedAt       time.Time
 }
 
+// ---- Agent Sandbox domain types (design §11) ----
+//
+// The following types and the SandboxProvider interface extend the Kubernetes
+// control plane to manage Agent Sandbox CRDs (agents.x-k8s.io). Third-party
+// CRD types never leak into these interfaces — the data layer translates them
+// to/from unstructured.Unstructured internally.
+
+// SandboxTemplateApplySpec is the biz-layer view of a SandboxTemplate CRD to
+// SSA-apply on a remote cluster. The data layer builds an
+// extensions.agents.x-k8s.io/v1beta1 SandboxTemplate from this.
+type SandboxTemplateApplySpec struct {
+	Name             string            // K8s SandboxTemplate name (DNS-1123 label)
+	Namespace        string            // K8s namespace (usually agent-sandbox-system or target ns)
+	Image            string            // Container image
+	ContainerCommand []string          // Entrypoint command (e.g. ["sh","-c","sleep infinity"])
+	Labels           map[string]string // AISphere-managed labels
+}
+
+// SandboxTemplateSyncResult is returned by ListSandboxTemplates for each
+// remote SandboxTemplate CRD discovered during a sync.
+type SandboxTemplateSyncResult struct {
+	Name            string
+	Namespace       string
+	UID             string
+	ResourceVersion string
+	Image           string
+	Labels          map[string]string
+}
+
+// SandboxApplySpec is the biz-layer view of a Sandbox CRD to SSA-apply. The
+// data layer builds an agents.x-k8s.io/v1beta1 Sandbox from this.
+type SandboxApplySpec struct {
+	Name          string            // K8s Sandbox name (DNS-1123 label)
+	Namespace     string            // K8s namespace to place the Sandbox in
+	TemplateRef   string            // SandboxTemplate K8s name (required for non-warm-pool creation)
+	OperatingMode string            // "Running" or "Suspended" (default Running)
+	Labels        map[string]string // AISphere-managed labels
+}
+
+// SandboxSyncResult is returned by ListSandboxes for each remote Sandbox CRD.
+type SandboxSyncResult struct {
+	Name            string
+	Namespace       string
+	UID             string
+	ResourceVersion string
+	Phase           string // Ready condition reason: DependenciesReady, PodSucceeded, etc.
+	PodName         string
+	PodIP           string
+	NodeName        string
+	Image           string
+	Labels          map[string]string
+}
+
+// SandboxRuntimeStatus is the observed state of a single Sandbox CRD.
+type SandboxRuntimeStatus struct {
+	Name            string
+	Namespace       string
+	Phase           string
+	PodName         string
+	PodIP           string
+	NodeName        string
+	Image           string
+	OperatingMode   string
+}
+
+// WarmPoolApplySpec is the biz-layer view of a SandboxWarmPool CRD.
+type WarmPoolApplySpec struct {
+	Name        string // K8s SandboxWarmPool name
+	Namespace   string // K8s namespace
+	TemplateRef string // SandboxTemplate K8s name
+	Replicas    int32  // desired pre-warmed pod count
+}
+
+// WarmPoolSyncResult is returned by ListWarmPools for each remote WarmPool.
+type WarmPoolSyncResult struct {
+	Name            string
+	Namespace       string
+	UID             string
+	ResourceVersion string
+	TemplateRef     string
+	Replicas        int32
+	ReadyReplicas   int32
+}
+
+// SandboxClaimApplySpec is the biz-layer view of a SandboxClaim CRD.
+type SandboxClaimApplySpec struct {
+	Name        string // K8s SandboxClaim name
+	Namespace   string // K8s namespace
+	WarmPoolRef string // SandboxWarmPool K8s name
+}
+
+// SandboxTemplate is the biz-layer view of a k8s_sandbox_templates row.
+type SandboxTemplate struct {
+	ID                  string
+	ClusterID           string
+	OrgID               string
+	Name                string
+	DisplayName         string
+	Description         string
+	KubernetesName      string
+	KubernetesNamespace string
+	KubernetesUID       string
+	ResourceVersion     string
+	Image               string
+	ContainerCommand    string
+	Labels              map[string]string
+	Status              string
+	HealthMessage       string
+	OwnerType           string
+	OwnerID             string
+	CreatedByType       string
+	CreatedBy           string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	Revision            int64
+}
+
+// Sandbox is the biz-layer view of a k8s_sandboxes row.
+type Sandbox struct {
+	ID              string
+	NamespaceID     string
+	ClusterID       string
+	OrgID           string
+	Name            string
+	KubernetesName  string
+	KubernetesUID   string
+	ResourceVersion string
+	TemplateID      string
+	WarmPoolID      string
+	ClaimID         string
+	Lifecycle       string
+	OperatingMode   string
+	PodName         string
+	PodIP           string
+	NodeName        string
+	Image           string
+	WorkspacePVC    string
+	NetworkMode     string
+	Labels          map[string]string
+	HealthMessage   string
+	LastSyncAt      time.Time
+	OwnerType       string
+	OwnerID         string
+	CreatedByType   string
+	CreatedBy       string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Revision        int64
+}
+
+// WarmPool is the biz-layer view of a k8s_sandbox_warm_pools row.
+type WarmPool struct {
+	ID              string
+	NamespaceID     string
+	ClusterID       string
+	OrgID           string
+	Name            string
+	KubernetesName  string
+	KubernetesUID   string
+	ResourceVersion string
+	TemplateID      string
+	Replicas        int32
+	ReadyReplicas   int32
+	Status          string
+	HealthMessage   string
+	LastSyncAt      time.Time
+	OwnerType       string
+	OwnerID         string
+	CreatedByType   string
+	CreatedBy       string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Revision        int64
+}
+
+// SandboxClaim is the biz-layer view of a k8s_sandbox_claims row.
+type SandboxClaim struct {
+	ID              string
+	NamespaceID     string
+	ClusterID       string
+	OrgID           string
+	Name            string
+	KubernetesName  string
+	KubernetesUID   string
+	ResourceVersion string
+	WarmPoolID      string
+	SandboxID       string
+	SandboxKubeName string
+	SandboxPodIP    string
+	Status          string
+	HealthMessage   string
+	LastSyncAt      time.Time
+	OwnerType       string
+	OwnerID         string
+	CreatedByType   string
+	CreatedBy       string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Revision        int64
+}
+
+// SandboxProvider is the biz-facing view for Agent Sandbox CRD operations
+// (design §11). The biz layer never touches CRD Go types directly; it asks
+// the provider to apply/delete/list and trusts the data layer to use
+// unstructured.Unstructured + dynamic client internally.
+type SandboxProvider interface {
+	// SandboxTemplate operations.
+	ApplySandboxTemplate(ctx context.Context, clusterID string, locator CredentialLocator, spec SandboxTemplateApplySpec) error
+	DeleteSandboxTemplate(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) error
+	ListSandboxTemplates(ctx context.Context, clusterID string, locator CredentialLocator, namespace string) ([]SandboxTemplateSyncResult, error)
+
+	// Sandbox operations.
+	ApplySandbox(ctx context.Context, clusterID string, locator CredentialLocator, spec SandboxApplySpec) error
+	DeleteSandbox(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) error
+	ListSandboxes(ctx context.Context, clusterID string, locator CredentialLocator, namespace string) ([]SandboxSyncResult, error)
+	GetSandboxStatus(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) (SandboxRuntimeStatus, error)
+
+	// WarmPool operations.
+	ApplyWarmPool(ctx context.Context, clusterID string, locator CredentialLocator, spec WarmPoolApplySpec) error
+	DeleteWarmPool(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) error
+	ListWarmPools(ctx context.Context, clusterID string, locator CredentialLocator, namespace string) ([]WarmPoolSyncResult, error)
+
+	// SandboxClaim operations.
+	ApplySandboxClaim(ctx context.Context, clusterID string, locator CredentialLocator, spec SandboxClaimApplySpec) error
+	DeleteSandboxClaim(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) error
+}
+
 // ClusterRepository is the persistence interface for k8s_clusters (design §5.3).
 // Implementations live in internal/data/cluster_repo.go. CAS methods return
 // ErrClusterRevisionConflict when expected_revision mismatches; status-machine
@@ -410,4 +645,41 @@ type NamespaceRepository interface {
 	// ListSharesBySyncStatus returns shares with a given sync_status for the
 	// reconciler.
 	ListSharesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*NamespaceShare, error)
+}
+
+// SandboxRepository is the persistence interface for Agent Sandbox control-
+// plane records (design §11). Implementations live in internal/data/sandbox_repo.go.
+// CAS Delete/Update methods return ErrClusterRevisionConflict on
+// expected_revision mismatch and the entity-specific Err*NotFound sentinel
+// when the row is missing or already soft-deleted.
+type SandboxRepository interface {
+	// SandboxTemplate CRUD
+	CreateSandboxTemplate(ctx context.Context, t *SandboxTemplate) (*SandboxTemplate, error)
+	GetSandboxTemplate(ctx context.Context, id string) (*SandboxTemplate, error)
+	ListSandboxTemplatesByCluster(ctx context.Context, clusterID string) ([]*SandboxTemplate, error)
+	DeleteSandboxTemplate(ctx context.Context, id string, expectedRevision int64) (*SandboxTemplate, error)
+	UpdateSandboxTemplateStatus(ctx context.Context, id, status, healthMessage string) (*SandboxTemplate, error)
+
+	// Sandbox CRUD
+	CreateSandbox(ctx context.Context, s *Sandbox) (*Sandbox, error)
+	GetSandbox(ctx context.Context, id string) (*Sandbox, error)
+	ListSandboxesByNamespace(ctx context.Context, namespaceID string) ([]*Sandbox, error)
+	ListSandboxesByCluster(ctx context.Context, clusterID string) ([]*Sandbox, error)
+	DeleteSandbox(ctx context.Context, id string, expectedRevision int64) (*Sandbox, error)
+	UpdateSandboxStatus(ctx context.Context, id string, lifecycle, healthMessage string, fields map[string]any) (*Sandbox, error)
+	UpdateSandboxSync(ctx context.Context, id string, fields map[string]any) (*Sandbox, error)
+
+	// WarmPool CRUD
+	CreateWarmPool(ctx context.Context, w *WarmPool) (*WarmPool, error)
+	GetWarmPool(ctx context.Context, id string) (*WarmPool, error)
+	ListWarmPoolsByNamespace(ctx context.Context, namespaceID string) ([]*WarmPool, error)
+	DeleteWarmPool(ctx context.Context, id string, expectedRevision int64) (*WarmPool, error)
+	UpdateWarmPoolStatus(ctx context.Context, id string, status string, fields map[string]any) (*WarmPool, error)
+
+	// SandboxClaim CRUD
+	CreateSandboxClaim(ctx context.Context, c *SandboxClaim) (*SandboxClaim, error)
+	GetSandboxClaim(ctx context.Context, id string) (*SandboxClaim, error)
+	ListSandboxClaimsByNamespace(ctx context.Context, namespaceID string) ([]*SandboxClaim, error)
+	DeleteSandboxClaim(ctx context.Context, id string, expectedRevision int64) (*SandboxClaim, error)
+	UpdateSandboxClaimStatus(ctx context.Context, id string, status string, fields map[string]any) (*SandboxClaim, error)
 }

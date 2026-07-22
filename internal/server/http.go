@@ -40,7 +40,7 @@ import (
 // serverx/autowire mounts the standard authn middleware before access. Public
 // routes are configured through security.access.public_operations instead of a
 // Hub-specific authn filter.
-func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, fileSvc *service.FileService) *khttp.Server {
+func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, sandboxSvc *service.SandboxService, fileSvc *service.FileService) *khttp.Server {
 	addr := cfg.HTTP.Addr
 	if addr == "" {
 		addr = "0.0.0.0:8000"
@@ -99,6 +99,9 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	}
 	if namespaceSvc != nil {
 		namespaceSvc.RegisterHTTPServer(srv)
+	}
+	if sandboxSvc != nil {
+		sandboxSvc.RegisterHTTPServer(srv)
 	}
 	if fileSvc != nil {
 		fileSvc.RegisterHTTPServer(srv)

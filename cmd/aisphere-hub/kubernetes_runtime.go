@@ -17,6 +17,7 @@ import (
 type kubernetesRuntime struct {
 	clusterService   *service.ClusterService
 	namespaceService *service.NamespaceService
+	sandboxService   *service.SandboxService
 	scheduler        *taskx.Scheduler
 	close            func() error
 }
@@ -68,6 +69,33 @@ func wireKubernetesRuntime(
 	)
 	runtime.clusterService = service.NewClusterService(clusterUC)
 	runtime.namespaceService = service.NewNamespaceService(namespaceUC)
+
+	// Sandbox usecase (design §11). Reuses the same KubernetesProvider pool
+	// (which now also implements biz.SandboxProvider) and the same outbox for
+	// async cleanup. The concrete k8sClientPool implements both interfaces; if
+	// K8s is disabled (noClientPool), the sandbox provider is nil and the
+	// sandbox service is not registered.
+	sandboxRepo := data.NewSandboxRepo(resources)
+	var sandboxProvider biz.SandboxProvider
+	if sp, ok := resources.KubernetesClientPool.(biz.SandboxProvider); ok {
+		sandboxProvider = sp
+	}
+	if sandboxProvider != nil {
+		sandboxUC := biz.NewSandboxUsecase(
+			sandboxRepo,
+			namespaceRepo,
+			clusterRepo,
+			sandboxProvider,
+			outboxRepo,
+			authzUsecase,
+			logger,
+			biz.ClusterUsecaseOptions{
+				MaxScan:          bc.Kubernetes.Reconcile.MaxScan,
+				MaxHydrateRounds: bc.Kubernetes.Reconcile.MaxHydrateRounds,
+			},
+		)
+		runtime.sandboxService = service.NewSandboxService(sandboxUC)
+	}
 
 	interval := bc.Kubernetes.Reconcile.Interval
 	if interval > 0 {

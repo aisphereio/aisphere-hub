@@ -179,6 +179,7 @@ func main() {
 		skillService,
 		k8sRuntime.clusterService,
 		k8sRuntime.namespaceService,
+		k8sRuntime.sandboxService,
 		fileService,
 	)
 	grpcServer := server.NewGRPCServer(
@@ -192,6 +193,7 @@ func main() {
 		skillService,
 		k8sRuntime.clusterService,
 		k8sRuntime.namespaceService,
+		k8sRuntime.sandboxService,
 		fileService,
 	)
 
