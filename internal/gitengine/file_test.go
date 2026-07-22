@@ -16,9 +16,9 @@ func decodeB64(s string) ([]byte, error) { return base64.StdEncoding.DecodeStrin
 
 // newTestEngine stands up an Engine backed by SQLite + a temp DataPath,
 // creates the hub_skill_profiles table the Engine expects, and seeds a
-// skill named "search" with an initial scaffold commit (SKILL.md +
-// skill.yaml on main). It mirrors the setup in engine_test.go so the
-// file API can be exercised against a real (embedded) bare repo.
+// skill named "search" with an initial scaffold commit (SKILL.md is the
+// sole canonical identity file). It mirrors the setup in engine_test.go
+// so the file API can be exercised against a real (embedded) bare repo.
 func newTestEngine(t *testing.T) *Engine {
 	t.Helper()
 	database, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "kernel.db")), &gorm.Config{})
@@ -58,15 +58,15 @@ func newTestEngine(t *testing.T) *Engine {
 }
 
 // TestListFilesRoot verifies the seeded scaffold is readable via the
-// file API and reports both seeded files at the root.
+// file API and reports the seeded SKILL.md at the root.
 func TestListFilesRoot(t *testing.T) {
 	engine := newTestEngine(t)
 	entries, err := engine.ListFiles(context.Background(), "search", "", "HEAD")
 	if err != nil {
 		t.Fatalf("ListFiles() error = %v", err)
 	}
-	if len(entries) != 2 {
-		t.Fatalf("entries = %d, want 2", len(entries))
+	if len(entries) != 1 {
+		t.Fatalf("entries = %d, want 1", len(entries))
 	}
 	names := map[string]bool{}
 	for _, e := range entries {
@@ -75,8 +75,11 @@ func TestListFilesRoot(t *testing.T) {
 		}
 		names[e.Name] = true
 	}
-	if !names["SKILL.md"] || !names["skill.yaml"] {
-		t.Errorf("expected SKILL.md + skill.yaml, got %v", names)
+	if !names["SKILL.md"] {
+		t.Errorf("expected SKILL.md, got %v", names)
+	}
+	if names["skill.yaml"] {
+		t.Errorf("scaffold unexpectedly contains skill.yaml; SKILL.md is the canonical identity file, got %v", names)
 	}
 }
 
