@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"os"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/aisphereio/kernel/logx"
 	"github.com/aisphereio/kernel/metricsx"
 	"github.com/aisphereio/kernel/taskx"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -155,20 +157,15 @@ func main() {
 	}
 
 	// Wire the Kubernetes cluster management plane (design §5/§6/§7.5.5).
-	// Only when kubernetes.enabled is true. PR③ ships the full CRUD + Probe +
-	// Rotate + Namespace + visibility reconcile path. The scheduler runs the
-	// visibility reconciler on a fixed interval; V1 uses an in-process
-	// taskx.Scheduler (no Dapr sidecar). Cross-replica singleton via RedisLocker
-	// is a V2 follow-up (test server runs a single Hub replica for V1).
 	var clusterService *service.ClusterService
 	var namespaceService *service.NamespaceService
 	var k8sScheduler *taskx.Scheduler
+	var k8sLeaseClient redis.UniversalClient
 	if bc.Kubernetes.Enabled {
 		clusterRepo := data.NewClusterRepo(resources)
 		namespaceRepo := data.NewNamespaceRepo(resources)
 		outboxRepo := data.NewOutboxRepo(resources.DB.GORM)
 
-		// Outbox adapter so biz.OutboxEnqueuer is satisfied by data.OutboxRepo.
 		clusterUC := biz.NewClusterUsecase(
 			clusterRepo,
 			resources.KubernetesCredStore,
@@ -198,18 +195,63 @@ func main() {
 		clusterService = service.NewClusterService(clusterUC)
 		namespaceService = service.NewNamespaceService(namespaceUC)
 
-		// Visibility reconciler + taskx.Scheduler (design §7.5.5 / decision 4).
-		// V1: in-process scheduler, no distributed lock (single replica). When
-		// multi-replica lands, wrap WithLocker(taskx.NewRedisLocker(...)).
 		if bc.Kubernetes.Reconcile.Interval > 0 {
+			schedulerOptions := make([]taskx.Option, 0, 1)
+			leaseEnabled := false
+			if bc.Data.Cache.Enabled && len(bc.Data.Cache.Config.Addrs) > 0 {
+				cacheCfg := bc.Data.Cache.Config
+				redisOptions := &redis.UniversalOptions{
+					Addrs:        cacheCfg.Addrs,
+					Username:     cacheCfg.Username,
+					Password:     cacheCfg.Password,
+					DB:           cacheCfg.DB,
+					MasterName:   cacheCfg.MasterName,
+					PoolSize:     cacheCfg.PoolSize,
+					MinIdleConns: cacheCfg.MinIdleConns,
+					DialTimeout:  cacheCfg.DialTimeout,
+					ReadTimeout:  cacheCfg.ReadTimeout,
+					WriteTimeout: cacheCfg.WriteTimeout,
+				}
+				if cacheCfg.TLSEnabled {
+					redisOptions.TLSConfig = &tls.Config{ // #nosec G402 -- operator-controlled compatibility flag
+						MinVersion:         tls.VersionTLS12,
+						InsecureSkipVerify: cacheCfg.TLSSkipVerify,
+					}
+				}
+				k8sLeaseClient = redis.NewUniversalClient(redisOptions)
+				pingCtx, cancel := context.WithTimeout(bootstrapCtx, 5*time.Second)
+				if err := k8sLeaseClient.Ping(pingCtx).Err(); err != nil {
+					cancel()
+					logger.Error("k8s task lease redis unavailable", logx.Err(err))
+					panic(err)
+				}
+				cancel()
+				defer k8sLeaseClient.Close()
+				prefix := cacheCfg.KeyPrefix
+				if prefix != "" {
+					prefix += ":"
+				}
+				schedulerOptions = append(schedulerOptions, taskx.WithLocker(taskx.NewRedisLocker(k8sLeaseClient, prefix+"taskx:lease:")))
+				leaseEnabled = true
+			} else {
+				logger.Warn("k8s reconciler distributed lease disabled because Redis cache is not configured")
+			}
+
+			k8sScheduler = taskx.NewScheduler(schedulerOptions...)
+			leaseTTL := bc.Kubernetes.Reconcile.LeaseTTL
+			if leaseTTL < 3*time.Minute {
+				leaseTTL = 3 * time.Minute
+			}
+			lease := taskx.LeaseOptions{Enabled: leaseEnabled, TTL: leaseTTL, RenewInterval: leaseTTL / 3}
+
 			reconciler := biz.NewVisibilityReconciler(namespaceRepo, authzUsecase, nil, logger, 100)
-			k8sScheduler = taskx.NewScheduler()
 			if err := k8sScheduler.Register(taskx.Job{
 				Name:       "k8s-visibility-reconciler",
 				Schedule:   taskx.Every(bc.Kubernetes.Reconcile.Interval),
 				Handler:    reconciler.Run,
 				RunOnStart: true,
 				Timeout:    2 * time.Minute,
+				Lease:      lease,
 				Retry: taskx.RetryPolicy{
 					MaxAttempts:    3,
 					InitialBackoff: 5 * time.Second,
@@ -220,11 +262,33 @@ func main() {
 				logger.Error("k8s reconciler registration failed", logx.Err(err))
 				panic(err)
 			}
+
+			cleanupWorker := data.NewCredentialCleanupWorker(outboxRepo, resources.KubernetesCredStore, logger)
+			if err := k8sScheduler.Register(taskx.Job{
+				Name:       "k8s-outbox-cleanup",
+				Schedule:   taskx.Every(bc.Kubernetes.Reconcile.Interval),
+				Handler:    cleanupWorker.Run,
+				RunOnStart: true,
+				Timeout:    2 * time.Minute,
+				Lease: taskx.LeaseOptions{
+					Enabled:       leaseEnabled,
+					Key:           "k8s-outbox-cleanup",
+					TTL:           leaseTTL,
+					RenewInterval: leaseTTL / 3,
+				},
+				Retry: taskx.RetryPolicy{
+					MaxAttempts:    3,
+					InitialBackoff: 5 * time.Second,
+					MaxBackoff:     1 * time.Minute,
+					Multiplier:     2,
+				},
+			}); err != nil {
+				logger.Error("k8s outbox worker registration failed", logx.Err(err))
+				panic(err)
+			}
 		}
 
 		// Bootstrap k8s SpiceDB relationships (warn, not fatal — design §7.6.6).
-		// V1: gather org IDs from configured orgs (none configured → skip). A
-		// future operator-config or DB scan supplies org IDs.
 		if err := biz.BootstrapClusterRelationships(bootstrapCtx, clusterRepo, authzUsecase, logger); err != nil {
 			logger.Warn("k8s cluster authz bootstrap failed; historical cluster permissions may be incomplete", logx.Err(err))
 		}
@@ -242,7 +306,6 @@ func main() {
 		kernel.Server(httpServer, grpcServer),
 		kernel.StopTimeout(10 * time.Second),
 	}
-	// Start the k8s visibility reconciler after the app is up (design §7.5.5).
 	if k8sScheduler != nil {
 		opts = append(opts, kernel.AfterStart(func(ctx context.Context) error {
 			if err := k8sScheduler.Start(ctx); err != nil {
