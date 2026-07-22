@@ -32,6 +32,7 @@ Thumbs.db
 *.log
 bin/
 .bin/
+dist/
 
 # Develop tools
 .vscode/

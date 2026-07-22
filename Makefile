@@ -2,8 +2,10 @@ GO ?= go
 BUF ?= buf
 
 KERNEL_MODULE ?= github.com/aisphereio/kernel
-KERNEL_VERSION ?= v0.4.1
+KERNEL_VERSION ?= v0.4.18
 KERNEL_LOCAL ?= ../kernel
+BASE_REF ?= main
+OPENAPI_VERSION ?= v1
 
 APP_NAME ?= aisphere-hub
 APP_CMD ?= ./cmd/$(APP_NAME)
@@ -13,6 +15,7 @@ RUN_ARGS ?= -conf $(CONF)
 LOCAL_BIN := $(CURDIR)/.bin
 BIN_DIR := $(CURDIR)/bin
 COVERPROFILE ?= coverage.out
+CONTRACT_BUNDLE_DIR ?= dist/api-contract
 
 ifeq ($(OS),Windows_NT)
 LOCAL_BIN := $(CURDIR)\.bin
@@ -24,7 +27,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 export PATH := $(LOCAL_BIN):$(PATH)
 endif
 
-.PHONY: help init tools tools-local check-tools api proto-check config wire generate build run test tidy verify clean
+.PHONY: help init tools tools-local check-tools api api-generate openapi-check proto-check breaking-check generated-check contract-check contract-bundle config wire generate build run test tidy verify clean
 
 help:
 	@echo "Kernel service targets:"
@@ -32,8 +35,12 @@ help:
 	@echo "  make tools        install codegen tools into .bin"
 	@echo "  make tools-local  install codegen tools from local KERNEL_LOCAL=../kernel"
 	@echo "  make check-tools  check required tools in .bin"
-	@echo "  make api          generate api proto code by buf.gen.yaml"
+	@echo "  make api          generate api proto code and normalize OpenAPI swagger"
 	@echo "  make proto-check  run buf lint and aisphere proto contract checks"
+	@echo "  make breaking-check  check proto breaking changes against BASE_REF"
+	@echo "  make generated-check  verify generated code has no drift"
+	@echo "  make contract-check  proto-check + breaking-check + api + generated-check"
+	@echo "  make contract-bundle  produce dist/api-contract/ swagger + contract-lock.json"
 	@echo "  make config       generate internal config proto code if buf.gen.config.yaml exists"
 	@echo "  make wire         generate dependency injection code"
 	@echo "  make generate     run go generate"
@@ -114,12 +121,17 @@ else
 	@test -x "$(LOCAL_BIN)/buf-check-aisphere" || (echo "missing $(LOCAL_BIN)/buf-check-aisphere"; exit 1)
 endif
 
-api: check-tools
+api: api-generate openapi-check
+
+api-generate: check-tools
 ifeq ($(OS),Windows_NT)
 	@cmd /c "set PATH=$(LOCAL_BIN);%PATH%&& .bin\buf.exe generate --template buf.gen.yaml"
 else
 	@PATH="$(LOCAL_BIN):$$PATH" $(LOCAL_BIN)/buf generate --template buf.gen.yaml
 endif
+
+openapi-check:
+	$(GO) run ./cmd/openapi-contract-check --input docs/openapi/aisphere-hub.swagger.json --output docs/openapi/aisphere-hub.swagger.json --title "Aisphere Hub API" --version "$(OPENAPI_VERSION)"
 
 proto-check: check-tools
 ifeq ($(OS),Windows_NT)
@@ -128,6 +140,29 @@ else
 	@PATH="$(LOCAL_BIN):$$PATH" $(LOCAL_BIN)/buf lint
 	@PATH="$(LOCAL_BIN):$$PATH" $(LOCAL_BIN)/buf build -o - | $(LOCAL_BIN)/buf-check-aisphere
 endif
+
+breaking-check: check-tools
+ifeq ($(OS),Windows_NT)
+	@cmd /c "set PATH=$(LOCAL_BIN);%PATH%&& .bin\buf.exe breaking --against '.git#branch=$(BASE_REF)'"
+else
+	@PATH="$(LOCAL_BIN):$$PATH" $(LOCAL_BIN)/buf breaking --against '.git#branch=$(BASE_REF)'
+endif
+
+generated-check: api
+	git diff --exit-code -- api docs/openapi
+
+contract-check: proto-check breaking-check api generated-check
+
+contract-bundle: api
+	@mkdir -p $(CONTRACT_BUNDLE_DIR)
+	cp docs/openapi/aisphere-hub.swagger.json $(CONTRACT_BUNDLE_DIR)/
+	@GIT_SHA=$$(git rev-parse HEAD 2>/dev/null || echo "unknown"); \
+	GIT_REF=$$(git symbolic-ref --short HEAD 2>/dev/null || echo "unknown"); \
+	SHA256=$$(sha256sum $(CONTRACT_BUNDLE_DIR)/aisphere-hub.swagger.json 2>/dev/null | cut -d' ' -f1 || \
+	         certutil -hashfile $(CONTRACT_BUNDLE_DIR)/aisphere-hub.swagger.json SHA256 2>/dev/null | findstr /v ":" | findstr /v "SHA" | tr -d ' \r\n' || echo "unknown"); \
+	printf '{\n  "repository": "https://github.com/aisphereio/aisphere-hub.git",\n  "git_sha": "%s",\n  "ref": "%s",\n  "sha256": "%s",\n  "kernel_version": "%s",\n  "generator": "protoc-gen-openapiv2@v2.29.0"\n}\n' \
+		"$$GIT_SHA" "$$GIT_REF" "$$SHA256" "$(KERNEL_VERSION)" > $(CONTRACT_BUNDLE_DIR)/contract-lock.json
+	@echo "contract bundle generated under $(CONTRACT_BUNDLE_DIR)/"
 
 config: check-tools
 ifeq ($(OS),Windows_NT)
