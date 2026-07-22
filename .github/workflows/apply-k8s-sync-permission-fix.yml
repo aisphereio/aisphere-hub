@@ -1,0 +1,43 @@
+name: Apply K8s sync permission fix
+
+on:
+  push:
+    branches: [fix/k8s-sync-permission]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/k8s-sync-permission
+      - name: Apply and commit focused fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('internal/biz/namespace_usecase.go')
+          text = path.read_text()
+          old = '''\t\tResource:   clusterResource(clusterID),
+          \t\tPermission: "probe",
+          \t})'''
+          new = '''\t\tResource:   clusterResource(clusterID),
+          \t\tPermission: "operate",
+          \t})'''
+          if old not in text:
+              raise SystemExit('expected SyncNamespaces permission block not found')
+          text = text.replace(old, new, 1)
+          text = text.replace('forbidden: no probe permission on cluster', 'forbidden: no operate permission on cluster', 1)
+          path.write_text(text)
+          PY
+          rm .github/workflows/apply-k8s-sync-permission-fix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add internal/biz/namespace_usecase.go .github/workflows/apply-k8s-sync-permission-fix.yml
+          git commit -m 'fix(kubernetes): authorize namespace sync with operate'
+          git push origin HEAD:fix/k8s-sync-permission
