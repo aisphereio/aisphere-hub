@@ -40,7 +40,7 @@ func newTestEngine(t *testing.T) *Engine {
 	if err := database.Exec(`CREATE TABLE hub_skill_profiles (
 		repository_id INTEGER PRIMARY KEY REFERENCES repos(id) ON DELETE CASCADE,
 		display_name TEXT NOT NULL DEFAULT '', org_id TEXT NOT NULL, project_id TEXT NOT NULL DEFAULT '',
-		created_by_type TEXT NOT NULL, created_by_id TEXT NOT NULL, visibility TEXT NOT NULL,
+		created_by_type TEXT NOT NULL, created_by_id TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '', visibility TEXT NOT NULL,
 		lifecycle_status TEXT NOT NULL, default_branch TEXT NOT NULL, provision_error TEXT NOT NULL DEFAULT '',
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)`).Error; err != nil {
