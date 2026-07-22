@@ -193,8 +193,18 @@ func (e *Engine) CreateFile(ctx context.Context, name, filePath, content, messag
 	if err != nil {
 		return nil, errGit(err)
 	}
+	if isSkillMetadataPath(filePath) && isDefaultBranchName(branch) {
+		if _, _, err := ParseSkillMetadata(name, content); err != nil {
+			return nil, errPathInvalid("SKILL.md: " + err.Error())
+		}
+	}
 	if err := setBranchRef(r.Storer, refName, commitSHA, headCommit.Hash); err != nil {
 		return nil, errGit(err)
+	}
+	if isSkillMetadataPath(filePath) && isDefaultBranchName(branch) {
+		if err := e.SyncSkillMetadata(ctx, name, branch); err != nil {
+			return nil, errGit(err)
+		}
 	}
 	return &biz.FileContent{
 		Name: path.Base(filePath), Path: filePath, SHA: blobHash.String(),
@@ -241,8 +251,18 @@ func (e *Engine) UpdateFile(ctx context.Context, name, filePath, content, messag
 	if err != nil {
 		return nil, errGit(err)
 	}
+	if isSkillMetadataPath(filePath) && isDefaultBranchName(branch) {
+		if _, _, err := ParseSkillMetadata(name, content); err != nil {
+			return nil, errPathInvalid("SKILL.md: " + err.Error())
+		}
+	}
 	if err := setBranchRef(r.Storer, refName, commitSHA, headCommit.Hash); err != nil {
 		return nil, errGit(err)
+	}
+	if isSkillMetadataPath(filePath) && isDefaultBranchName(branch) {
+		if err := e.SyncSkillMetadata(ctx, name, branch); err != nil {
+			return nil, errGit(err)
+		}
 	}
 	return &biz.FileContent{
 		Name: path.Base(filePath), Path: filePath, SHA: blobHash.String(),
@@ -256,6 +276,9 @@ func (e *Engine) DeleteFile(ctx context.Context, name, filePath, message, sha, b
 	filePath = strings.TrimSpace(filePath)
 	if filePath == "" || strings.Contains(filePath, "..") || strings.HasPrefix(filePath, "/") {
 		return "", "", errPathInvalid(filePath)
+	}
+	if isSkillMetadataPath(filePath) && isDefaultBranchName(branch) {
+		return "", "", errPathInvalid("SKILL.md cannot be deleted from the default branch")
 	}
 	r, headCommit, refName, err := e.openBare(ctx, name, branch)
 	if err != nil {
@@ -583,6 +606,18 @@ func splitPath(p string) []string {
 }
 
 func joinPath(parts []string) string { return strings.Join(parts, "/") }
+
+func isSkillMetadataPath(p string) bool {
+	return path.Clean(strings.TrimSpace(p)) == "SKILL.md"
+}
+
+func isDefaultBranchName(branch string) bool {
+	branch = strings.TrimPrefix(strings.TrimSpace(branch), "refs/heads/")
+	if branch == "" {
+		branch = biz.SkillDefaultBranch
+	}
+	return branch == biz.SkillDefaultBranch
+}
 
 func sortTreeEntries(entries []object.TreeEntry) {
 	sort.SliceStable(entries, func(i, j int) bool {
