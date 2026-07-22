@@ -161,12 +161,27 @@ func (uc *NamespaceUsecase) CreateNamespace(ctx context.Context, principal authn
 	}
 
 	// Step 5: apply remote Namespace via provider.
+	// Load the cluster to build a complete CredentialLocator (CredentialRef +
+	// CredentialRevision are required by the AEAD credential store; passing
+	// only ClusterID causes "credential ref not found: " on every remote op).
+	cluster, err := uc.clusters.GetCluster(ctx, created.ClusterID)
+	if err != nil {
+		failed, _ := uc.namespaces.UpdateNamespaceStatus(ctx, created.ID, NamespaceLifecycleCreating, NamespaceLifecycleFailed, map[string]any{
+			"last_error_code":    "CLUSTER_LOAD_FAILED",
+			"last_error_message": err.Error(),
+		})
+		if failed != nil {
+			return failed, nil
+		}
+		return created, nil
+	}
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
 	applySpec := NamespaceApplySpec{
 		Name:        created.KubeName,
 		Labels:      created.Labels,
 		Annotations: created.Annotations,
 	}
-	if err := uc.provider.ApplyNamespace(ctx, created.ClusterID, CredentialLocator{ClusterID: created.ClusterID}, applySpec); err != nil {
+	if err := uc.provider.ApplyNamespace(ctx, created.ClusterID, locator, applySpec); err != nil {
 		// Remote apply failed → mark FAILED (no rollback, design §6.4).
 		uc.log.WithContext(ctx).Warn("remote namespace apply failed; marking FAILED",
 			logx.String("namespace_id", created.ID),
@@ -421,7 +436,14 @@ func (uc *NamespaceUsecase) DeleteNamespace(ctx context.Context, principal authn
 	_ = uc.rels.RevokeResource(compensateCtx, namespaceResource(id))
 	// Remote delete for managed + CASCADE.
 	if ns.Managed && deletePolicy == DeletePolicyCascade {
-		if err := uc.provider.DeleteNamespace(ctx, ns.ClusterID, CredentialLocator{ClusterID: ns.ClusterID}, ns.KubeName); err != nil {
+		cluster, clErr := uc.clusters.GetCluster(ctx, ns.ClusterID)
+		if clErr != nil {
+			uc.log.WithContext(ctx).Warn("failed to load cluster for remote namespace delete; row is soft-deleted",
+				logx.String("namespace_id", id), logx.String("cluster_id", ns.ClusterID), logx.Err(clErr))
+			return nil
+		}
+		locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+		if err := uc.provider.DeleteNamespace(ctx, ns.ClusterID, locator, ns.KubeName); err != nil {
 			uc.log.WithContext(ctx).Warn("remote namespace delete failed; row is soft-deleted, operator may need to clean up",
 				logx.String("namespace_id", id), logx.String("kube_name", ns.KubeName), logx.Err(err))
 		}
@@ -542,7 +564,12 @@ func (uc *NamespaceUsecase) SyncNamespaces(ctx context.Context, principal authn.
 	if !dec.Allowed {
 		return errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on cluster")
 	}
-	remote, err := uc.provider.ListNamespaces(ctx, clusterID, CredentialLocator{ClusterID: clusterID})
+	cluster, err := uc.clusters.GetCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	remote, err := uc.provider.ListNamespaces(ctx, clusterID, locator)
 	if err != nil {
 		return err
 	}
