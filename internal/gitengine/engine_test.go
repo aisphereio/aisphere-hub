@@ -129,8 +129,8 @@ func TestRequiredPermissionForRefUpdate(t *testing.T) {
 }
 
 // TestCreateSkillSeedsInitialCommit verifies that CreateSkill leaves the
-// repository with a materialized main branch carrying an initial scaffold
-// commit (SKILL.md + skill.yaml) and HEAD pointing at main. Requires `git` on
+// repository with a materialized main branch carrying an initial SKILL.md
+// scaffold commit and HEAD pointing at main. Requires `git` on
 // PATH (the rest of the suite already shells out to git via soft-serve).
 func TestCreateSkillSeedsInitialCommit(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
@@ -215,10 +215,8 @@ func TestCreateSkillSeedsInitialCommit(t *testing.T) {
 		t.Fatalf("SKILL.md missing title; got:\n%s", skillMd)
 	}
 
-	// skill.yaml is present and names the skill.
-	skillYaml := gitShow(t, "show", "refs/heads/main:skill.yaml")
-	if !strings.Contains(skillYaml, "name: demo-skill") {
-		t.Fatalf("skill.yaml missing name; got:\n%s", skillYaml)
+	if _, err := exec.Command("git", "--git-dir", gitDir, "cat-file", "-e", "refs/heads/main:skill.yaml").CombinedOutput(); err == nil {
+		t.Fatal("new scaffold unexpectedly contains duplicate skill.yaml identity file")
 	}
 
 	// The commit message references the creator.
