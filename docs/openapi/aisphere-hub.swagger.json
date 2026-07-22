@@ -1081,6 +1081,39 @@
       },
       "type": "object"
     },
+    "v1ImportSkillArchiveRequest": {
+      "properties": {
+        "archiveZip": {
+          "format": "byte",
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orgId",
+        "archiveZip"
+      ],
+      "type": "object"
+    },
+    "v1ImportSkillArchiveResponse": {
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/v1SkillArchiveMetadata"
+        },
+        "skill": {
+          "$ref": "#/definitions/v1Skill"
+        }
+      },
+      "type": "object"
+    },
     "v1InClusterCredential": {
       "description": "Uses the Hub pod's service account token. V1 requires AllowInsecureDev\n because Hub is not necessarily in-cluster; reserved for local dev.",
       "type": "object"
@@ -1922,6 +1955,28 @@
           "type": "string"
         },
         "visibility": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1SkillArchiveMetadata": {
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "fileCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "unpackedSize": {
+          "format": "int64",
           "type": "string"
         }
       },
@@ -4524,6 +4579,38 @@
         },
         "tags": [
           "FileService"
+        ]
+      }
+    },
+    "/v1/skills:importArchive": {
+      "post": {
+        "operationId": "SkillService_ImportSkillArchive",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportSkillArchiveRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SkillService"
         ]
       }
     }

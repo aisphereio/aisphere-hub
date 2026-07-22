@@ -25,6 +25,7 @@ const OperationSkillServiceDeleteSkill = "/skill.v1.SkillService/DeleteSkill"
 const OperationSkillServiceDeleteSkillShare = "/skill.v1.SkillService/DeleteSkillShare"
 const OperationSkillServiceGetPullRequest = "/skill.v1.SkillService/GetPullRequest"
 const OperationSkillServiceGetSkill = "/skill.v1.SkillService/GetSkill"
+const OperationSkillServiceImportSkillArchive = "/skill.v1.SkillService/ImportSkillArchive"
 const OperationSkillServiceListPullRequests = "/skill.v1.SkillService/ListPullRequests"
 const OperationSkillServiceListSkillReleases = "/skill.v1.SkillService/ListSkillReleases"
 const OperationSkillServiceListSkillShares = "/skill.v1.SkillService/ListSkillShares"
@@ -43,6 +44,7 @@ type SkillServiceHTTPServer interface {
 	DeleteSkillShare(context.Context, *DeleteSkillShareRequest) (*DeleteSkillShareResponse, error)
 	GetPullRequest(context.Context, *GetPullRequestRequest) (*GetPullRequestResponse, error)
 	GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error)
+	ImportSkillArchive(context.Context, *ImportSkillArchiveRequest) (*ImportSkillArchiveResponse, error)
 	ListPullRequests(context.Context, *ListPullRequestsRequest) (*ListPullRequestsResponse, error)
 	ListSkillReleases(context.Context, *ListSkillReleasesRequest) (*ListSkillReleasesResponse, error)
 	ListSkillShares(context.Context, *ListSkillSharesRequest) (*ListSkillSharesResponse, error)
@@ -64,6 +66,7 @@ func RegisterSkillServiceHTTPServer(s *http.Server, srv SkillServiceHTTPServer) 
 	r.Handle("GET", "/v1/skills/{name}", _SkillService_GetSkill0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/pull-requests/{id}", _SkillService_GetPullRequest0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills", _SkillService_CreateSkill0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/skills:importArchive", _SkillService_ImportSkillArchive0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/pull-requests", _SkillService_CreatePullRequest0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/shares", _SkillService_CreateSkillShare0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}:visibility", _SkillService_UpdateSkillVisibility0_HTTP_Handler(srv))
@@ -292,6 +295,28 @@ func _SkillService_CreateSkill0_HTTP_Handler(srv SkillServiceHTTPServer) func(ct
 	}
 }
 
+func _SkillService_ImportSkillArchive0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ImportSkillArchiveRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceImportSkillArchive)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ImportSkillArchive(ctx, req.(*ImportSkillArchiveRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImportSkillArchiveResponse)
+		return ctx.Result(200, reply.Skill)
+	}
+}
+
 func _SkillService_CreatePullRequest0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in CreatePullRequestRequest
@@ -476,6 +501,7 @@ type SkillServiceHTTPClient interface {
 	DeleteSkillShare(ctx context.Context, req *DeleteSkillShareRequest, opts ...http.CallOption) (rsp *DeleteSkillShareResponse, err error)
 	GetPullRequest(ctx context.Context, req *GetPullRequestRequest, opts ...http.CallOption) (rsp *GetPullRequestResponse, err error)
 	GetSkill(ctx context.Context, req *GetSkillRequest, opts ...http.CallOption) (rsp *GetSkillResponse, err error)
+	ImportSkillArchive(ctx context.Context, req *ImportSkillArchiveRequest, opts ...http.CallOption) (rsp *ImportSkillArchiveResponse, err error)
 	ListPullRequests(ctx context.Context, req *ListPullRequestsRequest, opts ...http.CallOption) (rsp *ListPullRequestsResponse, err error)
 	ListSkillReleases(ctx context.Context, req *ListSkillReleasesRequest, opts ...http.CallOption) (rsp *ListSkillReleasesResponse, err error)
 	ListSkillShares(ctx context.Context, req *ListSkillSharesRequest, opts ...http.CallOption) (rsp *ListSkillSharesResponse, err error)
@@ -620,6 +646,23 @@ func (c *SkillServiceHTTPClientImpl) GetSkill(ctx context.Context, in *GetSkillR
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Skill, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *SkillServiceHTTPClientImpl) ImportSkillArchive(ctx context.Context, in *ImportSkillArchiveRequest, opts ...http.CallOption) (*ImportSkillArchiveResponse, error) {
+	var out ImportSkillArchiveResponse
+	pattern := "/v1/skills:importArchive"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationSkillServiceImportSkillArchive),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out.Skill, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -47,8 +47,8 @@ type SkillRelationships interface {
 }
 
 // ProjectValidator validates that a project exists, is readable by the
-// caller, and is in ACTIVE status. When nil, project_id is stored as-is
-// without validation (best-effort classification).
+// caller, and is in ACTIVE status. When project_id is non-empty, creation
+// fails closed if no validator is configured.
 type ProjectValidator interface {
 	ValidateProject(ctx context.Context, orgID, projectID string) error
 }
@@ -73,6 +73,40 @@ func (uc *SkillUsecase) WithProjectValidator(v ProjectValidator) *SkillUsecase {
 }
 
 func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Principal, in *GitSkill) (*GitSkill, error) {
+	return uc.createSkill(ctx, principal, in)
+}
+
+func (uc *SkillUsecase) ImportSkillArchive(ctx context.Context, principal authn.Principal, in *SkillArchiveImport) (*GitSkill, *SkillArchiveMetadata, error) {
+	if in == nil {
+		return nil, nil, ErrSkillInvalidArgument
+	}
+	archive, err := ParseSkillArchive(in.ArchiveZip, SkillArchiveLimits{})
+	if err != nil {
+		return nil, nil, err
+	}
+	skill := &GitSkill{
+		Name:         archive.Name,
+		DisplayName:  archive.DisplayName,
+		Description:  archive.Description,
+		Visibility:   in.Visibility,
+		OrgID:        in.OrgID,
+		ProjectID:    in.ProjectID,
+		InitialFiles: archive.Files,
+	}
+	created, err := uc.createSkill(ctx, principal, skill)
+	if err != nil {
+		return nil, nil, err
+	}
+	return created, &SkillArchiveMetadata{
+		Name:          archive.Name,
+		DisplayName:   archive.DisplayName,
+		Description:   archive.Description,
+		FileCount:     archive.FileCount,
+		UnpackedBytes: archive.UnpackedBytes,
+	}, nil
+}
+
+func (uc *SkillUsecase) createSkill(ctx context.Context, principal authn.Principal, in *GitSkill) (*GitSkill, error) {
 	if err := requirePrincipal(principal); err != nil {
 		return nil, err
 	}
