@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -133,6 +134,14 @@ func (p *k8sClientPool) ApplySandbox(ctx context.Context, clusterID string, loca
 	}
 	operatingMode := spec.OperatingMode
 	if operatingMode == "" {
+		operatingMode = biz.SandboxOperatingModeRunning
+	}
+	// K8s Sandbox CRD expects TitleCase ("Running"/"Suspended"); the biz layer
+	// stores UPPERCASE to match the DB CHECK constraint. Normalize here.
+	switch strings.ToUpper(operatingMode) {
+	case "SUSPENDED":
+		operatingMode = "Suspended"
+	default:
 		operatingMode = "Running"
 	}
 	obj := &unstructured.Unstructured{Object: map[string]interface{}{

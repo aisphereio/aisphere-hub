@@ -106,8 +106,8 @@ const (
 	SandboxNetworkModeOffline = "OFFLINE"
 	SandboxNetworkModeOnline  = "ONLINE"
 
-	SandboxOperatingModeRunning   = "Running"
-	SandboxOperatingModeSuspended = "Suspended"
+	SandboxOperatingModeRunning   = "RUNNING"
+	SandboxOperatingModeSuspended = "SUSPENDED"
 )
 
 // SandboxToolSchema describes one tool an agent may invoke inside a sandbox.
