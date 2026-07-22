@@ -30,7 +30,7 @@ data:
       add_source: false
       redact:
         enabled: true
-        keys: [password, secret, token, access_key, secret_key, client_secret]
+        keys: [password, secret, token, access_key, secret_key, client_secret, kubeconfig, ca_cert]
         value: "***"
       access_log:
         enabled: true
@@ -91,13 +91,8 @@ data:
 
     security:
       # Envoy Gateway terminates browser OIDC, verifies the Casdoor JWT, and
-      # injects x-aisphere-external-* claim headers (see hub-security-policy.yaml
-      # claimToHeaders). The hub runs in gateway_trusted mode: it trusts those
-      # gateway-injected headers and does NOT re-run JWKS verification itself,
-      # which keeps cert/rotation handling entirely at the Gateway layer.
-      # internal_call is disabled because the gateway does not (yet) inject
-      # X-Aisphere-Internal-Token; the trust boundary relies on the cluster
-      # network policy preventing bypass of Envoy.
+      # injects x-aisphere-external-* claim headers. The Hub trusts only the
+      # gateway boundary and performs object-level authorization through IAM.
       authn:
         enabled: true
         provider: casdoor
@@ -172,6 +167,35 @@ data:
     skill:
       git:
         data_path: /var/lib/aisphere-hub/git
+
+    # Kubernetes environment management is enabled in the deployment contract.
+    # HUB_KUBERNETES_ENCRYPTION_MASTER_KEY_V1 must be supplied by the existing
+    # aisphere-hub-secrets Secret as a base64-encoded 32-byte key.
+    kubernetes:
+      enabled: true
+      encryption:
+        master_keys:
+          v1: "${HUB_KUBERNETES_ENCRYPTION_MASTER_KEY_V1}"
+        active_version: v1
+      endpoint:
+        # Empty means address-class validation is used. Loopback/link-local are
+        # always blocked; private networks are allowed for on-prem test clusters.
+        allowed_cluster_egress: []
+        forbidden_cidrs:
+          - "127.0.0.0/8"
+          - "169.254.0.0/16"
+          - "::1/128"
+          - "fe80::/10"
+        allow_private_cluster_cidrs: true
+        allow_insecure_dev: false
+      client_pool:
+        max_active_clients: 64
+        ttl_ns: 1800000000000
+      reconcile:
+        interval_ns: 30000000000
+        max_hydrate_rounds: 3
+        max_scan: 1000
+        lease_ttl_ns: 180000000000
 ---
 apiVersion: v1
 kind: ConfigMap
