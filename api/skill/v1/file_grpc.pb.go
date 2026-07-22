@@ -38,9 +38,9 @@ const (
 // enforces authz (Require) since writes bypass the update hook.
 type FileServiceClient interface {
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*FileContents, error)
-	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*FileContent, error)
-	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*FileContent, error)
-	UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*FileContent, error)
+	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
+	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
+	UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*UpdateFileResponse, error)
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
 }
 
@@ -62,9 +62,9 @@ func (c *fileServiceClient) ListFiles(ctx context.Context, in *ListFilesRequest,
 	return out, nil
 }
 
-func (c *fileServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*FileContent, error) {
+func (c *fileServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FileContent)
+	out := new(GetFileResponse)
 	err := c.cc.Invoke(ctx, FileService_GetFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -72,9 +72,9 @@ func (c *fileServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opt
 	return out, nil
 }
 
-func (c *fileServiceClient) CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*FileContent, error) {
+func (c *fileServiceClient) CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FileContent)
+	out := new(CreateFileResponse)
 	err := c.cc.Invoke(ctx, FileService_CreateFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -82,9 +82,9 @@ func (c *fileServiceClient) CreateFile(ctx context.Context, in *CreateFileReques
 	return out, nil
 }
 
-func (c *fileServiceClient) UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*FileContent, error) {
+func (c *fileServiceClient) UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*UpdateFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(FileContent)
+	out := new(UpdateFileResponse)
 	err := c.cc.Invoke(ctx, FileService_UpdateFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -114,9 +114,9 @@ func (c *fileServiceClient) DeleteFile(ctx context.Context, in *DeleteFileReques
 // enforces authz (Require) since writes bypass the update hook.
 type FileServiceServer interface {
 	ListFiles(context.Context, *ListFilesRequest) (*FileContents, error)
-	GetFile(context.Context, *GetFileRequest) (*FileContent, error)
-	CreateFile(context.Context, *CreateFileRequest) (*FileContent, error)
-	UpdateFile(context.Context, *UpdateFileRequest) (*FileContent, error)
+	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
+	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
+	UpdateFile(context.Context, *UpdateFileRequest) (*UpdateFileResponse, error)
 	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
 }
@@ -131,13 +131,13 @@ type UnimplementedFileServiceServer struct{}
 func (UnimplementedFileServiceServer) ListFiles(context.Context, *ListFilesRequest) (*FileContents, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListFiles not implemented")
 }
-func (UnimplementedFileServiceServer) GetFile(context.Context, *GetFileRequest) (*FileContent, error) {
+func (UnimplementedFileServiceServer) GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFile not implemented")
 }
-func (UnimplementedFileServiceServer) CreateFile(context.Context, *CreateFileRequest) (*FileContent, error) {
+func (UnimplementedFileServiceServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
 }
-func (UnimplementedFileServiceServer) UpdateFile(context.Context, *UpdateFileRequest) (*FileContent, error) {
+func (UnimplementedFileServiceServer) UpdateFile(context.Context, *UpdateFileRequest) (*UpdateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateFile not implemented")
 }
 func (UnimplementedFileServiceServer) DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error) {

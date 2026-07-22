@@ -24,7 +24,7 @@ service FileService {
       audit: { enabled: true event: "hub.skill.file.list" risk: "low" }
     };
   }
-  rpc GetFile(GetFileRequest) returns (FileContent) {
+  rpc GetFile(GetFileRequest) returns (GetFileResponse) {
     option (google.api.http) = { get: "/v1/skills/{skill_name}/raw/{path=**}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -32,7 +32,7 @@ service FileService {
       audit: { enabled: true event: "hub.skill.file.get" risk: "low" }
     };
   }
-  rpc CreateFile(CreateFileRequest) returns (FileContent) {
+  rpc CreateFile(CreateFileRequest) returns (CreateFileResponse) {
     option (google.api.http) = { post: "/v1/skills/{skill_name}/contents/{path=**}" body: "*" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -40,7 +40,7 @@ service FileService {
       audit: { enabled: true event: "hub.skill.file.create" risk: "medium" }
     };
   }
-  rpc UpdateFile(UpdateFileRequest) returns (FileContent) {
+  rpc UpdateFile(UpdateFileRequest) returns (UpdateFileResponse) {
     option (google.api.http) = { put: "/v1/skills/{skill_name}/contents/{path=**}" body: "*" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
@@ -73,6 +73,42 @@ message FileContents {
   string path = 3;
 }
 message FileContent {
+  string name = 1;
+  string path = 2;
+  string sha = 3;
+  int64 size = 4;
+  string content = 5;
+  string encoding = 6;
+  string ref = 7;
+  string commit_sha = 8;
+  string commit_message = 9;
+  google.protobuf.Timestamp last_modified = 10;
+}
+message GetFileResponse {
+  string name = 1;
+  string path = 2;
+  string sha = 3;
+  int64 size = 4;
+  string content = 5;
+  string encoding = 6;
+  string ref = 7;
+  string commit_sha = 8;
+  string commit_message = 9;
+  google.protobuf.Timestamp last_modified = 10;
+}
+message CreateFileResponse {
+  string name = 1;
+  string path = 2;
+  string sha = 3;
+  int64 size = 4;
+  string content = 5;
+  string encoding = 6;
+  string ref = 7;
+  string commit_sha = 8;
+  string commit_message = 9;
+  google.protobuf.Timestamp last_modified = 10;
+}
+message UpdateFileResponse {
   string name = 1;
   string path = 2;
   string sha = 3;

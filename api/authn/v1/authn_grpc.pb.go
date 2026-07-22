@@ -112,6 +112,7 @@ type AuthnServiceClient interface {
 	// expires. The `access_token` field makes this previously-implicit side
 	// effect visible in the API contract.
 	//
+	//
 	// The logout URL is built by kernel authn.LogoutService (implemented by
 	// the Casdoor adapter in kernel/authn/casdoor). The hub data layer
 	// delegates to Resources.LogoutService.BuildLogoutURL().
@@ -310,6 +311,7 @@ type AuthnServiceServer interface {
 	// calls with the same token are rejected even before the IdP session
 	// expires. The `access_token` field makes this previously-implicit side
 	// effect visible in the API contract.
+	//
 	//
 	// The logout URL is built by kernel authn.LogoutService (implemented by
 	// the Casdoor adapter in kernel/authn/casdoor). The hub data layer
