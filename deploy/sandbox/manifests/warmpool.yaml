@@ -1,0 +1,12 @@
+# 方式二（2/3）：SandboxWarmPool
+# 预热 2 个 Pod，引用上面定义的模板，用模板里的镜像
+# claim 领走一个后自动补员，保持 replicas 数量
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxWarmPool
+metadata:
+  name: busybox-warmpool
+  namespace: agent-sandbox-demo
+spec:
+  replicas: 2
+  sandboxTemplateRef:
+    name: busybox-template

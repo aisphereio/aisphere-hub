@@ -1,0 +1,12 @@
+# 方式二（3/3）：SandboxClaim
+# 注意：这里不写任何 image！只写 warmPoolRef
+# 领到的沙箱自动用模板里指定的国内地址镜像
+# 预热池现成，5s 内领到
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxClaim
+metadata:
+  name: test-claim
+  namespace: agent-sandbox-demo
+spec:
+  warmPoolRef:
+    name: busybox-warmpool
