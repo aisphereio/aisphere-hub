@@ -413,15 +413,21 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 	}
 
 	// Resolve template ref up front (validates the template exists and yields
-	// its K8s name for the apply spec). A missing template is a client error
-	// surfaced before any DB write.
-	var templateRef string
+	// its K8s name + pod template fields for the apply spec). A missing template
+	// is a client error surfaced before any DB write.
+	var (
+		templateRef      string
+		templateImage    string
+		templateCommand  []string
+	)
 	if s.TemplateID != "" {
 		tmpl, terr := uc.sandboxes.GetSandboxTemplate(ctx, s.TemplateID)
 		if terr != nil {
 			return nil, fmt.Errorf("%w: referenced template not found: %v", ErrClusterInvalidArgument, terr)
 		}
 		templateRef = tmpl.KubernetesName
+		templateImage = tmpl.Image
+		templateCommand = parseContainerCommand(tmpl.ContainerCommand)
 	}
 
 	// Step 4: stamp owner/created_by + defaults.
@@ -476,11 +482,13 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 	}
 	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
 	applySpec := SandboxApplySpec{
-		Name:          created.KubernetesName,
-		Namespace:     ns.KubeName,
-		TemplateRef:   templateRef,
-		OperatingMode: created.OperatingMode,
-		Labels:        created.Labels,
+		Name:             created.KubernetesName,
+		Namespace:        ns.KubeName,
+		TemplateRef:      templateRef,
+		Image:            templateImage,
+		ContainerCommand: templateCommand,
+		OperatingMode:    created.OperatingMode,
+		Labels:           created.Labels,
 	}
 	if err := uc.provider.ApplySandbox(ctx, created.ClusterID, locator, applySpec); err != nil {
 		// Remote apply failed → mark FAILED + compensate SpiceDB (design §11).

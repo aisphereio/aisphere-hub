@@ -144,23 +144,46 @@ func (p *k8sClientPool) ApplySandbox(ctx context.Context, clusterID string, loca
 	default:
 		operatingMode = "Running"
 	}
+	// Build the inline podTemplate (the Sandbox CRD has no sandboxTemplateRef
+	// field — podTemplate.spec is required). The image + command come from the
+	// Hub SandboxTemplate record, inlined by the biz layer.
+	container := map[string]interface{}{
+		"name":  "runtime",
+		"image": spec.Image,
+	}
+	if len(spec.ContainerCommand) > 0 {
+		cmds := make([]interface{}, len(spec.ContainerCommand))
+		for i, c := range spec.ContainerCommand {
+			cmds[i] = c
+		}
+		container["command"] = cmds
+	}
+	podSpec := map[string]interface{}{
+		"containers":     []interface{}{container},
+		"restartPolicy":  "OnFailure",
+	}
+	specMap := map[string]interface{}{
+		"operatingMode": operatingMode,
+		"podTemplate": map[string]interface{}{
+			"spec": podSpec,
+		},
+	}
+	// Annotate the source template for traceability (not a spec field).
+	annotations := map[string]interface{}{}
+	if spec.TemplateRef != "" {
+		annotations["agents.x-k8s.io/sandbox-template-ref"] = spec.TemplateRef
+	}
 	obj := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "agents.x-k8s.io/v1beta1",
 		"kind":       "Sandbox",
 		"metadata": map[string]interface{}{
-			"name":      spec.Name,
-			"namespace": spec.Namespace,
-			"labels":    spec.Labels,
+			"name":        spec.Name,
+			"namespace":   spec.Namespace,
+			"labels":      spec.Labels,
+			"annotations": annotations,
 		},
-		"spec": map[string]interface{}{
-			"operatingMode": operatingMode,
-		},
+		"spec": specMap,
 	}}
-	if spec.TemplateRef != "" {
-		obj.Object["spec"].(map[string]interface{})["sandboxTemplateRef"] = map[string]interface{}{
-			"name": spec.TemplateRef,
-		}
-	}
 	obj.SetAPIVersion("agents.x-k8s.io/v1beta1")
 	obj.SetKind("Sandbox")
 	return client.ApplyUnstructured(ctx, obj, kubernetesx.ApplyOptions{FieldManager: "aisphere-hub-sandbox"})
