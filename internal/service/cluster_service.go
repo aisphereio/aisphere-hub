@@ -47,9 +47,17 @@ func (s *ClusterService) CreateCluster(ctx context.Context, req *kubernetesv1.Cr
 	}
 	principal := principalFromContext(ctx)
 	clusterID := newClusterID()
+	// Fall back to the principal's org when the request omits org_id. This
+	// mirrors ListClusters (line 78) and prevents org mismatch where a cluster
+	// is created under one org but listed under another (e.g. browser callers
+	// that derive org from the OIDC principal rather than a form field).
+	orgID := req.GetOrgId()
+	if orgID == "" {
+		orgID = principal.OrgID
+	}
 	c := &biz.Cluster{
 		ID:           clusterID,
-		OrgID:        req.GetOrgId(),
+		OrgID:        orgID,
 		Name:         req.GetName(),
 		DisplayName:  req.GetDisplayName(),
 		Description:  req.GetDescription(),
@@ -62,7 +70,7 @@ func (s *ClusterService) CreateCluster(ctx context.Context, req *kubernetesv1.Cr
 	// when these are empty).
 	if req.GetOwnerType() != "" && req.GetOwnerId() != "" {
 		// Override principal so the usecase stamps the requested owner.
-		principal = authn.Principal{SubjectType: req.GetOwnerType(), SubjectID: req.GetOwnerId(), OrgID: req.GetOrgId()}
+		principal = authn.Principal{SubjectType: req.GetOwnerType(), SubjectID: req.GetOwnerId(), OrgID: orgID}
 	}
 	created, err := s.uc.CreateCluster(ctx, principal, c, cred)
 	if err != nil {
