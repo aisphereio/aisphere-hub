@@ -231,6 +231,7 @@ func (p *k8sClientPool) ApplyNamespace(ctx context.Context, clusterID string, lo
 		return err
 	}
 	target := &corev1.Namespace{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 		ObjectMeta: metav1.ObjectMeta{Name: ns.Name, Labels: ns.Labels, Annotations: ns.Annotations},
 	}
 	return client.Apply(ctx, target, kubernetesx.ApplyOptions{FieldManager: "aisphere-hub-namespace"})
