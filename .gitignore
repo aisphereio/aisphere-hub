@@ -42,3 +42,4 @@ dist/
 # config
 configs/config.yaml
 configs/casdoor.pub.worktrees/
+.worktrees/
