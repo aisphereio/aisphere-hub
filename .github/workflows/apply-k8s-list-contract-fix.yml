@@ -1,0 +1,150 @@
+name: Apply K8s list contract fix
+
+on:
+  push:
+    branches: [fix/k8s-sync-permission]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/k8s-sync-permission
+      - name: Apply focused service patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          cluster_path = Path('internal/service/cluster_service.go')
+          cluster = cluster_path.read_text()
+          old_cluster_loop = '''\tout := &kubernetesv1.ListClustersResponse{Clusters: make([]*kubernetesv1.Cluster, 0, len(clusters))}
+          \tfor _, c := range clusters {
+          \t\tout.Clusters = append(out.Clusters, clusterToProto(c, nil))
+          \t}
+          \tout.NextPageToken = nextCursor'''
+          new_cluster_loop = '''\tout := &kubernetesv1.ListClustersResponse{Clusters: make([]*kubernetesv1.Cluster, 0, len(clusters))}
+          \tfor _, c := range clusters {
+          \t\tperms, permErr := s.uc.ClusterPermissionsFor(ctx, principal, c)
+          \t\tif permErr != nil {
+          \t\t\treturn nil, permErr
+          \t\t}
+          \t\tout.Clusters = append(out.Clusters, clusterToProto(c, perms))
+          \t}
+          \tout.NextPageToken = nextCursor'''
+          if old_cluster_loop not in cluster:
+              raise SystemExit('cluster list loop not found')
+          cluster_path.write_text(cluster.replace(old_cluster_loop, new_cluster_loop, 1))
+
+          namespace_path = Path('internal/service/namespace_service.go')
+          namespace = namespace_path.read_text()
+          old_global = '''// ListNamespaces (design §7.6.1 — owner-scoped candidate scan + BatchCheck).
+          func (s *NamespaceService) ListNamespaces(ctx context.Context, req *kubernetesv1.ListNamespacesRequest) (*kubernetesv1.ListNamespacesResponse, error) {
+          \t// V1: ListNamespaces by owner is not exposed via the usecase yet (the
+          \t// usecase has ListNamespacesByCluster). Cross-cluster list by owner is a
+          \t// §7.6.1 hydration path; for V1 we return the cluster-scoped list when
+          \t// cluster_id is set, else empty. Full owner-scope list is a follow-up.
+          \treturn &kubernetesv1.ListNamespacesResponse{}, nil
+          }'''
+          new_global = '''// ListNamespaces resolves all namespaces visible to the caller across clusters.
+          func (s *NamespaceService) ListNamespaces(ctx context.Context, req *kubernetesv1.ListNamespacesRequest) (*kubernetesv1.ListNamespacesResponse, error) {
+          \tprincipal := principalFromContext(ctx)
+          \torgID := req.GetOrgId()
+          \tif orgID == "" {
+          \t\torgID = principal.OrgID
+          \t}
+          \tnamespaces, nextCursor, err := s.uc.ListNamespaces(ctx, principal, orgID, req.GetPageToken(), int(req.GetPageSize()))
+          \tif err != nil {
+          \t\treturn nil, err
+          \t}
+          \tout := &kubernetesv1.ListNamespacesResponse{
+          \t\tNamespaces:    make([]*kubernetesv1.Namespace, 0, len(namespaces)),
+          \t\tNextPageToken: nextCursor,
+          \t}
+          \tfor _, ns := range namespaces {
+          \t\tperms, permErr := s.uc.NamespacePermissionsFor(ctx, principal, ns)
+          \t\tif permErr != nil {
+          \t\t\treturn nil, permErr
+          \t\t}
+          \t\tout.Namespaces = append(out.Namespaces, namespaceToProto(ns, perms))
+          \t}
+          \treturn out, nil
+          }'''
+          if old_global not in namespace:
+              raise SystemExit('global namespace list placeholder not found')
+          namespace = namespace.replace(old_global, new_global, 1)
+
+          old_cluster_namespaces = '''func (s *NamespaceService) ListClusterNamespaces(ctx context.Context, req *kubernetesv1.ListClusterNamespacesRequest) (*kubernetesv1.ListClusterNamespacesResponse, error) {
+          \tnamespaces, err := s.uc.ListNamespacesByCluster(ctx, principalFromContext(ctx), req.GetClusterId())
+          \tif err != nil {
+          \t\treturn nil, err
+          \t}
+          \tout := &kubernetesv1.ListClusterNamespacesResponse{Namespaces: make([]*kubernetesv1.Namespace, 0, len(namespaces))}
+          \tfor _, ns := range namespaces {
+          \t\tout.Namespaces = append(out.Namespaces, namespaceToProto(ns, nil))
+          \t}
+          \treturn out, nil
+          }'''
+          new_cluster_namespaces = '''func (s *NamespaceService) ListClusterNamespaces(ctx context.Context, req *kubernetesv1.ListClusterNamespacesRequest) (*kubernetesv1.ListClusterNamespacesResponse, error) {
+          \tprincipal := principalFromContext(ctx)
+          \tnamespaces, err := s.uc.ListNamespacesByCluster(ctx, principal, req.GetClusterId())
+          \tif err != nil {
+          \t\treturn nil, err
+          \t}
+          \tout := &kubernetesv1.ListClusterNamespacesResponse{Namespaces: make([]*kubernetesv1.Namespace, 0, len(namespaces))}
+          \tfor _, ns := range namespaces {
+          \t\tperms, permErr := s.uc.NamespacePermissionsFor(ctx, principal, ns)
+          \t\tif permErr != nil {
+          \t\t\treturn nil, permErr
+          \t\t}
+          \t\tout.Namespaces = append(out.Namespaces, namespaceToProto(ns, perms))
+          \t}
+          \treturn out, nil
+          }'''
+          if old_cluster_namespaces not in namespace:
+              raise SystemExit('cluster namespace list block not found')
+          namespace = namespace.replace(old_cluster_namespaces, new_cluster_namespaces, 1)
+
+          old_visibility_field = '''\t\tVisibility:              namespaceVisibilityToProto(ns.Visibility),
+          \t\tLifecycle:               namespaceLifecycleToProto(ns.Lifecycle),'''
+          new_visibility_field = '''\t\tVisibility:              namespaceVisibilityToProto(ns.Visibility),
+          \t\tEffectiveVisibility:     effectiveVisibilityToProto(ns.Visibility, ns.VisibilitySyncStatus),
+          \t\tLifecycle:               namespaceLifecycleToProto(ns.Lifecycle),'''
+          if old_visibility_field not in namespace:
+              raise SystemExit('namespace visibility proto fields not found')
+          namespace = namespace.replace(old_visibility_field, new_visibility_field, 1)
+
+          lifecycle_marker = '''func namespaceLifecycleToProto(v string) kubernetesv1.NamespaceLifecycle {'''
+          helper = '''func effectiveVisibilityToProto(visibility, syncStatus string) kubernetesv1.EffectiveVisibility {
+          \tif syncStatus != biz.VisibilitySyncSynced {
+          \t\treturn kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_UNKNOWN
+          \t}
+          \tswitch visibility {
+          \tcase biz.NamespaceVisibilityPublic:
+          \t\treturn kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_PUBLIC
+          \tcase biz.NamespaceVisibilityPrivate:
+          \t\treturn kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_PRIVATE
+          \tdefault:
+          \t\treturn kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_UNKNOWN
+          \t}
+          }
+
+          '''
+          if lifecycle_marker not in namespace:
+              raise SystemExit('namespace lifecycle helper marker not found')
+          namespace = namespace.replace(lifecycle_marker, helper + lifecycle_marker, 1)
+          namespace_path.write_text(namespace)
+          PY
+
+          rm .github/workflows/apply-k8s-list-contract-fix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add internal/service/cluster_service.go internal/service/namespace_service.go .github/workflows/apply-k8s-list-contract-fix.yml
+          git commit -m 'fix(kubernetes): hydrate list permissions and namespaces'
+          git push origin HEAD:fix/k8s-sync-permission
