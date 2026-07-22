@@ -1,0 +1,18 @@
+# 方式二（1/3）：SandboxTemplate
+# 镜像只写在这里一次 —— 这是 agent-sandbox 实现「默认镜像」的官方机制
+# 镜像用国内地址（daocloud 代理 Docker Hub），避免默认拉 Docker Hub
+# 要换默认镜像，改这一处即可，全池生效
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxTemplate
+metadata:
+  name: busybox-template
+  namespace: agent-sandbox-demo
+spec:
+  podTemplate:
+    spec:
+      containers:
+      - name: runtime
+        image: m.daocloud.io/docker.io/library/busybox:latest
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "sleep infinity"]
+      restartPolicy: OnFailure

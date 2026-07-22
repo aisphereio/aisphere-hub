@@ -1,0 +1,7 @@
+# gVisor RuntimeClass（升级强隔离用，待安装 runsc 后创建）
+# 配合 sandboxtemplate.yaml 里的 podTemplate.spec 加 runtimeClassName: gvisor
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+handler: runsc
