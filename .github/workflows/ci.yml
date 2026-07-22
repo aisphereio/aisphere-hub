@@ -31,13 +31,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Materialize PR base branch for compatibility checks
-        if: github.event_name == 'pull_request'
+      - name: Materialize base branch for compatibility checks
         shell: bash
-        env:
-          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
+          BASE_REF="${{ github.base_ref || 'main' }}"
           git branch --force "${BASE_REF}" "origin/${BASE_REF}"
           git show-ref --verify "refs/heads/${BASE_REF}"
 
