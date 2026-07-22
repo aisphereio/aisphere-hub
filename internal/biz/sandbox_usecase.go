@@ -246,9 +246,7 @@ func (uc *SandboxUsecase) CreateSandboxTemplate(ctx context.Context, principal a
 		Image:     created.Image,
 		Labels:    created.Labels,
 	}
-	if cmd := strings.TrimSpace(created.ContainerCommand); cmd != "" {
-		spec.ContainerCommand = strings.Fields(cmd)
-	}
+	spec.ContainerCommand = parseContainerCommand(created.ContainerCommand)
 	if err := uc.provider.ApplySandboxTemplate(ctx, created.ClusterID, locator, spec); err != nil {
 		uc.log.WithContext(ctx).Warn("remote sandbox template apply failed; marking FAILED",
 			logx.String("template_id", created.ID),
@@ -1185,4 +1183,21 @@ func (uc *SandboxUsecase) CallSandboxTool(ctx context.Context, principal authn.P
 		logx.String("tool", tool),
 		logx.String("trace_id", traceID))
 	return true, string(b), "", nil
+}
+
+// parseContainerCommand decodes the container_command field stored in the DB as
+// a JSON-encoded string array (e.g. `["/bin/sh","-c","sleep infinity"]`) into a
+// []string suitable for the K8s container spec. If the field is empty or not a
+// valid JSON array, it returns nil (no command — the image entrypoint runs).
+func parseContainerCommand(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "[]" {
+		return nil
+	}
+	var cmd []string
+	if err := json.Unmarshal([]byte(raw), &cmd); err != nil {
+		// Fallback: treat as a single shell command string split by whitespace.
+		return strings.Fields(raw)
+	}
+	return cmd
 }
