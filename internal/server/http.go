@@ -68,6 +68,10 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 		opts = append(opts, khttp.Metrics(resources.Metrics))
 	}
 	opts = append(opts, khttp.AccessLog(accessLog))
+	// Force protojson encoding for all proto.Message responses so browser
+	// clients (which omit Accept) get camelCase field names and non-empty
+	// collections — matching the OpenAPI contract and generated TS types.
+	opts = append(opts, khttp.ResponseEncoder(protoJSONResponseEncoder))
 	// Register the unified Kernel security chain BEFORE any routes are mounted.
 	// securityx builds the authn runtime and access skip policy from config;
 	// serverx/autowire owns the actual middleware order.
