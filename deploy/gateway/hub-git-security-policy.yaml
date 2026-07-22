@@ -1,0 +1,70 @@
+# Hub Git SecurityPolicy — JWT-only authentication for the /git route.
+#
+# Unlike hub-oidc-policy (which has an `oidc` block that redirects
+# unauthenticated browser users to Casdoor), this policy has NO oidc block:
+# it only verifies the Bearer JWT from the Authorization header. This is what
+# makes git clone/pull/push work — Git never receives a 302/HTML login page.
+#
+# Audience is the aisphere-git-cli Casdoor application client_id (a dedicated
+# Native/Public client). A git-aisphere login obtains a short-lived (30m)
+# access token whose aud matches this client id; the git-credential-aisphere
+# helper injects it as `Authorization: Bearer <token>`.
+#
+# claimToHeaders mapping (IMPORTANT):
+#   Casdoor's `sub` claim is the *username*, while `id` is the stable *UUID*.
+#   SpiceDB relationships key on the UUID (user:<uuid>), so we map:
+#     id  -> x-aisphere-external-sub   (UUID, the SpiceDB subject key)
+#     sub -> x-aisphere-external-id    (username, display only)
+#   This matches the IAM-front convention (aisphere-iam-front security-policy).
+#   The hub's principalFromGatewayClaimHeaders resolves subjectID via
+#   firstNonEmpty(principalID, userID, externalID, externalSub), so mapping
+#   the UUID to x-aisphere-external-sub yields the canonical Principal that
+#   matches SpiceDB — identical to the browser OIDC path.
+#
+# Client-forged x-aisphere-* headers are stripped gateway-wide by the
+# aisphere-sanitize-headers ClientTrafficPolicy before Envoy re-injects the
+# verified claims below, so /git cannot be spoofed.
+#
+# Casdoor application: aisphere-git-cli (client_id set via replacement or
+# kustomize suffix patch; placeholder below is the documented default).
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: hub-git-jwt-policy
+  namespace: aisphere
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: hub-git-route
+  jwt:
+    optional: false
+    providers:
+      - name: casdoor-git
+        issuer: "https://casdoor.weagent.cc:30723"
+        audiences:
+          - "ec15766f6cb98b908433"  # Casdoor aisphere-git-cli Public client (no secret)
+        remoteJWKS:
+          uri: "https://casdoor.weagent.cc:30723/.well-known/jwks"
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "
+        claimToHeaders:
+          - claim: id
+            header: x-aisphere-external-sub
+          - claim: sub
+            header: x-aisphere-external-id
+          - claim: name
+            header: x-aisphere-external-name
+          - claim: email
+            header: x-aisphere-external-email
+          - claim: iss
+            header: x-aisphere-external-issuer
+          - claim: owner
+            header: x-aisphere-external-owner
+          - claim: displayName
+            header: x-aisphere-external-display-name
+          - claim: preferred_username
+            header: x-aisphere-external-username
