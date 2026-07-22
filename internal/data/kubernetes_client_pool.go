@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/kernel/kubernetesx"
@@ -25,46 +26,29 @@ import (
 // from the ClusterCredentialStore (or accepts one from the caller, as Probe
 // does) and builds a fresh client via the injected factory.
 //
-// SSRF: the factory validates the server_url through EndpointPolicy and, for
-// ServiceAccount/InCluster credentials, pins the DialContext to the resolved
-// IPs (design §12.4 DNS rebinding defense). Kubeconfig credentials carry their
-// server URL inside the YAML; V1 trusts the CreateCluster-time validation and
-// relies on client-go's default dialer for them — pinning kubeconfig is a V2
-// follow-up noted in the design.
+// SSRF: every externally supplied API server URL is validated through
+// EndpointPolicy and its DialContext is pinned to the validated IP set. For a
+// kubeconfig, the selected context is first compiled into rest.Config, then the
+// resulting Host is validated and pinned. Proxy URLs, exec/auth-provider
+// plugins, and impersonation are rejected because they would bypass the Hub
+// trust boundary or execute caller-controlled code.
 type k8sClientPool struct {
 	store   biz.ClusterCredentialStore
 	policy  biz.EndpointPolicy
 	factory clientFactory
 	logger  logx.Logger
 
-	// clients maps cluster_id → *clientEntry. We store *clientEntry so a
-	// LoadOrStore compare-and-swap can detect a concurrent winner without
-	// holding a global lock. Entries are immutable once published: a rotate
-	// publishes a new *clientEntry (new revision) rather than mutating the
-	// old one, so in-flight requests holding the old pointer finish safely.
 	clients sync.Map
-
-	// inflight dedupes concurrent builds for the same cluster_id so two
-	// requests hitting a cold cache share one factory call.
 	inflight singleflight.Group
 }
 
-// clientEntry is the cached value. revision is the credential_revision the
-// client was built from; a mismatch with the locator forces a rebuild.
 type clientEntry struct {
 	client   kubernetesx.Client
 	revision int64
 }
 
-// clientFactory builds a kubernetesx.Client from a credential + locator. It is
-// the only seam that touches kubernetesx.New, so tests inject a fake to verify
-// cache behavior without standing up a real API server. The production factory
-// (defaultClientFactory) runs SSRF validation + pinned dial.
 type clientFactory func(ctx context.Context, clusterID string, locator biz.CredentialLocator, cred kubernetesx.Credential) (kubernetesx.Client, error)
 
-// NewClientPool builds the pool with the production factory. The factory wires
-// EndpointPolicy + pinned DialContext; callers (Resources) supply the store,
-// policy, and logger obtained from NewCredentialStore / NewEndpointPolicy.
 func NewClientPool(store biz.ClusterCredentialStore, policy biz.EndpointPolicy, logger logx.Logger) *k8sClientPool {
 	return &k8sClientPool{
 		store:   store,
@@ -74,10 +58,6 @@ func NewClientPool(store biz.ClusterCredentialStore, policy biz.EndpointPolicy, 
 	}
 }
 
-// defaultClientFactory is the production clientFactory. It merges the credential
-// into a kubernetesx.Config, runs the SSRF guard, and — for ServiceAccount /
-// InCluster credentials — injects a pinned DialContext via WithRESTConfig so
-// the TCP connection dials the resolved IP directly (design §12.4).
 func defaultClientFactory(policy biz.EndpointPolicy, logger logx.Logger) clientFactory {
 	return func(ctx context.Context, clusterID string, locator biz.CredentialLocator, cred kubernetesx.Credential) (kubernetesx.Client, error) {
 		base := kubernetesx.Config{
@@ -90,11 +70,24 @@ func defaultClientFactory(policy biz.EndpointPolicy, logger logx.Logger) clientF
 		if err != nil {
 			return nil, fmt.Errorf("merge credential for cluster %s: %w", clusterID, err)
 		}
-		// SSRF + pinned dial only for Host-based credentials. Kubeconfig
-		// carries its server URL inside the YAML; V1 relies on the
-		// CreateCluster-time EndpointPolicy check (PR③ biz layer) and uses
-		// client-go's default resolver for the dial.
-		if cred.Kind == kubernetesx.CredentialKindServiceAccount || cred.Kind == kubernetesx.CredentialKindInCluster {
+
+		switch cred.Kind {
+		case kubernetesx.CredentialKindKubeconfig:
+			restCfg, err := restConfigFromKubeconfig(cred)
+			if err != nil {
+				return nil, fmt.Errorf("compile kubeconfig for cluster %s: %w", clusterID, err)
+			}
+			if err := validateKubeconfigRestConfig(restCfg); err != nil {
+				return nil, fmt.Errorf("unsafe kubeconfig for cluster %s: %w", clusterID, err)
+			}
+			if err := pinRESTConfig(ctx, policy, restCfg); err != nil {
+				return nil, err
+			}
+			restCfg.QPS = 50
+			restCfg.Burst = 100
+			return kubernetesx.New(merged, kubernetesx.WithRESTConfig(restCfg))
+
+		case kubernetesx.CredentialKindServiceAccount:
 			resolved, err := policy.Validate(ctx, cred.Host)
 			if err != nil {
 				return nil, err
@@ -115,13 +108,68 @@ func defaultClientFactory(policy biz.EndpointPolicy, logger logx.Logger) clientF
 				Burst:       100,
 			}
 			return kubernetesx.New(merged, kubernetesx.WithRESTConfig(restCfg))
+
+		case kubernetesx.CredentialKindInCluster:
+			// In-cluster credentials are resolved from the pod service account and
+			// target the local cluster service; there is no caller-controlled URL.
+			return kubernetesx.New(merged)
+
+		default:
+			return nil, kubernetesx.ErrCredentialInvalid
 		}
-		return kubernetesx.New(merged)
 	}
 }
 
-// portFromURL extracts the port from a URL string, falling back to "443" for
-// https URLs without an explicit port (rare for kube API servers but defensive).
+func restConfigFromKubeconfig(cred kubernetesx.Credential) (*rest.Config, error) {
+	raw, err := clientcmd.Load(cred.Kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	contextName := cred.Context
+	if contextName == "" {
+		contextName = raw.CurrentContext
+	}
+	if contextName == "" {
+		return nil, errors.New("kubeconfig current-context is empty")
+	}
+	return clientcmd.NewNonInteractiveClientConfig(*raw, contextName, &clientcmd.ConfigOverrides{}, nil).ClientConfig()
+}
+
+func validateKubeconfigRestConfig(cfg *rest.Config) error {
+	if cfg == nil {
+		return errors.New("rest config is nil")
+	}
+	if cfg.Proxy != nil {
+		return errors.New("proxy-url is not allowed")
+	}
+	if cfg.ExecProvider != nil {
+		return errors.New("exec credential plugins are not allowed")
+	}
+	if cfg.AuthProvider != nil {
+		return errors.New("auth-provider plugins are not allowed")
+	}
+	if cfg.Impersonate.UserName != "" || cfg.Impersonate.UID != "" || len(cfg.Impersonate.Groups) > 0 || len(cfg.Impersonate.Extra) > 0 {
+		return errors.New("impersonation is not allowed")
+	}
+	return nil
+}
+
+func pinRESTConfig(ctx context.Context, policy biz.EndpointPolicy, cfg *rest.Config) error {
+	resolved, err := policy.Validate(ctx, cfg.Host)
+	if err != nil {
+		return err
+	}
+	port := portFromURL(cfg.Host)
+	if port == "" {
+		return errors.New("client pool: kubeconfig server URL has no port")
+	}
+	cfg.Dial = NewPinnedDialContext(resolved, port)
+	if cfg.TLSClientConfig.ServerName == "" {
+		cfg.TLSClientConfig.ServerName = resolved.OriginalHost
+	}
+	return nil
+}
+
 func portFromURL(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil || u.Port() == "" {
@@ -133,25 +181,15 @@ func portFromURL(raw string) string {
 	return u.Port()
 }
 
-// getOrBuild returns a cached client whose revision matches locator, or builds
-// one via singleflight. cred is optional: when non-zero (Kind != ""), it is
-// used directly; otherwise the pool loads the credential from the store. The
-// factory is called at most once per concurrent cold-cache miss per cluster.
 func (p *k8sClientPool) getOrBuild(ctx context.Context, clusterID string, locator biz.CredentialLocator, cred kubernetesx.Credential) (kubernetesx.Client, error) {
 	if v, ok := p.clients.Load(clusterID); ok {
 		entry := v.(*clientEntry)
 		if entry.revision == locator.CredentialRevision {
 			return entry.client, nil
 		}
-		// Revision mismatch (rotate happened): fall through to rebuild. The
-		// stale entry stays until the new build publishes, then is replaced.
 	}
-	// singleflight key includes revision so a concurrent rotate does not
-	// collapse two different revisions into one build.
 	key := fmt.Sprintf("%s@%d", clusterID, locator.CredentialRevision)
 	v, err, _ := p.inflight.Do(key, func() (interface{}, error) {
-		// Re-check under the singleflight winner: another request may have
-		// just published the entry we want.
 		if v, ok := p.clients.Load(clusterID); ok {
 			entry := v.(*clientEntry)
 			if entry.revision == locator.CredentialRevision {
@@ -179,10 +217,6 @@ func (p *k8sClientPool) getOrBuild(ctx context.Context, clusterID string, locato
 	return v.(kubernetesx.Client), nil
 }
 
-// Probe runs a reachability probe via the cached client (design §5.7.6). The
-// biz layer passes the credential explicitly because RotateCredential probes a
-// not-yet-committed revision (design §5.7.3 step 3); the pool still caches by
-// revision so a successful rotate reuses the probed client.
 func (p *k8sClientPool) Probe(ctx context.Context, clusterID string, locator biz.CredentialLocator, cred kubernetesx.Credential) (kubernetesx.ProbeResult, error) {
 	client, err := p.getOrBuild(ctx, clusterID, locator, cred)
 	if err != nil {
@@ -191,8 +225,6 @@ func (p *k8sClientPool) Probe(ctx context.Context, clusterID string, locator biz
 	return client.Probe(ctx, kubernetesx.ProbeRequest{})
 }
 
-// ApplyNamespace SSA-applies a Namespace on the cluster (design §6.4 step 6).
-// The data layer injects aisphere.io/* managed labels here before delegating.
 func (p *k8sClientPool) ApplyNamespace(ctx context.Context, clusterID string, locator biz.CredentialLocator, ns biz.NamespaceApplySpec) error {
 	client, err := p.getOrBuild(ctx, clusterID, locator, kubernetesx.Credential{})
 	if err != nil {
@@ -204,7 +236,6 @@ func (p *k8sClientPool) ApplyNamespace(ctx context.Context, clusterID string, lo
 	return client.Apply(ctx, target, kubernetesx.ApplyOptions{FieldManager: "aisphere-hub-namespace"})
 }
 
-// DeleteNamespace removes a remote Namespace by kube_name (design §6.6).
 func (p *k8sClientPool) DeleteNamespace(ctx context.Context, clusterID string, locator biz.CredentialLocator, kubeName string) error {
 	client, err := p.getOrBuild(ctx, clusterID, locator, kubernetesx.Credential{})
 	if err != nil {
@@ -213,7 +244,6 @@ func (p *k8sClientPool) DeleteNamespace(ctx context.Context, clusterID string, l
 	return client.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: kubeName}})
 }
 
-// ListNamespaces enumerates remote Namespaces for SyncNamespaces.
 func (p *k8sClientPool) ListNamespaces(ctx context.Context, clusterID string, locator biz.CredentialLocator) ([]biz.NamespaceSyncResult, error) {
 	client, err := p.getOrBuild(ctx, clusterID, locator, kubernetesx.Credential{})
 	if err != nil {
@@ -235,15 +265,10 @@ func (p *k8sClientPool) ListNamespaces(ctx context.Context, clusterID string, lo
 	return out, nil
 }
 
-// InvalidateCluster drops the cached client after a credential rotate (design
-// §5.7.3 step 5) or cluster delete. The next request rebuilds from the new
-// credential. kubernetesx.Client has no Close hook (controller-runtime clients
-// release via GC), so we just drop the reference.
 func (p *k8sClientPool) InvalidateCluster(ctx context.Context, clusterID string) {
 	p.clients.Delete(clusterID)
 }
 
-// Close empties the cache at shutdown. Registered with Resources.closers.
 func (p *k8sClientPool) Close() error {
 	p.clients.Range(func(k, _ interface{}) bool {
 		p.clients.Delete(k)
@@ -252,12 +277,8 @@ func (p *k8sClientPool) Close() error {
 	return nil
 }
 
-// compile-time interface check.
 var _ biz.KubernetesProvider = (*k8sClientPool)(nil)
 
-// noClientPool is a no-op implementation returned when Kubernetes is disabled.
-// Every method returns a sentinel error so a misconfigured call fails loudly
-// rather than silently dropping work.
 type noClientPool struct{}
 
 func (noClientPool) Probe(context.Context, string, biz.CredentialLocator, kubernetesx.Credential) (kubernetesx.ProbeResult, error) {
