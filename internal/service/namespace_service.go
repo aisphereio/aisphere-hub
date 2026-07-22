@@ -50,24 +50,45 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, req *kubernetesv
 	return &kubernetesv1.CreateNamespaceResponse{Namespace: namespaceToProto(created, nil)}, nil
 }
 
-// ListNamespaces (design §7.6.1 — owner-scoped candidate scan + BatchCheck).
+// ListNamespaces resolves all namespaces visible to the caller across clusters.
 func (s *NamespaceService) ListNamespaces(ctx context.Context, req *kubernetesv1.ListNamespacesRequest) (*kubernetesv1.ListNamespacesResponse, error) {
-	// V1: ListNamespaces by owner is not exposed via the usecase yet (the
-	// usecase has ListNamespacesByCluster). Cross-cluster list by owner is a
-	// §7.6.1 hydration path; for V1 we return the cluster-scoped list when
-	// cluster_id is set, else empty. Full owner-scope list is a follow-up.
-	return &kubernetesv1.ListNamespacesResponse{}, nil
+	principal := principalFromContext(ctx)
+	orgID := req.GetOrgId()
+	if orgID == "" {
+		orgID = principal.OrgID
+	}
+	namespaces, nextCursor, err := s.uc.ListNamespaces(ctx, principal, orgID, req.GetPageToken(), int(req.GetPageSize()))
+	if err != nil {
+		return nil, err
+	}
+	out := &kubernetesv1.ListNamespacesResponse{
+		Namespaces:    make([]*kubernetesv1.Namespace, 0, len(namespaces)),
+		NextPageToken: nextCursor,
+	}
+	for _, ns := range namespaces {
+		perms, permErr := s.uc.NamespacePermissionsFor(ctx, principal, ns)
+		if permErr != nil {
+			return nil, permErr
+		}
+		out.Namespaces = append(out.Namespaces, namespaceToProto(ns, perms))
+	}
+	return out, nil
 }
 
 // ListClusterNamespaces (design §7.6.3).
 func (s *NamespaceService) ListClusterNamespaces(ctx context.Context, req *kubernetesv1.ListClusterNamespacesRequest) (*kubernetesv1.ListClusterNamespacesResponse, error) {
-	namespaces, err := s.uc.ListNamespacesByCluster(ctx, principalFromContext(ctx), req.GetClusterId())
+	principal := principalFromContext(ctx)
+	namespaces, err := s.uc.ListNamespacesByCluster(ctx, principal, req.GetClusterId())
 	if err != nil {
 		return nil, err
 	}
 	out := &kubernetesv1.ListClusterNamespacesResponse{Namespaces: make([]*kubernetesv1.Namespace, 0, len(namespaces))}
 	for _, ns := range namespaces {
-		out.Namespaces = append(out.Namespaces, namespaceToProto(ns, nil))
+		perms, permErr := s.uc.NamespacePermissionsFor(ctx, principal, ns)
+		if permErr != nil {
+			return nil, permErr
+		}
+		out.Namespaces = append(out.Namespaces, namespaceToProto(ns, perms))
 	}
 	return out, nil
 }
@@ -193,6 +214,7 @@ func namespaceToProto(ns *biz.Namespace, perms *biz.NamespacePermissions) *kuber
 		DisplayName:             ns.DisplayName,
 		Description:             ns.Description,
 		Visibility:              namespaceVisibilityToProto(ns.Visibility),
+		EffectiveVisibility:     effectiveVisibilityToProto(ns.Visibility, ns.VisibilitySyncStatus),
 		Lifecycle:               namespaceLifecycleToProto(ns.Lifecycle),
 		Managed:                 ns.Managed,
 		KubernetesUid:           ns.KubernetesUID,
@@ -260,6 +282,20 @@ func namespaceVisibilityToProto(v string) kubernetesv1.NamespaceVisibility {
 		return kubernetesv1.NamespaceVisibility_NAMESPACE_VISIBILITY_PRIVATE
 	}
 	return kubernetesv1.NamespaceVisibility_NAMESPACE_VISIBILITY_UNSPECIFIED
+}
+
+func effectiveVisibilityToProto(visibility, syncStatus string) kubernetesv1.EffectiveVisibility {
+	if syncStatus != biz.VisibilitySyncSynced {
+		return kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_UNKNOWN
+	}
+	switch visibility {
+	case biz.NamespaceVisibilityPublic:
+		return kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_PUBLIC
+	case biz.NamespaceVisibilityPrivate:
+		return kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_PRIVATE
+	default:
+		return kubernetesv1.EffectiveVisibility_EFFECTIVE_VISIBILITY_UNKNOWN
+	}
 }
 
 func namespaceLifecycleToProto(v string) kubernetesv1.NamespaceLifecycle {

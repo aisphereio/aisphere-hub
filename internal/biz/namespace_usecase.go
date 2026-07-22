@@ -534,13 +534,13 @@ func (uc *NamespaceUsecase) SyncNamespaces(ctx context.Context, principal authn.
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   clusterResource(clusterID),
-		Permission: "probe",
+		Permission: "operate",
 	})
 	if err != nil {
 		return err
 	}
 	if !dec.Allowed {
-		return errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no probe permission on cluster")
+		return errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on cluster")
 	}
 	remote, err := uc.provider.ListNamespaces(ctx, clusterID, CredentialLocator{ClusterID: clusterID})
 	if err != nil {
