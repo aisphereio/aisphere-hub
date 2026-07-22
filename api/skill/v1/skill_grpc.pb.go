@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	SkillService_CreateSkill_FullMethodName           = "/skill.v1.SkillService/CreateSkill"
+	SkillService_ImportSkillArchive_FullMethodName    = "/skill.v1.SkillService/ImportSkillArchive"
 	SkillService_ListSkills_FullMethodName            = "/skill.v1.SkillService/ListSkills"
 	SkillService_GetSkill_FullMethodName              = "/skill.v1.SkillService/GetSkill"
 	SkillService_UpdateSkill_FullMethodName           = "/skill.v1.SkillService/UpdateSkill"
@@ -46,6 +47,7 @@ const (
 // not represented by protobuf upload or draft-file RPCs.
 type SkillServiceClient interface {
 	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error)
+	ImportSkillArchive(ctx context.Context, in *ImportSkillArchiveRequest, opts ...grpc.CallOption) (*ImportSkillArchiveResponse, error)
 	ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error)
 	GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*GetSkillResponse, error)
 	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
@@ -75,6 +77,16 @@ func (c *skillServiceClient) CreateSkill(ctx context.Context, in *CreateSkillReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSkillResponse)
 	err := c.cc.Invoke(ctx, SkillService_CreateSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) ImportSkillArchive(ctx context.Context, in *ImportSkillArchiveRequest, opts ...grpc.CallOption) (*ImportSkillArchiveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImportSkillArchiveResponse)
+	err := c.cc.Invoke(ctx, SkillService_ImportSkillArchive_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,6 +252,7 @@ func (c *skillServiceClient) ListSkillReleases(ctx context.Context, in *ListSkil
 // not represented by protobuf upload or draft-file RPCs.
 type SkillServiceServer interface {
 	CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error)
+	ImportSkillArchive(context.Context, *ImportSkillArchiveRequest) (*ImportSkillArchiveResponse, error)
 	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
 	GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
@@ -267,6 +280,9 @@ type UnimplementedSkillServiceServer struct{}
 
 func (UnimplementedSkillServiceServer) CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSkill not implemented")
+}
+func (UnimplementedSkillServiceServer) ImportSkillArchive(context.Context, *ImportSkillArchiveRequest) (*ImportSkillArchiveResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportSkillArchive not implemented")
 }
 func (UnimplementedSkillServiceServer) ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSkills not implemented")
@@ -348,6 +364,24 @@ func _SkillService_CreateSkill_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SkillServiceServer).CreateSkill(ctx, req.(*CreateSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_ImportSkillArchive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportSkillArchiveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).ImportSkillArchive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_ImportSkillArchive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).ImportSkillArchive(ctx, req.(*ImportSkillArchiveRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -632,6 +666,10 @@ var SkillService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateSkill",
 			Handler:    _SkillService_CreateSkill_Handler,
+		},
+		{
+			MethodName: "ImportSkillArchive",
+			Handler:    _SkillService_ImportSkillArchive_Handler,
 		},
 		{
 			MethodName: "ListSkills",

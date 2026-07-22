@@ -1,22 +1,22 @@
 package server
 
 import (
-		"context"
-		"strings"
+	"context"
+	"strings"
 
-		skillv1 "github.com/aisphereio/aisphere-hub/api/skill/v1"
-		"github.com/aisphereio/aisphere-hub/internal/conf"
-		"github.com/aisphereio/aisphere-hub/internal/data"
-		"github.com/aisphereio/aisphere-hub/internal/gitengine"
-		"github.com/aisphereio/kernel/accessx"
-		"github.com/aisphereio/kernel/auditx"
-		"github.com/aisphereio/kernel/authz"
-		"github.com/aisphereio/kernel/errorx"
-		"github.com/aisphereio/kernel/middleware"
-		mwaccess "github.com/aisphereio/kernel/middleware/access"
-		"github.com/aisphereio/kernel/securityx"
-		"github.com/aisphereio/kernel/serverx"
-	)
+	skillv1 "github.com/aisphereio/aisphere-hub/api/skill/v1"
+	"github.com/aisphereio/aisphere-hub/internal/conf"
+	"github.com/aisphereio/aisphere-hub/internal/data"
+	"github.com/aisphereio/aisphere-hub/internal/gitengine"
+	"github.com/aisphereio/kernel/accessx"
+	"github.com/aisphereio/kernel/auditx"
+	"github.com/aisphereio/kernel/authz"
+	"github.com/aisphereio/kernel/errorx"
+	"github.com/aisphereio/kernel/middleware"
+	mwaccess "github.com/aisphereio/kernel/middleware/access"
+	"github.com/aisphereio/kernel/securityx"
+	"github.com/aisphereio/kernel/serverx"
+)
 
 func hubServerMiddlewares(resources *data.Resources, cfg conf.SecurityConfig) []middleware.Middleware {
 	securityRuntime := mustHubSecurityRuntime(cfg)
@@ -36,23 +36,26 @@ func hubServerMiddlewares(resources *data.Resources, cfg conf.SecurityConfig) []
 }
 
 func hubAccessResolver(catalog serverx.ServiceCatalog) mwaccess.Resolver {
-		return func(ctx context.Context, operation string, request any) (accessx.Check, bool, error) {
-			if strings.HasPrefix(operation, "git.") {
-				return gitengine.ResolveProtocolAccess(ctx, operation, request)
-			}
-// Validate required authz parameters before delegating to the
-				// generated resolver. Missing org_id would produce a confusing
-				// SpiceDB 403 instead of a clear 400. project_id is optional.
-				if strings.HasSuffix(operation, "/CreateSkill") {
-					if req, ok := request.(*skillv1.CreateSkillRequest); ok {
-						if strings.TrimSpace(req.GetOrgId()) == "" {
-							return accessx.Check{}, false, errorx.BadRequest("ORG_ID_REQUIRED", "org_id is required for skill creation")
-						}
-					}
-				}
-			return catalog.AccessResolver(ctx, operation, request)
+	return func(ctx context.Context, operation string, request any) (accessx.Check, bool, error) {
+		if strings.HasPrefix(operation, "git.") {
+			return gitengine.ResolveProtocolAccess(ctx, operation, request)
 		}
+		// Validate required authz parameters before delegating to the
+		// generated resolver. Missing org_id would produce a confusing
+		// SpiceDB 403 instead of a clear 400. project_id is optional.
+		if strings.HasSuffix(operation, "/CreateSkill") {
+			if req, ok := request.(*skillv1.CreateSkillRequest); ok && strings.TrimSpace(req.GetOrgId()) == "" {
+				return accessx.Check{}, false, errorx.BadRequest("ORG_ID_REQUIRED", "org_id is required for skill creation")
+			}
+		}
+		if strings.HasSuffix(operation, "/ImportSkillArchive") {
+			if req, ok := request.(*skillv1.ImportSkillArchiveRequest); ok && strings.TrimSpace(req.GetOrgId()) == "" {
+				return accessx.Check{}, false, errorx.BadRequest("ORG_ID_REQUIRED", "org_id is required for skill archive import")
+			}
+		}
+		return catalog.AccessResolver(ctx, operation, request)
 	}
+}
 
 func mustHubSecurityRuntime(cfg conf.SecurityConfig) *securityx.Runtime {
 	runtime, err := securityx.NewRuntime(context.Background(), securityx.Config{

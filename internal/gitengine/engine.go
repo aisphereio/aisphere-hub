@@ -26,6 +26,9 @@ import (
 	"github.com/aisphereio/soft-serve/pkg/store"
 	"github.com/aisphereio/soft-serve/pkg/store/database"
 	softweb "github.com/aisphereio/soft-serve/pkg/web"
+	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"gorm.io/gorm"
 )
 
@@ -259,20 +262,19 @@ func (e *Engine) seedInitialCommit(ctx context.Context, name string, skill *biz.
 		return err
 	}
 	gitDir := repo.Path
-	skillMd := scaffoldContent(skill)
-
-	mdSha, err := runGitRepo(ctx, gitDir, strings.NewReader(skillMd), "hash-object", "-w", "--stdin")
-	if err != nil {
-		return fmt.Errorf("write SKILL.md blob: %w", err)
-	}
-	// mktree reads "<mode> <type> <sha>\t<name>" lines from stdin.
-	treeInput := fmt.Sprintf("100644 blob %s\tSKILL.md\n", mdSha)
-	treeSha, err := runGitRepo(ctx, gitDir, strings.NewReader(treeInput), "mktree")
-	if err != nil {
-		return fmt.Errorf("build tree: %w", err)
+	files := skill.InitialFiles
+	commitSubject := "Initial scaffold"
+	if len(files) == 0 {
+		files = []biz.SkillArchiveFile{{Path: "SKILL.md", Content: []byte(scaffoldContent(skill))}}
+	} else {
+		commitSubject = "Import skill archive"
 	}
 
-	commitMsg := fmt.Sprintf("Initial scaffold\n\nCreated by %s", skill.OwnerID)
+	treeSha, err := writeInitialTree(ctx, gitDir, files)
+	if err != nil {
+		return err
+	}
+	commitMsg := fmt.Sprintf("%s\n\nCreated by %s", commitSubject, skill.OwnerID)
 	now := time.Now().UTC().Format(time.RFC3339)
 	env := []string{
 		"GIT_AUTHOR_NAME=Aisphere Hub", "GIT_AUTHOR_EMAIL=noreply@aisphere.io",
@@ -293,6 +295,37 @@ func (e *Engine) seedInitialCommit(ctx context.Context, name string, skill *biz.
 		return fmt.Errorf("point HEAD at %s: %w", branch, err)
 	}
 	return nil
+}
+
+func writeInitialTree(ctx context.Context, gitDir string, files []biz.SkillArchiveFile) (string, error) {
+	_ = ctx
+	repo, err := gogit.PlainOpen(gitDir)
+	if err != nil {
+		return "", fmt.Errorf("open bare repository: %w", err)
+	}
+	root, err := emptyTree(repo.Storer)
+	if err != nil {
+		return "", fmt.Errorf("create empty tree: %w", err)
+	}
+	treeHash := plumbing.ZeroHash
+	for _, file := range files {
+		blobHash, _, err := writeBlob(repo.Storer, file.Content)
+		if err != nil {
+			return "", fmt.Errorf("write %s blob: %w", file.Path, err)
+		}
+		treeHash, err = upsertFileInTree(repo.Storer, root, file.Path, blobHash, filemode.Regular)
+		if err != nil {
+			return "", fmt.Errorf("add %s to tree: %w", file.Path, err)
+		}
+		root, err = loadTree(repo.Storer, treeHash)
+		if err != nil {
+			return "", fmt.Errorf("reload tree after %s: %w", file.Path, err)
+		}
+	}
+	if treeHash == plumbing.ZeroHash {
+		return "", fmt.Errorf("initial tree is empty")
+	}
+	return treeHash.String(), nil
 }
 
 // runGitRepo runs a git plumbing command against a bare repo path (GIT_DIR)

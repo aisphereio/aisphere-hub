@@ -234,3 +234,75 @@ func TestCreateSkillSeedsInitialCommit(t *testing.T) {
 		t.Fatalf("releases = %d, want 0", len(releases))
 	}
 }
+
+func TestCreateSkillSeedsArchiveInitialCommit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skipf("git not on PATH: %v", err)
+	}
+	database, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "kernel.db")), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("gorm.Open() error = %v", err)
+	}
+	sqlDB, err := database.DB()
+	if err != nil {
+		t.Fatalf("database.DB() error = %v", err)
+	}
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	engine, err := newWithDatabase(context.Background(), Config{DataPath: t.TempDir()}, database, "sqlite")
+	if err != nil {
+		t.Fatalf("newWithDatabase() error = %v", err)
+	}
+	t.Cleanup(func() { _ = engine.Close() })
+
+	if err := database.Exec(`CREATE TABLE hub_skill_profiles (
+		repository_id INTEGER PRIMARY KEY REFERENCES repos(id) ON DELETE CASCADE,
+		display_name TEXT NOT NULL DEFAULT '', org_id TEXT NOT NULL, project_id TEXT NOT NULL DEFAULT '',
+		created_by_type TEXT NOT NULL, created_by_id TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '', visibility TEXT NOT NULL,
+		lifecycle_status TEXT NOT NULL, default_branch TEXT NOT NULL, provision_error TEXT NOT NULL DEFAULT '',
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`).Error; err != nil {
+		t.Fatalf("create profile table: %v", err)
+	}
+
+	_, err = engine.CreateSkill(context.Background(), &biz.GitSkill{
+		Name: "archive-skill", DisplayName: "Archive Skill", Description: "Imported from zip",
+		OwnerID: "owner-1", OwnerType: "user", OrgID: "org-1",
+		Visibility: biz.SkillVisibilityPrivate, Status: biz.SkillStatusProvisioning,
+		InitialFiles: []biz.SkillArchiveFile{
+			{Path: "SKILL.md", Content: []byte("---\nname: archive-skill\ndescription: Imported from zip\n---\n# Archive Skill\n")},
+			{Path: "skill.yaml", Content: []byte("entry: src/main.py\n")},
+			{Path: "src/main.py", Content: []byte("print('ok')\n")},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateSkill() error = %v", err)
+	}
+
+	item, err := engine.backend.Repository(context.Background(), "archive-skill")
+	if err != nil {
+		t.Fatalf("Repository() error = %v", err)
+	}
+	repo, err := item.Open()
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	gitDir := repo.Path
+	gitShow := func(t *testing.T, args ...string) string {
+		t.Helper()
+		out, err := exec.Command("git", append([]string{"--git-dir", gitDir}, args...)...).Output()
+		if err != nil {
+			t.Fatalf("git %s: %v", strings.Join(args, " "), err)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	if got, want := gitShow(t, "rev-list", "--count", "refs/heads/main"), "1"; got != want {
+		t.Fatalf("commit count = %q, want %q", got, want)
+	}
+	if got := gitShow(t, "show", "refs/heads/main:src/main.py"); got != "print('ok')" {
+		t.Fatalf("src/main.py = %q", got)
+	}
+	if got := gitShow(t, "log", "-1", "--format=%s", "refs/heads/main"); got != "Import skill archive" {
+		t.Fatalf("commit subject = %q", got)
+	}
+}

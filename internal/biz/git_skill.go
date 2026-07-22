@@ -30,6 +30,9 @@ var (
 	ErrSkillInvalidArgument      = errorx.BadRequest(errorx.Code("SKILL_INVALID_ARGUMENT"), "invalid skill argument")
 	ErrSkillMetadataManagedByGit = errorx.Conflict(errorx.Code("SKILL_METADATA_MANAGED_BY_GIT"), "skill name and description are managed by SKILL.md")
 	ErrSkillDependencyFailed     = errorx.Unavailable(errorx.Code("SKILL_DEPENDENCY_FAILED"), "skill dependency failed")
+	ErrSkillArchiveInvalid       = errorx.BadRequest(errorx.Code("SKILL_ARCHIVE_INVALID"), "invalid skill archive")
+	ErrSkillArchiveTooLarge      = errorx.BadRequest(errorx.Code("SKILL_ARCHIVE_TOO_LARGE"), "skill archive is too large")
+	ErrSkillArchiveMissingMeta   = errorx.BadRequest(errorx.Code("SKILL_ARCHIVE_SKILL_MD_MISSING"), "skill archive root SKILL.md is required")
 	ErrPullRequestNotFound       = errorx.NotFound(errorx.Code("PULL_REQUEST_NOT_FOUND"), "pull request not found")
 	ErrPullRequestNotOpen        = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_OPEN"), "pull request is not open")
 	ErrPullRequestStale          = errorx.Conflict(errorx.Code("PULL_REQUEST_STALE"), "pull request target changed")
@@ -51,7 +54,33 @@ type GitSkill struct {
 	Name, DisplayName, Description, Visibility      string
 	OwnerID, OwnerType, OwnerName, OrgID, ProjectID string
 	DefaultBranch, Status                           string
+	InitialFiles                                    []SkillArchiveFile
 	CreateTime, UpdateTime                          time.Time
+}
+
+type SkillArchiveFile struct {
+	Path    string
+	Content []byte
+}
+
+type SkillArchive struct {
+	Name          string
+	DisplayName   string
+	Description   string
+	Files         []SkillArchiveFile
+	FileCount     int
+	UnpackedBytes int64
+}
+
+type SkillArchiveImport struct {
+	OrgID, ProjectID, Visibility string
+	ArchiveZip                   []byte
+}
+
+type SkillArchiveMetadata struct {
+	Name, DisplayName, Description string
+	FileCount                      int
+	UnpackedBytes                  int64
 }
 
 type GitSkillListOptions struct {
