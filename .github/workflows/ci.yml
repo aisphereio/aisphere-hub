@@ -17,12 +17,27 @@ concurrency:
   group: hub-ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  KERNEL_VERSION: v0.4.18
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     steps:
-      - name: Checkout
+      - name: Checkout full history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize base branch for compatibility checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          git branch --force "${BASE_REF}" "origin/${BASE_REF}"
+          git show-ref --verify "refs/heads/${BASE_REF}"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -30,8 +45,22 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Verify Kernel version alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_version="$(go list -m -f '{{.Version}}' github.com/aisphereio/kernel)"
+          test "$runtime_version" = "$KERNEL_VERSION" || {
+            echo "Kernel runtime is $runtime_version, expected $KERNEL_VERSION"
+            exit 1
+          }
+
+      - name: Install pinned generators
+        shell: bash
+        run: make KERNEL_VERSION="${KERNEL_VERSION}" tools
+
+      - name: Check protobuf compatibility and OpenAPI contract
+        run: make KERNEL_VERSION=${KERNEL_VERSION} BASE_REF=${{ github.base_ref || 'main' }} contract-check
 
       - name: Test
         run: go test ./... -count=1 -short

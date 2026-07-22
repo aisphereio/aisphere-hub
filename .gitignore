@@ -32,6 +32,7 @@ Thumbs.db
 *.log
 bin/
 .bin/
+dist/
 
 # Develop tools
 .vscode/
@@ -41,3 +42,4 @@ bin/
 # config
 configs/config.yaml
 configs/casdoor.pub.worktrees/
+.worktrees/

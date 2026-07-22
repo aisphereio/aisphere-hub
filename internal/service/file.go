@@ -45,15 +45,15 @@ func (s *FileService) ListFiles(ctx context.Context, req *skillv1.ListFilesReque
 	return out, nil
 }
 
-func (s *FileService) GetFile(ctx context.Context, req *skillv1.GetFileRequest) (*skillv1.FileContent, error) {
+func (s *FileService) GetFile(ctx context.Context, req *skillv1.GetFileRequest) (*skillv1.GetFileResponse, error) {
 	content, err := s.uc.GetFileContent(ctx, principalFromContext(ctx), req.GetSkillName(), req.GetPath(), req.GetRef())
 	if err != nil {
 		return nil, err
 	}
-	return fileContentToProto(content), nil
+	return fileContentToGetFileResponse(content), nil
 }
 
-func (s *FileService) CreateFile(ctx context.Context, req *skillv1.CreateFileRequest) (*skillv1.FileContent, error) {
+func (s *FileService) CreateFile(ctx context.Context, req *skillv1.CreateFileRequest) (*skillv1.CreateFileResponse, error) {
 	content, err := decodeContent(req.GetContent())
 	if err != nil {
 		return nil, errorx.BadRequest(errorx.Code("SKILL_FILE_CONTENT_INVALID"), "content is not valid base64")
@@ -62,10 +62,10 @@ func (s *FileService) CreateFile(ctx context.Context, req *skillv1.CreateFileReq
 	if err != nil {
 		return nil, err
 	}
-	return fileContentToProto(out), nil
+	return fileContentToCreateFileResponse(out), nil
 }
 
-func (s *FileService) UpdateFile(ctx context.Context, req *skillv1.UpdateFileRequest) (*skillv1.FileContent, error) {
+func (s *FileService) UpdateFile(ctx context.Context, req *skillv1.UpdateFileRequest) (*skillv1.UpdateFileResponse, error) {
 	content, err := decodeContent(req.GetContent())
 	if err != nil {
 		return nil, errorx.BadRequest(errorx.Code("SKILL_FILE_CONTENT_INVALID"), "content is not valid base64")
@@ -74,7 +74,7 @@ func (s *FileService) UpdateFile(ctx context.Context, req *skillv1.UpdateFileReq
 	if err != nil {
 		return nil, err
 	}
-	return fileContentToProto(out), nil
+	return fileContentToUpdateFileResponse(out), nil
 }
 
 func (s *FileService) DeleteFile(ctx context.Context, req *skillv1.DeleteFileRequest) (*skillv1.DeleteFileResponse, error) {
@@ -102,11 +102,47 @@ func fileInfoToProto(in *biz.FileInfo) *skillv1.FileInfo {
 	}
 }
 
-func fileContentToProto(in *biz.FileContent) *skillv1.FileContent {
+func fileContentToGetFileResponse(in *biz.FileContent) *skillv1.GetFileResponse {
 	if in == nil {
 		return nil
 	}
-	return &skillv1.FileContent{
+	return &skillv1.GetFileResponse{
+		Name:          in.Name,
+		Path:          in.Path,
+		Sha:           in.SHA,
+		Size:          in.Size,
+		Content:       in.Content,
+		Encoding:      in.Encoding,
+		Ref:           in.Ref,
+		CommitSha:     in.CommitSHA,
+		CommitMessage: in.CommitMessage,
+		LastModified:  timestamp(in.LastModified),
+	}
+}
+
+func fileContentToCreateFileResponse(in *biz.FileContent) *skillv1.CreateFileResponse {
+	if in == nil {
+		return nil
+	}
+	return &skillv1.CreateFileResponse{
+		Name:          in.Name,
+		Path:          in.Path,
+		Sha:           in.SHA,
+		Size:          in.Size,
+		Content:       in.Content,
+		Encoding:      in.Encoding,
+		Ref:           in.Ref,
+		CommitSha:     in.CommitSHA,
+		CommitMessage: in.CommitMessage,
+		LastModified:  timestamp(in.LastModified),
+	}
+}
+
+func fileContentToUpdateFileResponse(in *biz.FileContent) *skillv1.UpdateFileResponse {
+	if in == nil {
+		return nil
+	}
+	return &skillv1.UpdateFileResponse{
 		Name:          in.Name,
 		Path:          in.Path,
 		Sha:           in.SHA,

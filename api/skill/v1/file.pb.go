@@ -292,6 +292,354 @@ func (x *FileContent) GetLastModified() *timestamppb.Timestamp {
 	return nil
 }
 
+type GetFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Sha           string                 `protobuf:"bytes,3,opt,name=sha,proto3" json:"sha,omitempty"`
+	Size          int64                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	Content       string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	Encoding      string                 `protobuf:"bytes,6,opt,name=encoding,proto3" json:"encoding,omitempty"`
+	Ref           string                 `protobuf:"bytes,7,opt,name=ref,proto3" json:"ref,omitempty"`
+	CommitSha     string                 `protobuf:"bytes,8,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	CommitMessage string                 `protobuf:"bytes,9,opt,name=commit_message,json=commitMessage,proto3" json:"commit_message,omitempty"`
+	LastModified  *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_modified,json=lastModified,proto3" json:"last_modified,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFileResponse) Reset() {
+	*x = GetFileResponse{}
+	mi := &file_skill_v1_file_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFileResponse) ProtoMessage() {}
+
+func (x *GetFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_file_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFileResponse.ProtoReflect.Descriptor instead.
+func (*GetFileResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetFileResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetSha() string {
+	if x != nil {
+		return x.Sha
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *GetFileResponse) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetEncoding() string {
+	if x != nil {
+		return x.Encoding
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetCommitMessage() string {
+	if x != nil {
+		return x.CommitMessage
+	}
+	return ""
+}
+
+func (x *GetFileResponse) GetLastModified() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastModified
+	}
+	return nil
+}
+
+type CreateFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Sha           string                 `protobuf:"bytes,3,opt,name=sha,proto3" json:"sha,omitempty"`
+	Size          int64                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	Content       string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	Encoding      string                 `protobuf:"bytes,6,opt,name=encoding,proto3" json:"encoding,omitempty"`
+	Ref           string                 `protobuf:"bytes,7,opt,name=ref,proto3" json:"ref,omitempty"`
+	CommitSha     string                 `protobuf:"bytes,8,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	CommitMessage string                 `protobuf:"bytes,9,opt,name=commit_message,json=commitMessage,proto3" json:"commit_message,omitempty"`
+	LastModified  *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_modified,json=lastModified,proto3" json:"last_modified,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFileResponse) Reset() {
+	*x = CreateFileResponse{}
+	mi := &file_skill_v1_file_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFileResponse) ProtoMessage() {}
+
+func (x *CreateFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_file_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFileResponse.ProtoReflect.Descriptor instead.
+func (*CreateFileResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CreateFileResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetSha() string {
+	if x != nil {
+		return x.Sha
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *CreateFileResponse) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetEncoding() string {
+	if x != nil {
+		return x.Encoding
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetCommitMessage() string {
+	if x != nil {
+		return x.CommitMessage
+	}
+	return ""
+}
+
+func (x *CreateFileResponse) GetLastModified() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastModified
+	}
+	return nil
+}
+
+type UpdateFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Sha           string                 `protobuf:"bytes,3,opt,name=sha,proto3" json:"sha,omitempty"`
+	Size          int64                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	Content       string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	Encoding      string                 `protobuf:"bytes,6,opt,name=encoding,proto3" json:"encoding,omitempty"`
+	Ref           string                 `protobuf:"bytes,7,opt,name=ref,proto3" json:"ref,omitempty"`
+	CommitSha     string                 `protobuf:"bytes,8,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	CommitMessage string                 `protobuf:"bytes,9,opt,name=commit_message,json=commitMessage,proto3" json:"commit_message,omitempty"`
+	LastModified  *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_modified,json=lastModified,proto3" json:"last_modified,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateFileResponse) Reset() {
+	*x = UpdateFileResponse{}
+	mi := &file_skill_v1_file_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateFileResponse) ProtoMessage() {}
+
+func (x *UpdateFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_file_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateFileResponse.ProtoReflect.Descriptor instead.
+func (*UpdateFileResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *UpdateFileResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetSha() string {
+	if x != nil {
+		return x.Sha
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *UpdateFileResponse) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetEncoding() string {
+	if x != nil {
+		return x.Encoding
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetCommitMessage() string {
+	if x != nil {
+		return x.CommitMessage
+	}
+	return ""
+}
+
+func (x *UpdateFileResponse) GetLastModified() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastModified
+	}
+	return nil
+}
+
 type ListFilesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SkillName     string                 `protobuf:"bytes,1,opt,name=skill_name,json=skillName,proto3" json:"skill_name,omitempty"`
@@ -303,7 +651,7 @@ type ListFilesRequest struct {
 
 func (x *ListFilesRequest) Reset() {
 	*x = ListFilesRequest{}
-	mi := &file_skill_v1_file_proto_msgTypes[3]
+	mi := &file_skill_v1_file_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -315,7 +663,7 @@ func (x *ListFilesRequest) String() string {
 func (*ListFilesRequest) ProtoMessage() {}
 
 func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_file_proto_msgTypes[3]
+	mi := &file_skill_v1_file_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -328,7 +676,7 @@ func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFilesRequest.ProtoReflect.Descriptor instead.
 func (*ListFilesRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_file_proto_rawDescGZIP(), []int{3}
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListFilesRequest) GetSkillName() string {
@@ -363,7 +711,7 @@ type GetFileRequest struct {
 
 func (x *GetFileRequest) Reset() {
 	*x = GetFileRequest{}
-	mi := &file_skill_v1_file_proto_msgTypes[4]
+	mi := &file_skill_v1_file_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -375,7 +723,7 @@ func (x *GetFileRequest) String() string {
 func (*GetFileRequest) ProtoMessage() {}
 
 func (x *GetFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_file_proto_msgTypes[4]
+	mi := &file_skill_v1_file_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -388,7 +736,7 @@ func (x *GetFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFileRequest.ProtoReflect.Descriptor instead.
 func (*GetFileRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_file_proto_rawDescGZIP(), []int{4}
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetFileRequest) GetSkillName() string {
@@ -427,7 +775,7 @@ type CreateFileRequest struct {
 
 func (x *CreateFileRequest) Reset() {
 	*x = CreateFileRequest{}
-	mi := &file_skill_v1_file_proto_msgTypes[5]
+	mi := &file_skill_v1_file_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -439,7 +787,7 @@ func (x *CreateFileRequest) String() string {
 func (*CreateFileRequest) ProtoMessage() {}
 
 func (x *CreateFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_file_proto_msgTypes[5]
+	mi := &file_skill_v1_file_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -452,7 +800,7 @@ func (x *CreateFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFileRequest.ProtoReflect.Descriptor instead.
 func (*CreateFileRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_file_proto_rawDescGZIP(), []int{5}
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateFileRequest) GetSkillName() string {
@@ -520,7 +868,7 @@ type UpdateFileRequest struct {
 
 func (x *UpdateFileRequest) Reset() {
 	*x = UpdateFileRequest{}
-	mi := &file_skill_v1_file_proto_msgTypes[6]
+	mi := &file_skill_v1_file_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -532,7 +880,7 @@ func (x *UpdateFileRequest) String() string {
 func (*UpdateFileRequest) ProtoMessage() {}
 
 func (x *UpdateFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_file_proto_msgTypes[6]
+	mi := &file_skill_v1_file_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -545,7 +893,7 @@ func (x *UpdateFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFileRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFileRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_file_proto_rawDescGZIP(), []int{6}
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateFileRequest) GetSkillName() string {
@@ -619,7 +967,7 @@ type DeleteFileRequest struct {
 
 func (x *DeleteFileRequest) Reset() {
 	*x = DeleteFileRequest{}
-	mi := &file_skill_v1_file_proto_msgTypes[7]
+	mi := &file_skill_v1_file_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +979,7 @@ func (x *DeleteFileRequest) String() string {
 func (*DeleteFileRequest) ProtoMessage() {}
 
 func (x *DeleteFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_file_proto_msgTypes[7]
+	mi := &file_skill_v1_file_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +992,7 @@ func (x *DeleteFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFileRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFileRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_file_proto_rawDescGZIP(), []int{7}
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteFileRequest) GetSkillName() string {
@@ -706,7 +1054,7 @@ type DeleteFileResponse struct {
 
 func (x *DeleteFileResponse) Reset() {
 	*x = DeleteFileResponse{}
-	mi := &file_skill_v1_file_proto_msgTypes[8]
+	mi := &file_skill_v1_file_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -718,7 +1066,7 @@ func (x *DeleteFileResponse) String() string {
 func (*DeleteFileResponse) ProtoMessage() {}
 
 func (x *DeleteFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_file_proto_msgTypes[8]
+	mi := &file_skill_v1_file_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -731,7 +1079,7 @@ func (x *DeleteFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFileResponse.ProtoReflect.Descriptor instead.
 func (*DeleteFileResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_file_proto_rawDescGZIP(), []int{8}
+	return file_skill_v1_file_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteFileResponse) GetCommitSha() string {
@@ -766,6 +1114,45 @@ const file_skill_v1_file_proto_rawDesc = "" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x12\n" +
 	"\x04path\x18\x03 \x01(\tR\x04path\"\xaa\x02\n" +
 	"\vFileContent\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x10\n" +
+	"\x03sha\x18\x03 \x01(\tR\x03sha\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x18\n" +
+	"\acontent\x18\x05 \x01(\tR\acontent\x12\x1a\n" +
+	"\bencoding\x18\x06 \x01(\tR\bencoding\x12\x10\n" +
+	"\x03ref\x18\a \x01(\tR\x03ref\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\b \x01(\tR\tcommitSha\x12%\n" +
+	"\x0ecommit_message\x18\t \x01(\tR\rcommitMessage\x12?\n" +
+	"\rlast_modified\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\flastModified\"\xae\x02\n" +
+	"\x0fGetFileResponse\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x10\n" +
+	"\x03sha\x18\x03 \x01(\tR\x03sha\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x18\n" +
+	"\acontent\x18\x05 \x01(\tR\acontent\x12\x1a\n" +
+	"\bencoding\x18\x06 \x01(\tR\bencoding\x12\x10\n" +
+	"\x03ref\x18\a \x01(\tR\x03ref\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\b \x01(\tR\tcommitSha\x12%\n" +
+	"\x0ecommit_message\x18\t \x01(\tR\rcommitMessage\x12?\n" +
+	"\rlast_modified\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\flastModified\"\xb1\x02\n" +
+	"\x12CreateFileResponse\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x10\n" +
+	"\x03sha\x18\x03 \x01(\tR\x03sha\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x18\n" +
+	"\acontent\x18\x05 \x01(\tR\acontent\x12\x1a\n" +
+	"\bencoding\x18\x06 \x01(\tR\bencoding\x12\x10\n" +
+	"\x03ref\x18\a \x01(\tR\x03ref\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\b \x01(\tR\tcommitSha\x12%\n" +
+	"\x0ecommit_message\x18\t \x01(\tR\rcommitMessage\x12?\n" +
+	"\rlast_modified\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\flastModified\"\xb1\x02\n" +
+	"\x12UpdateFileResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x10\n" +
 	"\x03sha\x18\x03 \x01(\tR\x03sha\x12\x12\n" +
@@ -819,17 +1206,17 @@ const file_skill_v1_file_proto_rawDesc = "" +
 	"\x12DeleteFileResponse\x12\x1d\n" +
 	"\n" +
 	"commit_sha\x18\x01 \x01(\tR\tcommitSha\x12%\n" +
-	"\x0ecommit_message\x18\x02 \x01(\tR\rcommitMessage2\xf4\a\n" +
+	"\x0ecommit_message\x18\x02 \x01(\tR\rcommitMessage2\x86\b\n" +
 	"\vFileService\x12\xbb\x01\n" +
 	"\tListFiles\x12\x1a.skill.v1.ListFilesRequest\x1a\x16.skill.v1.FileContents\"z\x92\xf4\x18K\b\x03\x12)\n" +
-	"\x04view\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x13hub.skill.file.list\x1a\x03low\x82\xd3\xe4\x93\x02%\x12#/v1/skills/{skill_name}/contents/**\x12\xb7\x01\n" +
-	"\aGetFile\x12\x18.skill.v1.GetFileRequest\x1a\x15.skill.v1.FileContent\"{\x92\xf4\x18J\b\x03\x12)\n" +
-	"\x04view\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a\x1b\b\x01\x12\x12hub.skill.file.get\x1a\x03low\x82\xd3\xe4\x93\x02'\x12%/v1/skills/{skill_name}/raw/{path=**}\x12\xcc\x01\n" +
+	"\x04view\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x13hub.skill.file.list\x1a\x03low\x82\xd3\xe4\x93\x02%\x12#/v1/skills/{skill_name}/contents/**\x12\xbb\x01\n" +
+	"\aGetFile\x12\x18.skill.v1.GetFileRequest\x1a\x19.skill.v1.GetFileResponse\"{\x92\xf4\x18J\b\x03\x12)\n" +
+	"\x04view\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a\x1b\b\x01\x12\x12hub.skill.file.get\x1a\x03low\x82\xd3\xe4\x93\x02'\x12%/v1/skills/{skill_name}/raw/{path=**}\x12\xd3\x01\n" +
 	"\n" +
-	"CreateFile\x12\x1b.skill.v1.CreateFileRequest\x1a\x15.skill.v1.FileContent\"\x89\x01\x92\xf4\x18P\b\x03\x12)\n" +
-	"\x04edit\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a!\b\x01\x12\x15hub.skill.file.create\x1a\x06medium\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/skills/{skill_name}/contents/{path=**}\x12\xcc\x01\n" +
+	"CreateFile\x12\x1b.skill.v1.CreateFileRequest\x1a\x1c.skill.v1.CreateFileResponse\"\x89\x01\x92\xf4\x18P\b\x03\x12)\n" +
+	"\x04edit\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a!\b\x01\x12\x15hub.skill.file.create\x1a\x06medium\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/skills/{skill_name}/contents/{path=**}\x12\xd3\x01\n" +
 	"\n" +
-	"UpdateFile\x12\x1b.skill.v1.UpdateFileRequest\x1a\x15.skill.v1.FileContent\"\x89\x01\x92\xf4\x18P\b\x03\x12)\n" +
+	"UpdateFile\x12\x1b.skill.v1.UpdateFileRequest\x1a\x1c.skill.v1.UpdateFileResponse\"\x89\x01\x92\xf4\x18P\b\x03\x12)\n" +
 	"\x04edit\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a!\b\x01\x12\x15hub.skill.file.update\x1a\x06medium\x82\xd3\xe4\x93\x02/:\x01*\x1a*/v1/skills/{skill_name}/contents/{path=**}\x12\xce\x01\n" +
 	"\n" +
 	"DeleteFile\x12\x1b.skill.v1.DeleteFileRequest\x1a\x1c.skill.v1.DeleteFileResponse\"\x84\x01\x92\xf4\x18N\b\x03\x12)\n" +
@@ -847,38 +1234,44 @@ func file_skill_v1_file_proto_rawDescGZIP() []byte {
 	return file_skill_v1_file_proto_rawDescData
 }
 
-var file_skill_v1_file_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_skill_v1_file_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_skill_v1_file_proto_goTypes = []any{
 	(*FileInfo)(nil),              // 0: skill.v1.FileInfo
 	(*FileContents)(nil),          // 1: skill.v1.FileContents
 	(*FileContent)(nil),           // 2: skill.v1.FileContent
-	(*ListFilesRequest)(nil),      // 3: skill.v1.ListFilesRequest
-	(*GetFileRequest)(nil),        // 4: skill.v1.GetFileRequest
-	(*CreateFileRequest)(nil),     // 5: skill.v1.CreateFileRequest
-	(*UpdateFileRequest)(nil),     // 6: skill.v1.UpdateFileRequest
-	(*DeleteFileRequest)(nil),     // 7: skill.v1.DeleteFileRequest
-	(*DeleteFileResponse)(nil),    // 8: skill.v1.DeleteFileResponse
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*GetFileResponse)(nil),       // 3: skill.v1.GetFileResponse
+	(*CreateFileResponse)(nil),    // 4: skill.v1.CreateFileResponse
+	(*UpdateFileResponse)(nil),    // 5: skill.v1.UpdateFileResponse
+	(*ListFilesRequest)(nil),      // 6: skill.v1.ListFilesRequest
+	(*GetFileRequest)(nil),        // 7: skill.v1.GetFileRequest
+	(*CreateFileRequest)(nil),     // 8: skill.v1.CreateFileRequest
+	(*UpdateFileRequest)(nil),     // 9: skill.v1.UpdateFileRequest
+	(*DeleteFileRequest)(nil),     // 10: skill.v1.DeleteFileRequest
+	(*DeleteFileResponse)(nil),    // 11: skill.v1.DeleteFileResponse
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
 }
 var file_skill_v1_file_proto_depIdxs = []int32{
-	9, // 0: skill.v1.FileInfo.last_modified:type_name -> google.protobuf.Timestamp
-	0, // 1: skill.v1.FileContents.entries:type_name -> skill.v1.FileInfo
-	9, // 2: skill.v1.FileContent.last_modified:type_name -> google.protobuf.Timestamp
-	3, // 3: skill.v1.FileService.ListFiles:input_type -> skill.v1.ListFilesRequest
-	4, // 4: skill.v1.FileService.GetFile:input_type -> skill.v1.GetFileRequest
-	5, // 5: skill.v1.FileService.CreateFile:input_type -> skill.v1.CreateFileRequest
-	6, // 6: skill.v1.FileService.UpdateFile:input_type -> skill.v1.UpdateFileRequest
-	7, // 7: skill.v1.FileService.DeleteFile:input_type -> skill.v1.DeleteFileRequest
-	1, // 8: skill.v1.FileService.ListFiles:output_type -> skill.v1.FileContents
-	2, // 9: skill.v1.FileService.GetFile:output_type -> skill.v1.FileContent
-	2, // 10: skill.v1.FileService.CreateFile:output_type -> skill.v1.FileContent
-	2, // 11: skill.v1.FileService.UpdateFile:output_type -> skill.v1.FileContent
-	8, // 12: skill.v1.FileService.DeleteFile:output_type -> skill.v1.DeleteFileResponse
-	8, // [8:13] is the sub-list for method output_type
-	3, // [3:8] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	12, // 0: skill.v1.FileInfo.last_modified:type_name -> google.protobuf.Timestamp
+	0,  // 1: skill.v1.FileContents.entries:type_name -> skill.v1.FileInfo
+	12, // 2: skill.v1.FileContent.last_modified:type_name -> google.protobuf.Timestamp
+	12, // 3: skill.v1.GetFileResponse.last_modified:type_name -> google.protobuf.Timestamp
+	12, // 4: skill.v1.CreateFileResponse.last_modified:type_name -> google.protobuf.Timestamp
+	12, // 5: skill.v1.UpdateFileResponse.last_modified:type_name -> google.protobuf.Timestamp
+	6,  // 6: skill.v1.FileService.ListFiles:input_type -> skill.v1.ListFilesRequest
+	7,  // 7: skill.v1.FileService.GetFile:input_type -> skill.v1.GetFileRequest
+	8,  // 8: skill.v1.FileService.CreateFile:input_type -> skill.v1.CreateFileRequest
+	9,  // 9: skill.v1.FileService.UpdateFile:input_type -> skill.v1.UpdateFileRequest
+	10, // 10: skill.v1.FileService.DeleteFile:input_type -> skill.v1.DeleteFileRequest
+	1,  // 11: skill.v1.FileService.ListFiles:output_type -> skill.v1.FileContents
+	3,  // 12: skill.v1.FileService.GetFile:output_type -> skill.v1.GetFileResponse
+	4,  // 13: skill.v1.FileService.CreateFile:output_type -> skill.v1.CreateFileResponse
+	5,  // 14: skill.v1.FileService.UpdateFile:output_type -> skill.v1.UpdateFileResponse
+	11, // 15: skill.v1.FileService.DeleteFile:output_type -> skill.v1.DeleteFileResponse
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_skill_v1_file_proto_init() }
@@ -892,7 +1285,7 @@ func file_skill_v1_file_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_skill_v1_file_proto_rawDesc), len(file_skill_v1_file_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
