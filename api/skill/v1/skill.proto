@@ -22,6 +22,15 @@ option (aisphere.access.v1.policy) = {
 	    };
   }
 
+  rpc ImportSkillArchive(ImportSkillArchiveRequest) returns (ImportSkillArchiveResponse) {
+    option (google.api.http) = { post: "/v1/skills:importArchive" body: "*" response_body: "skill" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "create_skill" resource: "zone:{org_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.archive.import" risk: "high" }
+    };
+  }
+
   rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) {
     option (google.api.http) = { get: "/v1/skills" };
     option (aisphere.access.v1.policy) = {
@@ -186,6 +195,24 @@ message CreateSkillRequest {
   string org_id = 6 [(google.api.field_behavior) = REQUIRED];
 }
 message CreateSkillResponse { Skill skill = 1; }
+
+message ImportSkillArchiveRequest {
+  string org_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string project_id = 2;
+  string visibility = 3;
+  bytes archive_zip = 4 [(google.api.field_behavior) = REQUIRED];
+}
+message ImportSkillArchiveResponse {
+  Skill skill = 1;
+  SkillArchiveMetadata metadata = 2;
+}
+message SkillArchiveMetadata {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  int32 file_count = 4;
+  int64 unpacked_size = 5;
+}
 
 message ListSkillsRequest {
   int32 page_size = 1;

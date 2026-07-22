@@ -91,6 +91,48 @@ func TestSkillUsecaseCreateRejectsPrincipalOrgMismatch(t *testing.T) {
 	}
 }
 
+func TestSkillUsecaseImportSkillArchiveUsesSkillMDMetadata(t *testing.T) {
+	skills := newMemoryGitSkillRepo()
+	git := &fakeSkillGitEngine{skills: skills}
+	rels := &fakeSkillRelationships{}
+	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), git, rels)
+	archive := zipBytes(t, map[string]string{
+		"SKILL.md":    "---\nname: archive-skill\ndisplay_name: Archive Skill\ndescription: Imported from zip\n---\n# Archive\n",
+		"skill.yaml":  "entry: main.py\n",
+		"src/main.py": "print('ok')\n",
+	})
+
+	created, meta, err := uc.ImportSkillArchive(context.Background(), authn.Principal{SubjectID: "owner-1", SubjectType: authn.SubjectTypeUser, OrgID: "org-1"}, &SkillArchiveImport{
+		OrgID:      "org-1",
+		Visibility: SkillVisibilityPublic,
+		ArchiveZip: archive,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Name != "archive-skill" || created.DisplayName != "Archive Skill" || created.Description != "Imported from zip" {
+		t.Fatalf("created skill = %+v", created)
+	}
+	if meta == nil || meta.Name != "archive-skill" || meta.FileCount != 3 {
+		t.Fatalf("metadata = %+v", meta)
+	}
+	if len(git.initialFiles["archive-skill"]) != 3 {
+		t.Fatalf("initial files = %d, want 3", len(git.initialFiles["archive-skill"]))
+	}
+	if len(rels.written) != 5 {
+		t.Fatalf("relationships = %d, want owner + zone + public viewers", len(rels.written))
+	}
+	publicUserViewer := false
+	for _, rel := range rels.written {
+		if rel.Relation == "viewer" && rel.Subject.Type == "user" && rel.Subject.ID == "*" {
+			publicUserViewer = true
+		}
+	}
+	if !publicUserViewer {
+		t.Fatalf("public user viewer relationship missing: %+v", rels.written)
+	}
+}
+
 func TestSkillUsecaseListReturnsOnlySkillsViewableByPrincipal(t *testing.T) {
 	skills := newMemoryGitSkillRepo()
 	skills.items["allowed-skill"] = &GitSkill{Name: "allowed-skill", Status: SkillStatusActive}
@@ -285,10 +327,11 @@ func (r *memoryPullRequestRepo) MergePullRequest(_ context.Context, skill, id, e
 }
 
 type fakeSkillGitEngine struct {
-	skills  *memoryGitSkillRepo
-	created map[string]bool
-	deleted map[string]bool
-	refs    map[string]string
+	skills       *memoryGitSkillRepo
+	created      map[string]bool
+	deleted      map[string]bool
+	initialFiles map[string][]SkillArchiveFile
+	refs         map[string]string
 }
 
 func (e *fakeSkillGitEngine) CreateSkill(ctx context.Context, in *GitSkill) (*GitSkill, error) {
@@ -296,6 +339,10 @@ func (e *fakeSkillGitEngine) CreateSkill(ctx context.Context, in *GitSkill) (*Gi
 		e.created = map[string]bool{}
 	}
 	e.created[in.Name] = true
+	if e.initialFiles == nil {
+		e.initialFiles = map[string][]SkillArchiveFile{}
+	}
+	e.initialFiles[in.Name] = append([]SkillArchiveFile(nil), in.InitialFiles...)
 	if e.skills != nil {
 		return e.skills.CreateSkill(ctx, in)
 	}

@@ -23,6 +23,13 @@ func SkillServiceGatewayManifest() gatewayx.Manifest {
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
+				ID:       "skill.import.skill.archive",
+				Method:   "POST",
+				Path:     "/v1/skills:importArchive",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/ImportSkillArchive"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
 				ID:       "skill.list.skills",
 				Method:   "GET",
 				Path:     "/v1/skills",
@@ -137,6 +144,17 @@ func SkillServiceGatewayBindCreateSkill(req gatewayx.DispatchRequest, match gate
 		out = v
 	}
 	if v, ok := req.Body.(CreateSkillRequest); ok {
+		out = &v
+	}
+	return out, nil
+}
+
+func SkillServiceGatewayBindImportSkillArchive(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ImportSkillArchiveRequest, error) {
+	out := &ImportSkillArchiveRequest{}
+	if v, ok := req.Body.(*ImportSkillArchiveRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(ImportSkillArchiveRequest); ok {
 		out = &v
 	}
 	return out, nil
@@ -372,6 +390,9 @@ func SkillServiceGatewayBindListSkillReleases(req gatewayx.DispatchRequest, matc
 
 func RegisterSkillServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, client SkillServiceClient) error {
 	if err := registry.Register("/skill.v1.SkillService/CreateSkill", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindCreateSkill, client.CreateSkill)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/ImportSkillArchive", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindImportSkillArchive, client.ImportSkillArchive)); err != nil {
 		return err
 	}
 	if err := registry.Register("/skill.v1.SkillService/ListSkills", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindListSkills, client.ListSkills)); err != nil {

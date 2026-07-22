@@ -30,6 +30,17 @@ var SkillServiceAuthzRules = authz.Rules{
 		AuditEvent: "hub.skill.create",
 		AuditRisk:  "high",
 	},
+	"/skill.v1.SkillService/ImportSkillArchive": {
+		Service:    "skill.v1.SkillService",
+		Method:     "ImportSkillArchive",
+		FullMethod: "/skill.v1.SkillService/ImportSkillArchive",
+		Action:     "create_skill",
+		Resource:   "zone:{org_id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.archive.import",
+		AuditRisk:  "high",
+	},
 	"/skill.v1.SkillService/GetSkill": {
 		Service:    "skill.v1.SkillService",
 		Method:     "GetSkill",
@@ -197,6 +208,17 @@ const SkillServiceAuthzManifestJSON = `{
       "audience": "hub-service",
       "mode": "CHECK_ONLY",
       "audit_event": "hub.skill.create",
+      "audit_risk": "high"
+    },
+    {
+      "service": "skill.v1.SkillService",
+      "method": "ImportSkillArchive",
+      "full_method": "/skill.v1.SkillService/ImportSkillArchive",
+      "action": "create_skill",
+      "resource": "zone:{org_id}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.skill.archive.import",
       "audit_risk": "high"
     },
     {
@@ -422,6 +444,8 @@ func _SkillServiceNormalizeOperation(operation string) string {
 	switch operation {
 	case "CreateSkill", "skill.v1.SkillService/CreateSkill":
 		return "/skill.v1.SkillService/CreateSkill"
+	case "ImportSkillArchive", "skill.v1.SkillService/ImportSkillArchive":
+		return "/skill.v1.SkillService/ImportSkillArchive"
 	case "GetSkill", "skill.v1.SkillService/GetSkill":
 		return "/skill.v1.SkillService/GetSkill"
 	case "UpdateSkill", "skill.v1.SkillService/UpdateSkill":
@@ -504,6 +528,45 @@ func (c *SkillServiceSecureClient) CreateSkill(ctx context.Context, in *CreateSk
 		}
 	}
 	return c.raw.CreateSkill(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) ImportSkillArchive(ctx context.Context, in *ImportSkillArchiveRequest, opts ...grpc.CallOption) (*ImportSkillArchiveResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillServiceAuthzRules["/skill.v1.SkillService/ImportSkillArchive"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.ImportSkillArchive(ctx, in, opts...)
 }
 
 func (c *SkillServiceSecureClient) ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error) {

@@ -63,6 +63,17 @@ var SkillServiceKernelAuthzRules = authz.Rules{
 		AuditEvent: "hub.skill.create",
 		AuditRisk:  "high",
 	},
+	"/skill.v1.SkillService/ImportSkillArchive": {
+		Service:    "skill.v1.SkillService",
+		Method:     "ImportSkillArchive",
+		FullMethod: "/skill.v1.SkillService/ImportSkillArchive",
+		Action:     "create_skill",
+		Resource:   "zone:{org_id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.archive.import",
+		AuditRisk:  "high",
+	},
 	"/skill.v1.SkillService/GetSkill": {
 		Service:    "skill.v1.SkillService",
 		Method:     "GetSkill",
@@ -237,6 +248,21 @@ func SkillServiceKernelRequestInfoResolver(ctx context.Context, operation string
 		}
 		info.Labels["authz_mode"] = "CHECK_ONLY"
 		info.Labels["audit_event"] = "hub.skill.create"
+		info.Labels["audit_risk"] = "high"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/ImportSkillArchive":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillService",
+			Method:        "ImportSkillArchive",
+			Operation:     "/skill.v1.SkillService/ImportSkillArchive",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "create_skill",
+			Resource:      "zone:{org_id}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.skill.archive.import"
 		info.Labels["audit_risk"] = "high"
 		return info.Normalize(), true, nil
 	case "/skill.v1.SkillService/ListSkills":
@@ -493,6 +519,8 @@ func _SkillServiceKernelNormalizeOperation(operation string) string {
 	switch operation {
 	case "CreateSkill", "skill.v1.SkillService/CreateSkill":
 		return "/skill.v1.SkillService/CreateSkill"
+	case "ImportSkillArchive", "skill.v1.SkillService/ImportSkillArchive":
+		return "/skill.v1.SkillService/ImportSkillArchive"
 	case "ListSkills", "skill.v1.SkillService/ListSkills":
 		return "/skill.v1.SkillService/ListSkills"
 	case "GetSkill", "skill.v1.SkillService/GetSkill":

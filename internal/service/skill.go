@@ -32,6 +32,19 @@ func (s *SkillService) CreateSkill(ctx context.Context, req *skillv1.CreateSkill
 	return &skillv1.CreateSkillResponse{Skill: skillToProto(out)}, nil
 }
 
+func (s *SkillService) ImportSkillArchive(ctx context.Context, req *skillv1.ImportSkillArchiveRequest) (*skillv1.ImportSkillArchiveResponse, error) {
+	out, meta, err := s.uc.ImportSkillArchive(ctx, principalFromContext(ctx), &biz.SkillArchiveImport{
+		OrgID:      req.GetOrgId(),
+		ProjectID:  req.GetProjectId(),
+		Visibility: req.GetVisibility(),
+		ArchiveZip: req.GetArchiveZip(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &skillv1.ImportSkillArchiveResponse{Skill: skillToProto(out), Metadata: archiveMetadataToProto(meta)}, nil
+}
+
 func (s *SkillService) ListSkills(ctx context.Context, req *skillv1.ListSkillsRequest) (*skillv1.ListSkillsResponse, error) {
 	offset, err := decodePageToken(req.GetPageToken())
 	if err != nil {
@@ -189,6 +202,12 @@ func skillToProto(item *biz.GitSkill) *skillv1.Skill {
 		return nil
 	}
 	return &skillv1.Skill{Name: item.Name, DisplayName: item.DisplayName, Description: item.Description, Visibility: item.Visibility, OwnerId: item.OwnerID, OwnerName: item.OwnerName, OrgId: item.OrgID, ProjectId: item.ProjectID, DefaultBranch: item.DefaultBranch, Status: item.Status, CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime)}
+}
+func archiveMetadataToProto(item *biz.SkillArchiveMetadata) *skillv1.SkillArchiveMetadata {
+	if item == nil {
+		return nil
+	}
+	return &skillv1.SkillArchiveMetadata{Name: item.Name, DisplayName: item.DisplayName, Description: item.Description, FileCount: int32(item.FileCount), UnpackedSize: item.UnpackedBytes}
 }
 func shareToProto(item *biz.SkillShare) *skillv1.SkillShare {
 	if item == nil {
