@@ -25,15 +25,16 @@ const (
 )
 
 var (
-	ErrSkillAlreadyExists      = errorx.Conflict(errorx.Code("SKILL_ALREADY_EXISTS"), "skill already exists")
-	ErrSkillNotFound           = errorx.NotFound(errorx.Code("SKILL_NOT_FOUND"), "skill not found")
-	ErrSkillInvalidArgument    = errorx.BadRequest(errorx.Code("SKILL_INVALID_ARGUMENT"), "invalid skill argument")
-	ErrSkillDependencyFailed   = errorx.Unavailable(errorx.Code("SKILL_DEPENDENCY_FAILED"), "skill dependency failed")
-	ErrPullRequestNotFound     = errorx.NotFound(errorx.Code("PULL_REQUEST_NOT_FOUND"), "pull request not found")
-	ErrPullRequestNotOpen      = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_OPEN"), "pull request is not open")
-	ErrPullRequestStale        = errorx.Conflict(errorx.Code("PULL_REQUEST_STALE"), "pull request target changed")
-	ErrPullRequestNotApproved  = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_APPROVED"), "pull request is not approved")
-	ErrPullRequestReviewExists = errorx.Conflict(errorx.Code("PULL_REQUEST_REVIEW_EXISTS"), "pull request review already exists")
+	ErrSkillAlreadyExists        = errorx.Conflict(errorx.Code("SKILL_ALREADY_EXISTS"), "skill already exists")
+	ErrSkillNotFound             = errorx.NotFound(errorx.Code("SKILL_NOT_FOUND"), "skill not found")
+	ErrSkillInvalidArgument      = errorx.BadRequest(errorx.Code("SKILL_INVALID_ARGUMENT"), "invalid skill argument")
+	ErrSkillMetadataManagedByGit = errorx.Conflict(errorx.Code("SKILL_METADATA_MANAGED_BY_GIT"), "skill name and description are managed by SKILL.md")
+	ErrSkillDependencyFailed     = errorx.Unavailable(errorx.Code("SKILL_DEPENDENCY_FAILED"), "skill dependency failed")
+	ErrPullRequestNotFound       = errorx.NotFound(errorx.Code("PULL_REQUEST_NOT_FOUND"), "pull request not found")
+	ErrPullRequestNotOpen        = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_OPEN"), "pull request is not open")
+	ErrPullRequestStale          = errorx.Conflict(errorx.Code("PULL_REQUEST_STALE"), "pull request target changed")
+	ErrPullRequestNotApproved    = errorx.Conflict(errorx.Code("PULL_REQUEST_NOT_APPROVED"), "pull request is not approved")
+	ErrPullRequestReviewExists   = errorx.Conflict(errorx.Code("PULL_REQUEST_REVIEW_EXISTS"), "pull request review already exists")
 
 	// File-content API errors. These mirror the GitLab/Gitea repository-files
 	// REST shape; the underlying store is still the bare git repo, so the codes
@@ -46,11 +47,11 @@ var (
 )
 
 type GitSkill struct {
-	RepositoryID                               int64
-	Name, DisplayName, Description, Visibility string
+	RepositoryID                                    int64
+	Name, DisplayName, Description, Visibility      string
 	OwnerID, OwnerType, OwnerName, OrgID, ProjectID string
-	DefaultBranch, Status                      string
-	CreateTime, UpdateTime                     time.Time
+	DefaultBranch, Status                           string
+	CreateTime, UpdateTime                          time.Time
 }
 
 type GitSkillListOptions struct {

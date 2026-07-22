@@ -29,6 +29,12 @@ type SkillGitEngine interface {
 	DeleteFile(ctx context.Context, name, path, message, sha, branch, committerName, committerEmail string) (commitSHA, commitMessage string, err error)
 }
 
+// SkillMetadataSyncer is optional so existing git engine test doubles and
+// external implementations remain source-compatible.
+type SkillMetadataSyncer interface {
+	SyncSkillMetadata(context.Context, string, string) error
+}
+
 type SkillRelationships interface {
 	BatchCheck(context.Context, AuthzBatchCheckRequest) (AuthzBatchCheckResult, error)
 	WriteRelationships(ctx context.Context, rels ...AuthzRelationship) (AuthzWriteResult, error)
@@ -88,6 +94,9 @@ func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Princip
 	if item.Visibility == "" {
 		item.Visibility = SkillVisibilityPrivate
 	}
+	if item.Visibility != SkillVisibilityPrivate && item.Visibility != SkillVisibilityInternal && item.Visibility != SkillVisibilityPublic {
+		return nil, ErrSkillInvalidArgument
+	}
 	// Validate optional project_id. Non-empty project_id requires a
 	// configured validator; fail-closed when missing.
 	if item.ProjectID != "" {
@@ -103,19 +112,16 @@ func (uc *SkillUsecase) CreateSkill(ctx context.Context, principal authn.Princip
 		return nil, err
 	}
 	resource := AuthzObjectRef{Type: "skill", ID: item.Name}
-	// Write owner and zone relationships atomically in a single call.
-	if _, err := uc.rels.WriteRelationships(ctx,
-		AuthzRelationship{
-			Resource: resource,
-			Relation: "owner",
-			Subject:  principalSubject(principal),
-		},
-		AuthzRelationship{
-			Resource: resource,
-			Relation: "zone",
-			Subject:  AuthzSubjectRef{Type: "zone", ID: item.OrgID},
-		},
-	); err != nil {
+	// Project the initial visibility in the same SpiceDB write as the owner and
+	// zone edges. Public is an authz capability, not just a PostgreSQL flag.
+	relationships := []AuthzRelationship{
+		{Resource: resource, Relation: "owner", Subject: principalSubject(principal)},
+		{Resource: resource, Relation: "zone", Subject: AuthzSubjectRef{Type: "zone", ID: item.OrgID}},
+	}
+	if item.Visibility == SkillVisibilityPublic {
+		relationships = appendSkillPublicViewers(relationships, resource)
+	}
+	if _, err := uc.rels.WriteRelationships(ctx, relationships...); err != nil {
 		compensateCtx := context.WithoutCancel(ctx)
 		_ = uc.git.DeleteRepository(compensateCtx, item.Name)
 		return nil, fmt.Errorf("%w: project relationships: %v", ErrSkillDependencyFailed, err)
@@ -177,7 +183,7 @@ func (uc *SkillUsecase) UpdateSkill(ctx context.Context, in *GitSkill) (*GitSkil
 	if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) {
 		return nil, ErrSkillInvalidArgument
 	}
-	return uc.skills.UpdateSkill(ctx, in)
+	return nil, ErrSkillMetadataManagedByGit
 }
 
 func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, name, visibility string) (*GitSkill, error) {
@@ -185,11 +191,27 @@ func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, name, visibil
 		return nil, ErrSkillInvalidArgument
 	}
 	current, err := uc.skills.GetSkill(ctx, name)
-	if err != nil || current.Visibility == visibility {
+	if err != nil {
 		return current, err
 	}
 	resource := AuthzObjectRef{Type: "skill", ID: name}
 	wildcards := []AuthzSubjectRef{{Type: "user", ID: "*"}, {Type: "service", ID: "*"}, {Type: "service_account", ID: "*"}}
+	// Reconcile the projection even when the desired value is unchanged. This
+	// repairs Skills created before public visibility was projected to SpiceDB.
+	if current.Visibility == visibility {
+		if visibility == SkillVisibilityPublic {
+			if err := grantSkillPublicViewers(ctx, uc.rels, resource); err != nil {
+				return nil, err
+			}
+		} else {
+			for _, subject := range wildcards {
+				if err := uc.rels.RevokeAll(ctx, resource, subject); err != nil {
+					return nil, err
+				}
+			}
+		}
+		return current, nil
+	}
 	if visibility == SkillVisibilityPublic {
 		for i, subject := range wildcards {
 			if err := uc.rels.GrantRole(ctx, resource, "viewer", subject); err != nil {
@@ -199,17 +221,25 @@ func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, name, visibil
 				return nil, err
 			}
 		}
-	} else if current.Visibility == SkillVisibilityPublic {
+	} else {
 		for _, subject := range wildcards {
 			if err := uc.rels.RevokeAll(ctx, resource, subject); err != nil {
+				if current.Visibility == SkillVisibilityPublic {
+					_ = grantSkillPublicViewers(context.WithoutCancel(ctx), uc.rels, resource)
+				}
 				return nil, err
 			}
 		}
 	}
 	updated, err := uc.skills.UpdateSkillVisibility(ctx, name, visibility)
-	if err != nil && visibility == SkillVisibilityPublic {
-		for _, subject := range wildcards {
-			_ = uc.rels.RevokeAll(context.WithoutCancel(ctx), resource, subject)
+	if err != nil {
+		compensateCtx := context.WithoutCancel(ctx)
+		if visibility == SkillVisibilityPublic {
+			for _, subject := range wildcards {
+				_ = uc.rels.RevokeAll(compensateCtx, resource, subject)
+			}
+		} else if current.Visibility == SkillVisibilityPublic {
+			_ = grantSkillPublicViewers(compensateCtx, uc.rels, resource)
 		}
 	}
 	return updated, err
@@ -236,6 +266,11 @@ func (uc *SkillUsecase) ListSkillShares(ctx context.Context, name string) ([]Ski
 	}
 	out := make([]SkillShare, 0, len(rels))
 	for _, rel := range rels {
+		// owner/zone/parent are structural edges, and wildcard viewers are the
+		// public capability. Neither is an explicit collaborator to display.
+		if rel.Relation == "owner" || rel.Relation == "zone" || rel.Relation == "parent" || rel.Subject.ID == "*" {
+			continue
+		}
 		out = append(out, SkillShare{SkillName: name, Relation: rel.Relation, SubjectType: rel.Subject.Type, SubjectID: rel.Subject.ID, SubjectRelation: rel.Subject.Relation})
 	}
 	return out, nil
@@ -353,6 +388,11 @@ func (uc *SkillUsecase) MergePullRequest(ctx context.Context, principal authn.Pr
 	if err != nil {
 		return nil, err
 	}
+	if syncer, ok := uc.git.(SkillMetadataSyncer); ok {
+		if err := syncer.SyncSkillMetadata(ctx, skill, pr.TargetRef); err != nil {
+			return nil, fmt.Errorf("%w: sync SKILL.md metadata: %v", ErrSkillDependencyFailed, err)
+		}
+	}
 	return uc.pulls.MergePullRequest(ctx, skill, id, expectedTargetSHA, mergedSHA, principal.SubjectID)
 }
 
@@ -390,4 +430,20 @@ func validSkillRelation(relation string) bool {
 	default:
 		return false
 	}
+}
+
+func appendSkillPublicViewers(rels []AuthzRelationship, resource AuthzObjectRef) []AuthzRelationship {
+	for _, subject := range []AuthzSubjectRef{{Type: "user", ID: "*"}, {Type: "service", ID: "*"}, {Type: "service_account", ID: "*"}} {
+		rels = append(rels, AuthzRelationship{Resource: resource, Relation: "viewer", Subject: subject})
+	}
+	return rels
+}
+
+func grantSkillPublicViewers(ctx context.Context, rels SkillRelationships, resource AuthzObjectRef) error {
+	for _, subject := range []AuthzSubjectRef{{Type: "user", ID: "*"}, {Type: "service", ID: "*"}, {Type: "service_account", ID: "*"}} {
+		if err := rels.GrantRole(ctx, resource, "viewer", subject); err != nil {
+			return err
+		}
+	}
+	return nil
 }

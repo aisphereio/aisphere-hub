@@ -247,7 +247,7 @@ func (e *Engine) DeleteRepository(ctx context.Context, name string) error {
 	return e.backend.DeleteRepository(softproto.WithUserContext(e.operationContext(ctx), e.owner), name)
 }
 
-// seedInitialCommit writes an initial commit (SKILL.md + skill.yaml) to the
+// seedInitialCommit writes an initial commit (SKILL.md) to the
 // default branch of a freshly created skill repository and points HEAD at it.
 // It uses raw git plumbing (hash-object / mktree / commit-tree / update-ref /
 // symbolic-ref) against the bare repo path, mirroring the Merge helper's
@@ -259,19 +259,14 @@ func (e *Engine) seedInitialCommit(ctx context.Context, name string, skill *biz.
 		return err
 	}
 	gitDir := repo.Path
-	skillMd, skillYaml := scaffoldContent(skill)
+	skillMd := scaffoldContent(skill)
 
 	mdSha, err := runGitRepo(ctx, gitDir, strings.NewReader(skillMd), "hash-object", "-w", "--stdin")
 	if err != nil {
 		return fmt.Errorf("write SKILL.md blob: %w", err)
 	}
-	yamlSha, err := runGitRepo(ctx, gitDir, strings.NewReader(skillYaml), "hash-object", "-w", "--stdin")
-	if err != nil {
-		return fmt.Errorf("write skill.yaml blob: %w", err)
-	}
-
 	// mktree reads "<mode> <type> <sha>\t<name>" lines from stdin.
-	treeInput := fmt.Sprintf("100644 blob %s\tSKILL.md\n100644 blob %s\tskill.yaml\n", mdSha, yamlSha)
+	treeInput := fmt.Sprintf("100644 blob %s\tSKILL.md\n", mdSha)
 	treeSha, err := runGitRepo(ctx, gitDir, strings.NewReader(treeInput), "mktree")
 	if err != nil {
 		return fmt.Errorf("build tree: %w", err)
@@ -361,11 +356,63 @@ func (e *Engine) Merge(ctx context.Context, name, sourceRef, targetRef, expected
 	if strings.TrimSpace(mergeBase) != strings.TrimSpace(expectedTargetSHA) {
 		return "", biz.ErrPullRequestStale
 	}
+	if _, _, err := e.readSkillMetadata(ctx, repo, sourceSHA, name); err != nil {
+		return "", fmt.Errorf("gitengine: validate SKILL.md: %w", err)
+	}
 	cmd := exec.CommandContext(ctx, "git", "--git-dir", repo.Path, "update-ref", targetRef, sourceSHA, expectedTargetSHA)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("gitengine: update target ref: %w: %s", err, strings.TrimSpace(string(output)))
 	}
+	if err := e.syncSkillMetadata(ctx, name, sourceSHA, repo.Path); err != nil {
+		return "", err
+	}
 	return sourceSHA, nil
+}
+
+// SyncSkillMetadata refreshes the PostgreSQL metadata projection from the
+// default branch. The Git document is authoritative; the Hub columns remain
+// a query cache for list/detail APIs.
+func (e *Engine) SyncSkillMetadata(ctx context.Context, name, ref string) error {
+	repo, err := e.open(ctx, name)
+	if err != nil {
+		return err
+	}
+	sha, err := repo.ShowRefVerify(normalizeRef(ref))
+	if err != nil {
+		return err
+	}
+	return e.syncSkillMetadata(ctx, name, sha, repo.Path)
+}
+
+func (e *Engine) readSkillMetadata(ctx context.Context, repo *softgit.Repository, sha, name string) (string, string, error) {
+	content, err := runGitRepo(ctx, repo.Path, nil, "show", strings.TrimSpace(sha)+":SKILL.md")
+	if err != nil {
+		return "", "", err
+	}
+	displayName, description, err := ParseSkillMetadata(name, content)
+	return displayName, description, err
+}
+
+func (e *Engine) syncSkillMetadata(ctx context.Context, name, sha, repoPath string) error {
+	content, err := runGitRepo(ctx, repoPath, nil, "show", strings.TrimSpace(sha)+":SKILL.md")
+	if err != nil {
+		return fmt.Errorf("gitengine: read SKILL.md: %w", err)
+	}
+	displayName, description, err := ParseSkillMetadata(name, content)
+	if err != nil {
+		return fmt.Errorf("gitengine: validate SKILL.md: %w", err)
+	}
+	query := e.db.Rebind(`UPDATE hub_skill_profiles
+		SET display_name = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE repository_id = (SELECT id FROM repos WHERE name = ?)`)
+	if _, err := e.db.ExecContext(ctx, query, displayName, name); err != nil {
+		return fmt.Errorf("gitengine: update skill metadata projection: %w", err)
+	}
+	query = e.db.Rebind(`UPDATE repos SET description = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ?`)
+	if _, err := e.db.ExecContext(ctx, query, description, name); err != nil {
+		return fmt.Errorf("gitengine: update repository metadata projection: %w", err)
+	}
+	return nil
 }
 
 func (e *Engine) ListReleases(ctx context.Context, name string) ([]biz.SkillRelease, error) {

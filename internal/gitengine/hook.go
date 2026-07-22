@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aisphereio/aisphere-hub/internal/biz"
 	iamauthz "github.com/aisphereio/aisphere-iam/client/authzgrpc"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authz"
@@ -60,7 +61,27 @@ func RunHook(ctx context.Context, args []string, _ io.Reader, stderr io.Writer) 
 		_, _ = fmt.Fprintf(stderr, "skillhub: %v\n", err)
 		return 1
 	}
+	if strings.TrimPrefix(normalizeRef(args[1]), "refs/heads/") == defaultBranch() && !isZero(args[3]) {
+		repoPath := strings.TrimSpace(os.Getenv("SOFT_SERVE_REPO_PATH"))
+		content, err := runGitRepo(ctx, repoPath, nil, "show", args[3]+":SKILL.md")
+		if err != nil {
+			_, _ = fmt.Fprintf(stderr, "skillhub: read default-branch SKILL.md: %v\n", err)
+			return 1
+		}
+		if _, _, err := ParseSkillMetadata(repository, content); err != nil {
+			_, _ = fmt.Fprintf(stderr, "skillhub: invalid default-branch metadata: %v\n", err)
+			return 1
+		}
+	}
 	return 0
+}
+
+func defaultBranch() string {
+	branch := strings.TrimSpace(os.Getenv("AISPHERE_GIT_DEFAULT_BRANCH"))
+	if branch == "" {
+		return biz.SkillDefaultBranch
+	}
+	return strings.TrimPrefix(branch, "refs/heads/")
 }
 
 func authorizeRefUpdate(ctx context.Context, checker permissionChecker, principal authn.Principal, repository, permission string) error {
