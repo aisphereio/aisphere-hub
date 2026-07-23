@@ -47,7 +47,7 @@ The server normalizes the version to tag `v1.4.0`, verifies that `sourceRef` sti
 Exact resolution is encoded in the URL:
 
 ```text
-GET /v1/skills/search/releasess/v1.4.0:resolve
+GET /v1/skills/search/releases/v1.4.0:resolve
 ```
 
 Only exact release versions are accepted in this increment. Floating selectors such as `latest`, `main`, and SemVer ranges remain intentionally unsupported until channel and SkillSet revision resolution are implemented.
