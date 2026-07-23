@@ -47,7 +47,7 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	}
 	timeout := cfg.HTTP.Timeout
 	if timeout <= 0 {
-		timeout = time.Second
+		timeout = 30 * time.Second
 	}
 	opts := []khttp.ServerOption{khttp.Address(addr), khttp.Timeout(timeout)}
 	if cfg.HTTP.CORS.Enabled {

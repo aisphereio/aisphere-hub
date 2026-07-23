@@ -259,6 +259,9 @@ func (uc *NamespaceUsecase) ListNamespacesByCluster(ctx context.Context, princip
 }
 
 // UpdateNamespace applies FieldMask updates with CAS (design §7.5).
+// When labels or annotations change, the update is also projected to the
+// remote K8s namespace via provider.ApplyNamespace (best-effort: a remote
+// failure is logged but does not roll back the DB, mirroring the create path).
 func (uc *NamespaceUsecase) UpdateNamespace(ctx context.Context, principal authn.Principal, id string, expectedRevision int64, updates map[string]any) (*Namespace, error) {
 	subject, err := canonicalSubject(principal)
 	if err != nil {
@@ -280,7 +283,43 @@ func (uc *NamespaceUsecase) UpdateNamespace(ctx context.Context, principal authn
 			return nil, fmt.Errorf("%w: field %q is immutable", ErrClusterInvalidArgument, k)
 		}
 	}
-	return uc.namespaces.UpdateNamespaceWithCAS(ctx, id, expectedRevision, updates)
+	updated, err := uc.namespaces.UpdateNamespaceWithCAS(ctx, id, expectedRevision, updates)
+	if err != nil {
+		return nil, err
+	}
+
+	// Sync labels/annotations to the remote K8s namespace when either field was
+	// part of the update. Only for managed namespaces that have a remote object
+	// (KubernetesUID non-empty); unmanaged or not-yet-created namespaces are
+	// skipped — the create flow will apply the final state.
+	needsRemoteSync := false
+	for k := range updates {
+		if k == "labels" || k == "annotations" {
+			needsRemoteSync = true
+			break
+		}
+	}
+	if needsRemoteSync && updated.Managed && updated.KubernetesUID != "" {
+		cluster, cerr := uc.clusters.GetCluster(ctx, updated.ClusterID)
+		if cerr != nil {
+			uc.log.WithContext(ctx).Warn("update namespace: load cluster for remote sync failed",
+				logx.String("namespace_id", id), logx.Err(cerr))
+			return updated, nil
+		}
+		locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+		applySpec := NamespaceApplySpec{
+			Name:        updated.KubeName,
+			Labels:      updated.Labels,
+			Annotations: updated.Annotations,
+		}
+		if aerr := uc.provider.ApplyNamespace(ctx, updated.ClusterID, locator, applySpec); aerr != nil {
+			uc.log.WithContext(ctx).Warn("update namespace: remote apply failed; DB update retained",
+				logx.String("namespace_id", id),
+				logx.String("kube_name", updated.KubeName),
+				logx.Err(aerr))
+		}
+	}
+	return updated, nil
 }
 
 func isImmutableNamespaceField(col string) bool {

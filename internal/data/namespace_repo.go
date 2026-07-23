@@ -465,6 +465,31 @@ func (r *namespaceRepo) ListNamespacesBySyncStatus(ctx context.Context, syncStat
 	return out, nil
 }
 
+// ListReadyNamespaces returns namespaces with lifecycle=READY (non-deleted) for
+// the SandboxSyncReconciler to reconcile sandbox/warm-pool/claim state.
+func (r *namespaceRepo) ListReadyNamespaces(ctx context.Context, limit int) ([]*biz.Namespace, error) {
+	db := r.db(ctx)
+	if db == nil {
+		return nil, errors.New("namespace repo: database not configured")
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	var rows []k8sNamespaceModel
+	if err := db.WithContext(ctx).
+		Where("lifecycle = ? AND deleted_at IS NULL", biz.NamespaceLifecycleReady).
+		Order("updated_at ASC").
+		Limit(limit).
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("namespace repo: list ready namespaces: %w", err)
+	}
+	out := make([]*biz.Namespace, len(rows))
+	for i, row := range rows {
+		out[i] = namespaceModelToBiz(row)
+	}
+	return out, nil
+}
+
 func (r *namespaceRepo) ListSharesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*biz.NamespaceShare, error) {
 	db := r.db(ctx)
 	if db == nil {

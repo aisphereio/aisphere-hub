@@ -130,6 +130,15 @@ service SandboxService {
     };
   }
 
+  rpc SyncWarmPools(SyncWarmPoolsRequest) returns (SyncWarmPoolsResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/warm-pools:sync" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.warm_pool.sync" risk: "medium" }
+    };
+  }
+
   // ---- SandboxClaim (claim from WarmPool) ----
 
   rpc CreateSandboxClaim(CreateSandboxClaimRequest) returns (CreateSandboxClaimResponse) {
@@ -156,6 +165,15 @@ service SandboxService {
       exposure: AUTHORIZED
       authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "hub.sandbox_claim.delete" risk: "high" }
+    };
+  }
+
+  rpc SyncSandboxClaims(SyncSandboxClaimsRequest) returns (SyncSandboxClaimsResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/sandbox-claims:sync" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_claim.sync" risk: "medium" }
     };
   }
 
@@ -474,6 +492,16 @@ message DeleteWarmPoolResponse {
   WarmPool warm_pool = 1;
 }
 
+message SyncWarmPoolsRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SyncWarmPoolsResponse {
+  int32 imported = 1;
+  int32 updated = 2;
+  int32 removed = 3;
+}
+
 // ---- SandboxClaim request/response messages ----
 
 message CreateSandboxClaimRequest {
@@ -506,6 +534,16 @@ message DeleteSandboxClaimRequest {
 
 message DeleteSandboxClaimResponse {
   SandboxClaim claim = 1;
+}
+
+message SyncSandboxClaimsRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SyncSandboxClaimsResponse {
+  int32 imported = 1;
+  int32 updated = 2;
+  int32 removed = 3;
 }
 
 // ---- Sandbox tool invocation messages ----

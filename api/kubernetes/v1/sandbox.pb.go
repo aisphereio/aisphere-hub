@@ -2528,6 +2528,110 @@ func (x *DeleteWarmPoolResponse) GetWarmPool() *WarmPool {
 	return nil
 }
 
+type SyncWarmPoolsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NamespaceId   string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncWarmPoolsRequest) Reset() {
+	*x = SyncWarmPoolsRequest{}
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncWarmPoolsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncWarmPoolsRequest) ProtoMessage() {}
+
+func (x *SyncWarmPoolsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncWarmPoolsRequest.ProtoReflect.Descriptor instead.
+func (*SyncWarmPoolsRequest) Descriptor() ([]byte, []int) {
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *SyncWarmPoolsRequest) GetNamespaceId() string {
+	if x != nil {
+		return x.NamespaceId
+	}
+	return ""
+}
+
+type SyncWarmPoolsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Imported      int32                  `protobuf:"varint,1,opt,name=imported,proto3" json:"imported,omitempty"`
+	Updated       int32                  `protobuf:"varint,2,opt,name=updated,proto3" json:"updated,omitempty"`
+	Removed       int32                  `protobuf:"varint,3,opt,name=removed,proto3" json:"removed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncWarmPoolsResponse) Reset() {
+	*x = SyncWarmPoolsResponse{}
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncWarmPoolsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncWarmPoolsResponse) ProtoMessage() {}
+
+func (x *SyncWarmPoolsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncWarmPoolsResponse.ProtoReflect.Descriptor instead.
+func (*SyncWarmPoolsResponse) Descriptor() ([]byte, []int) {
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *SyncWarmPoolsResponse) GetImported() int32 {
+	if x != nil {
+		return x.Imported
+	}
+	return 0
+}
+
+func (x *SyncWarmPoolsResponse) GetUpdated() int32 {
+	if x != nil {
+		return x.Updated
+	}
+	return 0
+}
+
+func (x *SyncWarmPoolsResponse) GetRemoved() int32 {
+	if x != nil {
+		return x.Removed
+	}
+	return 0
+}
+
 type CreateSandboxClaimRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NamespaceId   string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
@@ -2541,7 +2645,7 @@ type CreateSandboxClaimRequest struct {
 
 func (x *CreateSandboxClaimRequest) Reset() {
 	*x = CreateSandboxClaimRequest{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[29]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2553,7 +2657,7 @@ func (x *CreateSandboxClaimRequest) String() string {
 func (*CreateSandboxClaimRequest) ProtoMessage() {}
 
 func (x *CreateSandboxClaimRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[29]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2566,7 +2670,7 @@ func (x *CreateSandboxClaimRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSandboxClaimRequest.ProtoReflect.Descriptor instead.
 func (*CreateSandboxClaimRequest) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{29}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CreateSandboxClaimRequest) GetNamespaceId() string {
@@ -2613,7 +2717,7 @@ type CreateSandboxClaimResponse struct {
 
 func (x *CreateSandboxClaimResponse) Reset() {
 	*x = CreateSandboxClaimResponse{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[30]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2625,7 +2729,7 @@ func (x *CreateSandboxClaimResponse) String() string {
 func (*CreateSandboxClaimResponse) ProtoMessage() {}
 
 func (x *CreateSandboxClaimResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[30]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2638,7 +2742,7 @@ func (x *CreateSandboxClaimResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSandboxClaimResponse.ProtoReflect.Descriptor instead.
 func (*CreateSandboxClaimResponse) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{30}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *CreateSandboxClaimResponse) GetClaim() *SandboxClaim {
@@ -2659,7 +2763,7 @@ type ListSandboxClaimsRequest struct {
 
 func (x *ListSandboxClaimsRequest) Reset() {
 	*x = ListSandboxClaimsRequest{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[31]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2671,7 +2775,7 @@ func (x *ListSandboxClaimsRequest) String() string {
 func (*ListSandboxClaimsRequest) ProtoMessage() {}
 
 func (x *ListSandboxClaimsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[31]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2684,7 +2788,7 @@ func (x *ListSandboxClaimsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSandboxClaimsRequest.ProtoReflect.Descriptor instead.
 func (*ListSandboxClaimsRequest) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{31}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ListSandboxClaimsRequest) GetNamespaceId() string {
@@ -2718,7 +2822,7 @@ type ListSandboxClaimsResponse struct {
 
 func (x *ListSandboxClaimsResponse) Reset() {
 	*x = ListSandboxClaimsResponse{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[32]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2730,7 +2834,7 @@ func (x *ListSandboxClaimsResponse) String() string {
 func (*ListSandboxClaimsResponse) ProtoMessage() {}
 
 func (x *ListSandboxClaimsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[32]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2743,7 +2847,7 @@ func (x *ListSandboxClaimsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSandboxClaimsResponse.ProtoReflect.Descriptor instead.
 func (*ListSandboxClaimsResponse) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{32}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListSandboxClaimsResponse) GetClaims() []*SandboxClaim {
@@ -2770,7 +2874,7 @@ type DeleteSandboxClaimRequest struct {
 
 func (x *DeleteSandboxClaimRequest) Reset() {
 	*x = DeleteSandboxClaimRequest{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[33]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2782,7 +2886,7 @@ func (x *DeleteSandboxClaimRequest) String() string {
 func (*DeleteSandboxClaimRequest) ProtoMessage() {}
 
 func (x *DeleteSandboxClaimRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[33]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2795,7 +2899,7 @@ func (x *DeleteSandboxClaimRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSandboxClaimRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSandboxClaimRequest) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{33}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *DeleteSandboxClaimRequest) GetId() string {
@@ -2821,7 +2925,7 @@ type DeleteSandboxClaimResponse struct {
 
 func (x *DeleteSandboxClaimResponse) Reset() {
 	*x = DeleteSandboxClaimResponse{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[34]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2833,7 +2937,7 @@ func (x *DeleteSandboxClaimResponse) String() string {
 func (*DeleteSandboxClaimResponse) ProtoMessage() {}
 
 func (x *DeleteSandboxClaimResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[34]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2846,7 +2950,7 @@ func (x *DeleteSandboxClaimResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSandboxClaimResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSandboxClaimResponse) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{34}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *DeleteSandboxClaimResponse) GetClaim() *SandboxClaim {
@@ -2854,6 +2958,110 @@ func (x *DeleteSandboxClaimResponse) GetClaim() *SandboxClaim {
 		return x.Claim
 	}
 	return nil
+}
+
+type SyncSandboxClaimsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NamespaceId   string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncSandboxClaimsRequest) Reset() {
+	*x = SyncSandboxClaimsRequest{}
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncSandboxClaimsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncSandboxClaimsRequest) ProtoMessage() {}
+
+func (x *SyncSandboxClaimsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncSandboxClaimsRequest.ProtoReflect.Descriptor instead.
+func (*SyncSandboxClaimsRequest) Descriptor() ([]byte, []int) {
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *SyncSandboxClaimsRequest) GetNamespaceId() string {
+	if x != nil {
+		return x.NamespaceId
+	}
+	return ""
+}
+
+type SyncSandboxClaimsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Imported      int32                  `protobuf:"varint,1,opt,name=imported,proto3" json:"imported,omitempty"`
+	Updated       int32                  `protobuf:"varint,2,opt,name=updated,proto3" json:"updated,omitempty"`
+	Removed       int32                  `protobuf:"varint,3,opt,name=removed,proto3" json:"removed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncSandboxClaimsResponse) Reset() {
+	*x = SyncSandboxClaimsResponse{}
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncSandboxClaimsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncSandboxClaimsResponse) ProtoMessage() {}
+
+func (x *SyncSandboxClaimsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncSandboxClaimsResponse.ProtoReflect.Descriptor instead.
+func (*SyncSandboxClaimsResponse) Descriptor() ([]byte, []int) {
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *SyncSandboxClaimsResponse) GetImported() int32 {
+	if x != nil {
+		return x.Imported
+	}
+	return 0
+}
+
+func (x *SyncSandboxClaimsResponse) GetUpdated() int32 {
+	if x != nil {
+		return x.Updated
+	}
+	return 0
+}
+
+func (x *SyncSandboxClaimsResponse) GetRemoved() int32 {
+	if x != nil {
+		return x.Removed
+	}
+	return 0
 }
 
 type ListSandboxToolsRequest struct {
@@ -2865,7 +3073,7 @@ type ListSandboxToolsRequest struct {
 
 func (x *ListSandboxToolsRequest) Reset() {
 	*x = ListSandboxToolsRequest{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[35]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2877,7 +3085,7 @@ func (x *ListSandboxToolsRequest) String() string {
 func (*ListSandboxToolsRequest) ProtoMessage() {}
 
 func (x *ListSandboxToolsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[35]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2890,7 +3098,7 @@ func (x *ListSandboxToolsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSandboxToolsRequest.ProtoReflect.Descriptor instead.
 func (*ListSandboxToolsRequest) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{35}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListSandboxToolsRequest) GetId() string {
@@ -2911,7 +3119,7 @@ type SandboxToolSchema struct {
 
 func (x *SandboxToolSchema) Reset() {
 	*x = SandboxToolSchema{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[36]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2923,7 +3131,7 @@ func (x *SandboxToolSchema) String() string {
 func (*SandboxToolSchema) ProtoMessage() {}
 
 func (x *SandboxToolSchema) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[36]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2936,7 +3144,7 @@ func (x *SandboxToolSchema) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SandboxToolSchema.ProtoReflect.Descriptor instead.
 func (*SandboxToolSchema) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{36}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *SandboxToolSchema) GetName() string {
@@ -2969,7 +3177,7 @@ type ListSandboxToolsResponse struct {
 
 func (x *ListSandboxToolsResponse) Reset() {
 	*x = ListSandboxToolsResponse{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[37]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2981,7 +3189,7 @@ func (x *ListSandboxToolsResponse) String() string {
 func (*ListSandboxToolsResponse) ProtoMessage() {}
 
 func (x *ListSandboxToolsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[37]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2994,7 +3202,7 @@ func (x *ListSandboxToolsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSandboxToolsResponse.ProtoReflect.Descriptor instead.
 func (*ListSandboxToolsResponse) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{37}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ListSandboxToolsResponse) GetTools() []*SandboxToolSchema {
@@ -3016,7 +3224,7 @@ type CallSandboxToolRequest struct {
 
 func (x *CallSandboxToolRequest) Reset() {
 	*x = CallSandboxToolRequest{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[38]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3028,7 +3236,7 @@ func (x *CallSandboxToolRequest) String() string {
 func (*CallSandboxToolRequest) ProtoMessage() {}
 
 func (x *CallSandboxToolRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[38]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3041,7 +3249,7 @@ func (x *CallSandboxToolRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallSandboxToolRequest.ProtoReflect.Descriptor instead.
 func (*CallSandboxToolRequest) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{38}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *CallSandboxToolRequest) GetId() string {
@@ -3084,7 +3292,7 @@ type CallSandboxToolResponse struct {
 
 func (x *CallSandboxToolResponse) Reset() {
 	*x = CallSandboxToolResponse{}
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[39]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3096,7 +3304,7 @@ func (x *CallSandboxToolResponse) String() string {
 func (*CallSandboxToolResponse) ProtoMessage() {}
 
 func (x *CallSandboxToolResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[39]
+	mi := &file_kubernetes_v1_sandbox_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3109,7 +3317,7 @@ func (x *CallSandboxToolResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallSandboxToolResponse.ProtoReflect.Descriptor instead.
 func (*CallSandboxToolResponse) Descriptor() ([]byte, []int) {
-	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{39}
+	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *CallSandboxToolResponse) GetOk() bool {
@@ -3366,7 +3574,13 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
 	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"N\n" +
 	"\x16DeleteWarmPoolResponse\x124\n" +
-	"\twarm_pool\x18\x01 \x01(\v2\x17.kubernetes.v1.WarmPoolR\bwarmPool\"\xbd\x01\n" +
+	"\twarm_pool\x18\x01 \x01(\v2\x17.kubernetes.v1.WarmPoolR\bwarmPool\">\n" +
+	"\x14SyncWarmPoolsRequest\x12&\n" +
+	"\fnamespace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vnamespaceId\"g\n" +
+	"\x15SyncWarmPoolsResponse\x12\x1a\n" +
+	"\bimported\x18\x01 \x01(\x05R\bimported\x12\x18\n" +
+	"\aupdated\x18\x02 \x01(\x05R\aupdated\x12\x18\n" +
+	"\aremoved\x18\x03 \x01(\x05R\aremoved\"\xbd\x01\n" +
 	"\x19CreateSandboxClaimRequest\x12&\n" +
 	"\fnamespace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vnamespaceId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
@@ -3389,7 +3603,13 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
 	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"O\n" +
 	"\x1aDeleteSandboxClaimResponse\x121\n" +
-	"\x05claim\x18\x01 \x01(\v2\x1b.kubernetes.v1.SandboxClaimR\x05claim\".\n" +
+	"\x05claim\x18\x01 \x01(\v2\x1b.kubernetes.v1.SandboxClaimR\x05claim\"B\n" +
+	"\x18SyncSandboxClaimsRequest\x12&\n" +
+	"\fnamespace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vnamespaceId\"k\n" +
+	"\x19SyncSandboxClaimsResponse\x12\x1a\n" +
+	"\bimported\x18\x01 \x01(\x05R\bimported\x12\x18\n" +
+	"\aupdated\x18\x02 \x01(\x05R\aupdated\x12\x18\n" +
+	"\aremoved\x18\x03 \x01(\x05R\aremoved\".\n" +
 	"\x17ListSandboxToolsRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"u\n" +
 	"\x11SandboxToolSchema\x12\x12\n" +
@@ -3443,7 +3663,7 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x1cSANDBOX_CLAIM_STATUS_PENDING\x10\x01\x12\x1e\n" +
 	"\x1aSANDBOX_CLAIM_STATUS_READY\x10\x02\x12\x1f\n" +
 	"\x1bSANDBOX_CLAIM_STATUS_FAILED\x10\x03\x12 \n" +
-	"\x1cSANDBOX_CLAIM_STATUS_DELETED\x10\x042\xb9\x1f\n" +
+	"\x1cSANDBOX_CLAIM_STATUS_DELETED\x10\x042\xb3#\n" +
 	"\x0eSandboxService\x12\x96\x02\n" +
 	"\x15CreateSandboxTemplate\x12+.kubernetes.v1.CreateSandboxTemplateRequest\x1a,.kubernetes.v1.CreateSandboxTemplateResponse\"\xa1\x01\x92\xf4\x18]\b\x03\x122\n" +
 	"\aoperate\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a%\b\x01\x12\x1bhub.sandbox_template.create\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\btemplate\"+/v1/clusters/{cluster_id}/sandbox-templates\x12\x80\x02\n" +
@@ -3469,13 +3689,17 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\rListWarmPools\x12#.kubernetes.v1.ListWarmPoolsRequest\x1a$.kubernetes.v1.ListWarmPoolsResponse\"\x87\x01\x92\xf4\x18S\b\x03\x122\n" +
 	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1b\b\x01\x12\x12hub.warm_pool.list\x1a\x03low\x82\xd3\xe4\x93\x02*\x12(/v1/namespaces/{namespace_id}/warm-pools\x12\xcb\x01\n" +
 	"\x0eDeleteWarmPool\x12$.kubernetes.v1.DeleteWarmPoolRequest\x1a%.kubernetes.v1.DeleteWarmPoolResponse\"l\x92\xf4\x18M\b\x03\x12)\n" +
-	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x14hub.warm_pool.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x15*\x13/v1/warm-pools/{id}\x12\x88\x02\n" +
+	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x14hub.warm_pool.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x15*\x13/v1/warm-pools/{id}\x12\xf0\x01\n" +
+	"\rSyncWarmPools\x12#.kubernetes.v1.SyncWarmPoolsRequest\x1a$.kubernetes.v1.SyncWarmPoolsResponse\"\x93\x01\x92\xf4\x18Z\b\x03\x126\n" +
+	"\aoperate\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x12hub.warm_pool.sync\x1a\x06medium\x82\xd3\xe4\x93\x02/\"-/v1/namespaces/{namespace_id}/warm-pools:sync\x12\x88\x02\n" +
 	"\x12CreateSandboxClaim\x12(.kubernetes.v1.CreateSandboxClaimRequest\x1a).kubernetes.v1.CreateSandboxClaimResponse\"\x9c\x01\x92\xf4\x18Z\b\x03\x122\n" +
 	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x18hub.sandbox_claim.create\x1a\x04high\x82\xd3\xe4\x93\x028:\x01*b\x05claim\",/v1/namespaces/{namespace_id}/sandbox-claims\x12\xf8\x01\n" +
 	"\x11ListSandboxClaims\x12'.kubernetes.v1.ListSandboxClaimsRequest\x1a(.kubernetes.v1.ListSandboxClaimsResponse\"\x8f\x01\x92\xf4\x18W\b\x03\x122\n" +
 	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x16hub.sandbox_claim.list\x1a\x03low\x82\xd3\xe4\x93\x02.\x12,/v1/namespaces/{namespace_id}/sandbox-claims\x12\xdf\x01\n" +
 	"\x12DeleteSandboxClaim\x12(.kubernetes.v1.DeleteSandboxClaimRequest\x1a).kubernetes.v1.DeleteSandboxClaimResponse\"t\x92\xf4\x18Q\b\x03\x12)\n" +
-	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x18hub.sandbox_claim.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x19*\x17/v1/sandbox-claims/{id}\x12\xd4\x01\n" +
+	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x18hub.sandbox_claim.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x19*\x17/v1/sandbox-claims/{id}\x12\x84\x02\n" +
+	"\x11SyncSandboxClaims\x12'.kubernetes.v1.SyncSandboxClaimsRequest\x1a(.kubernetes.v1.SyncSandboxClaimsResponse\"\x9b\x01\x92\xf4\x18^\b\x03\x126\n" +
+	"\aoperate\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x16hub.sandbox_claim.sync\x1a\x06medium\x82\xd3\xe4\x93\x023\"1/v1/namespaces/{namespace_id}/sandbox-claims:sync\x12\xd4\x01\n" +
 	"\x10ListSandboxTools\x12&.kubernetes.v1.ListSandboxToolsRequest\x1a'.kubernetes.v1.ListSandboxToolsResponse\"o\x92\xf4\x18K\b\x03\x12&\n" +
 	"\x03use\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x16hub.sandbox.tools.list\x1a\x03low\x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/sandboxes/{id}/tools\x12\xdb\x01\n" +
 	"\x0fCallSandboxTool\x12%.kubernetes.v1.CallSandboxToolRequest\x1a&.kubernetes.v1.CallSandboxToolResponse\"y\x92\xf4\x18M\b\x03\x12&\n" +
@@ -3494,7 +3718,7 @@ func file_kubernetes_v1_sandbox_proto_rawDescGZIP() []byte {
 }
 
 var file_kubernetes_v1_sandbox_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_kubernetes_v1_sandbox_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_kubernetes_v1_sandbox_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_kubernetes_v1_sandbox_proto_goTypes = []any{
 	(SandboxLifecycle)(0),                 // 0: kubernetes.v1.SandboxLifecycle
 	(SandboxNetworkMode)(0),               // 1: kubernetes.v1.SandboxNetworkMode
@@ -3531,52 +3755,56 @@ var file_kubernetes_v1_sandbox_proto_goTypes = []any{
 	(*ListWarmPoolsResponse)(nil),         // 32: kubernetes.v1.ListWarmPoolsResponse
 	(*DeleteWarmPoolRequest)(nil),         // 33: kubernetes.v1.DeleteWarmPoolRequest
 	(*DeleteWarmPoolResponse)(nil),        // 34: kubernetes.v1.DeleteWarmPoolResponse
-	(*CreateSandboxClaimRequest)(nil),     // 35: kubernetes.v1.CreateSandboxClaimRequest
-	(*CreateSandboxClaimResponse)(nil),    // 36: kubernetes.v1.CreateSandboxClaimResponse
-	(*ListSandboxClaimsRequest)(nil),      // 37: kubernetes.v1.ListSandboxClaimsRequest
-	(*ListSandboxClaimsResponse)(nil),     // 38: kubernetes.v1.ListSandboxClaimsResponse
-	(*DeleteSandboxClaimRequest)(nil),     // 39: kubernetes.v1.DeleteSandboxClaimRequest
-	(*DeleteSandboxClaimResponse)(nil),    // 40: kubernetes.v1.DeleteSandboxClaimResponse
-	(*ListSandboxToolsRequest)(nil),       // 41: kubernetes.v1.ListSandboxToolsRequest
-	(*SandboxToolSchema)(nil),             // 42: kubernetes.v1.SandboxToolSchema
-	(*ListSandboxToolsResponse)(nil),      // 43: kubernetes.v1.ListSandboxToolsResponse
-	(*CallSandboxToolRequest)(nil),        // 44: kubernetes.v1.CallSandboxToolRequest
-	(*CallSandboxToolResponse)(nil),       // 45: kubernetes.v1.CallSandboxToolResponse
-	nil,                                   // 46: kubernetes.v1.SandboxTemplate.LabelsEntry
-	nil,                                   // 47: kubernetes.v1.CreateSandboxTemplateRequest.LabelsEntry
-	nil,                                   // 48: kubernetes.v1.CreateSandboxRequest.LabelsEntry
-	(*timestamppb.Timestamp)(nil),         // 49: google.protobuf.Timestamp
-	(DeletePolicy)(0),                     // 50: kubernetes.v1.DeletePolicy
+	(*SyncWarmPoolsRequest)(nil),          // 35: kubernetes.v1.SyncWarmPoolsRequest
+	(*SyncWarmPoolsResponse)(nil),         // 36: kubernetes.v1.SyncWarmPoolsResponse
+	(*CreateSandboxClaimRequest)(nil),     // 37: kubernetes.v1.CreateSandboxClaimRequest
+	(*CreateSandboxClaimResponse)(nil),    // 38: kubernetes.v1.CreateSandboxClaimResponse
+	(*ListSandboxClaimsRequest)(nil),      // 39: kubernetes.v1.ListSandboxClaimsRequest
+	(*ListSandboxClaimsResponse)(nil),     // 40: kubernetes.v1.ListSandboxClaimsResponse
+	(*DeleteSandboxClaimRequest)(nil),     // 41: kubernetes.v1.DeleteSandboxClaimRequest
+	(*DeleteSandboxClaimResponse)(nil),    // 42: kubernetes.v1.DeleteSandboxClaimResponse
+	(*SyncSandboxClaimsRequest)(nil),      // 43: kubernetes.v1.SyncSandboxClaimsRequest
+	(*SyncSandboxClaimsResponse)(nil),     // 44: kubernetes.v1.SyncSandboxClaimsResponse
+	(*ListSandboxToolsRequest)(nil),       // 45: kubernetes.v1.ListSandboxToolsRequest
+	(*SandboxToolSchema)(nil),             // 46: kubernetes.v1.SandboxToolSchema
+	(*ListSandboxToolsResponse)(nil),      // 47: kubernetes.v1.ListSandboxToolsResponse
+	(*CallSandboxToolRequest)(nil),        // 48: kubernetes.v1.CallSandboxToolRequest
+	(*CallSandboxToolResponse)(nil),       // 49: kubernetes.v1.CallSandboxToolResponse
+	nil,                                   // 50: kubernetes.v1.SandboxTemplate.LabelsEntry
+	nil,                                   // 51: kubernetes.v1.CreateSandboxTemplateRequest.LabelsEntry
+	nil,                                   // 52: kubernetes.v1.CreateSandboxRequest.LabelsEntry
+	(*timestamppb.Timestamp)(nil),         // 53: google.protobuf.Timestamp
+	(DeletePolicy)(0),                     // 54: kubernetes.v1.DeletePolicy
 }
 var file_kubernetes_v1_sandbox_proto_depIdxs = []int32{
 	0,  // 0: kubernetes.v1.Sandbox.lifecycle:type_name -> kubernetes.v1.SandboxLifecycle
 	1,  // 1: kubernetes.v1.Sandbox.network_mode:type_name -> kubernetes.v1.SandboxNetworkMode
 	2,  // 2: kubernetes.v1.Sandbox.operating_mode:type_name -> kubernetes.v1.SandboxOperatingMode
 	10, // 3: kubernetes.v1.Sandbox.permissions:type_name -> kubernetes.v1.SandboxPermissions
-	49, // 4: kubernetes.v1.Sandbox.create_time:type_name -> google.protobuf.Timestamp
-	49, // 5: kubernetes.v1.Sandbox.update_time:type_name -> google.protobuf.Timestamp
-	49, // 6: kubernetes.v1.Sandbox.last_sync_time:type_name -> google.protobuf.Timestamp
-	46, // 7: kubernetes.v1.SandboxTemplate.labels:type_name -> kubernetes.v1.SandboxTemplate.LabelsEntry
+	53, // 4: kubernetes.v1.Sandbox.create_time:type_name -> google.protobuf.Timestamp
+	53, // 5: kubernetes.v1.Sandbox.update_time:type_name -> google.protobuf.Timestamp
+	53, // 6: kubernetes.v1.Sandbox.last_sync_time:type_name -> google.protobuf.Timestamp
+	50, // 7: kubernetes.v1.SandboxTemplate.labels:type_name -> kubernetes.v1.SandboxTemplate.LabelsEntry
 	3,  // 8: kubernetes.v1.SandboxTemplate.status:type_name -> kubernetes.v1.SandboxTemplateStatus
-	49, // 9: kubernetes.v1.SandboxTemplate.create_time:type_name -> google.protobuf.Timestamp
-	49, // 10: kubernetes.v1.SandboxTemplate.update_time:type_name -> google.protobuf.Timestamp
+	53, // 9: kubernetes.v1.SandboxTemplate.create_time:type_name -> google.protobuf.Timestamp
+	53, // 10: kubernetes.v1.SandboxTemplate.update_time:type_name -> google.protobuf.Timestamp
 	4,  // 11: kubernetes.v1.WarmPool.status:type_name -> kubernetes.v1.WarmPoolStatus
-	49, // 12: kubernetes.v1.WarmPool.create_time:type_name -> google.protobuf.Timestamp
-	49, // 13: kubernetes.v1.WarmPool.update_time:type_name -> google.protobuf.Timestamp
+	53, // 12: kubernetes.v1.WarmPool.create_time:type_name -> google.protobuf.Timestamp
+	53, // 13: kubernetes.v1.WarmPool.update_time:type_name -> google.protobuf.Timestamp
 	5,  // 14: kubernetes.v1.SandboxClaim.status:type_name -> kubernetes.v1.SandboxClaimStatus
-	49, // 15: kubernetes.v1.SandboxClaim.create_time:type_name -> google.protobuf.Timestamp
-	49, // 16: kubernetes.v1.SandboxClaim.update_time:type_name -> google.protobuf.Timestamp
-	47, // 17: kubernetes.v1.CreateSandboxTemplateRequest.labels:type_name -> kubernetes.v1.CreateSandboxTemplateRequest.LabelsEntry
+	53, // 15: kubernetes.v1.SandboxClaim.create_time:type_name -> google.protobuf.Timestamp
+	53, // 16: kubernetes.v1.SandboxClaim.update_time:type_name -> google.protobuf.Timestamp
+	51, // 17: kubernetes.v1.CreateSandboxTemplateRequest.labels:type_name -> kubernetes.v1.CreateSandboxTemplateRequest.LabelsEntry
 	7,  // 18: kubernetes.v1.CreateSandboxTemplateResponse.template:type_name -> kubernetes.v1.SandboxTemplate
 	7,  // 19: kubernetes.v1.ListSandboxTemplatesResponse.templates:type_name -> kubernetes.v1.SandboxTemplate
 	7,  // 20: kubernetes.v1.GetSandboxTemplateResponse.template:type_name -> kubernetes.v1.SandboxTemplate
 	7,  // 21: kubernetes.v1.DeleteSandboxTemplateResponse.template:type_name -> kubernetes.v1.SandboxTemplate
 	2,  // 22: kubernetes.v1.CreateSandboxRequest.operating_mode:type_name -> kubernetes.v1.SandboxOperatingMode
-	48, // 23: kubernetes.v1.CreateSandboxRequest.labels:type_name -> kubernetes.v1.CreateSandboxRequest.LabelsEntry
+	52, // 23: kubernetes.v1.CreateSandboxRequest.labels:type_name -> kubernetes.v1.CreateSandboxRequest.LabelsEntry
 	6,  // 24: kubernetes.v1.CreateSandboxResponse.sandbox:type_name -> kubernetes.v1.Sandbox
 	6,  // 25: kubernetes.v1.ListSandboxesResponse.sandboxes:type_name -> kubernetes.v1.Sandbox
 	6,  // 26: kubernetes.v1.GetSandboxResponse.sandbox:type_name -> kubernetes.v1.Sandbox
-	50, // 27: kubernetes.v1.DeleteSandboxRequest.delete_policy:type_name -> kubernetes.v1.DeletePolicy
+	54, // 27: kubernetes.v1.DeleteSandboxRequest.delete_policy:type_name -> kubernetes.v1.DeletePolicy
 	6,  // 28: kubernetes.v1.DeleteSandboxResponse.sandbox:type_name -> kubernetes.v1.Sandbox
 	8,  // 29: kubernetes.v1.CreateWarmPoolResponse.warm_pool:type_name -> kubernetes.v1.WarmPool
 	8,  // 30: kubernetes.v1.ListWarmPoolsResponse.warm_pools:type_name -> kubernetes.v1.WarmPool
@@ -3584,7 +3812,7 @@ var file_kubernetes_v1_sandbox_proto_depIdxs = []int32{
 	9,  // 32: kubernetes.v1.CreateSandboxClaimResponse.claim:type_name -> kubernetes.v1.SandboxClaim
 	9,  // 33: kubernetes.v1.ListSandboxClaimsResponse.claims:type_name -> kubernetes.v1.SandboxClaim
 	9,  // 34: kubernetes.v1.DeleteSandboxClaimResponse.claim:type_name -> kubernetes.v1.SandboxClaim
-	42, // 35: kubernetes.v1.ListSandboxToolsResponse.tools:type_name -> kubernetes.v1.SandboxToolSchema
+	46, // 35: kubernetes.v1.ListSandboxToolsResponse.tools:type_name -> kubernetes.v1.SandboxToolSchema
 	11, // 36: kubernetes.v1.SandboxService.CreateSandboxTemplate:input_type -> kubernetes.v1.CreateSandboxTemplateRequest
 	13, // 37: kubernetes.v1.SandboxService.ListSandboxTemplates:input_type -> kubernetes.v1.ListSandboxTemplatesRequest
 	15, // 38: kubernetes.v1.SandboxService.GetSandboxTemplate:input_type -> kubernetes.v1.GetSandboxTemplateRequest
@@ -3597,30 +3825,34 @@ var file_kubernetes_v1_sandbox_proto_depIdxs = []int32{
 	29, // 45: kubernetes.v1.SandboxService.CreateWarmPool:input_type -> kubernetes.v1.CreateWarmPoolRequest
 	31, // 46: kubernetes.v1.SandboxService.ListWarmPools:input_type -> kubernetes.v1.ListWarmPoolsRequest
 	33, // 47: kubernetes.v1.SandboxService.DeleteWarmPool:input_type -> kubernetes.v1.DeleteWarmPoolRequest
-	35, // 48: kubernetes.v1.SandboxService.CreateSandboxClaim:input_type -> kubernetes.v1.CreateSandboxClaimRequest
-	37, // 49: kubernetes.v1.SandboxService.ListSandboxClaims:input_type -> kubernetes.v1.ListSandboxClaimsRequest
-	39, // 50: kubernetes.v1.SandboxService.DeleteSandboxClaim:input_type -> kubernetes.v1.DeleteSandboxClaimRequest
-	41, // 51: kubernetes.v1.SandboxService.ListSandboxTools:input_type -> kubernetes.v1.ListSandboxToolsRequest
-	44, // 52: kubernetes.v1.SandboxService.CallSandboxTool:input_type -> kubernetes.v1.CallSandboxToolRequest
-	12, // 53: kubernetes.v1.SandboxService.CreateSandboxTemplate:output_type -> kubernetes.v1.CreateSandboxTemplateResponse
-	14, // 54: kubernetes.v1.SandboxService.ListSandboxTemplates:output_type -> kubernetes.v1.ListSandboxTemplatesResponse
-	16, // 55: kubernetes.v1.SandboxService.GetSandboxTemplate:output_type -> kubernetes.v1.GetSandboxTemplateResponse
-	18, // 56: kubernetes.v1.SandboxService.DeleteSandboxTemplate:output_type -> kubernetes.v1.DeleteSandboxTemplateResponse
-	20, // 57: kubernetes.v1.SandboxService.CreateSandbox:output_type -> kubernetes.v1.CreateSandboxResponse
-	22, // 58: kubernetes.v1.SandboxService.ListSandboxes:output_type -> kubernetes.v1.ListSandboxesResponse
-	24, // 59: kubernetes.v1.SandboxService.GetSandbox:output_type -> kubernetes.v1.GetSandboxResponse
-	26, // 60: kubernetes.v1.SandboxService.DeleteSandbox:output_type -> kubernetes.v1.DeleteSandboxResponse
-	28, // 61: kubernetes.v1.SandboxService.SyncSandboxes:output_type -> kubernetes.v1.SyncSandboxesResponse
-	30, // 62: kubernetes.v1.SandboxService.CreateWarmPool:output_type -> kubernetes.v1.CreateWarmPoolResponse
-	32, // 63: kubernetes.v1.SandboxService.ListWarmPools:output_type -> kubernetes.v1.ListWarmPoolsResponse
-	34, // 64: kubernetes.v1.SandboxService.DeleteWarmPool:output_type -> kubernetes.v1.DeleteWarmPoolResponse
-	36, // 65: kubernetes.v1.SandboxService.CreateSandboxClaim:output_type -> kubernetes.v1.CreateSandboxClaimResponse
-	38, // 66: kubernetes.v1.SandboxService.ListSandboxClaims:output_type -> kubernetes.v1.ListSandboxClaimsResponse
-	40, // 67: kubernetes.v1.SandboxService.DeleteSandboxClaim:output_type -> kubernetes.v1.DeleteSandboxClaimResponse
-	43, // 68: kubernetes.v1.SandboxService.ListSandboxTools:output_type -> kubernetes.v1.ListSandboxToolsResponse
-	45, // 69: kubernetes.v1.SandboxService.CallSandboxTool:output_type -> kubernetes.v1.CallSandboxToolResponse
-	53, // [53:70] is the sub-list for method output_type
-	36, // [36:53] is the sub-list for method input_type
+	35, // 48: kubernetes.v1.SandboxService.SyncWarmPools:input_type -> kubernetes.v1.SyncWarmPoolsRequest
+	37, // 49: kubernetes.v1.SandboxService.CreateSandboxClaim:input_type -> kubernetes.v1.CreateSandboxClaimRequest
+	39, // 50: kubernetes.v1.SandboxService.ListSandboxClaims:input_type -> kubernetes.v1.ListSandboxClaimsRequest
+	41, // 51: kubernetes.v1.SandboxService.DeleteSandboxClaim:input_type -> kubernetes.v1.DeleteSandboxClaimRequest
+	43, // 52: kubernetes.v1.SandboxService.SyncSandboxClaims:input_type -> kubernetes.v1.SyncSandboxClaimsRequest
+	45, // 53: kubernetes.v1.SandboxService.ListSandboxTools:input_type -> kubernetes.v1.ListSandboxToolsRequest
+	48, // 54: kubernetes.v1.SandboxService.CallSandboxTool:input_type -> kubernetes.v1.CallSandboxToolRequest
+	12, // 55: kubernetes.v1.SandboxService.CreateSandboxTemplate:output_type -> kubernetes.v1.CreateSandboxTemplateResponse
+	14, // 56: kubernetes.v1.SandboxService.ListSandboxTemplates:output_type -> kubernetes.v1.ListSandboxTemplatesResponse
+	16, // 57: kubernetes.v1.SandboxService.GetSandboxTemplate:output_type -> kubernetes.v1.GetSandboxTemplateResponse
+	18, // 58: kubernetes.v1.SandboxService.DeleteSandboxTemplate:output_type -> kubernetes.v1.DeleteSandboxTemplateResponse
+	20, // 59: kubernetes.v1.SandboxService.CreateSandbox:output_type -> kubernetes.v1.CreateSandboxResponse
+	22, // 60: kubernetes.v1.SandboxService.ListSandboxes:output_type -> kubernetes.v1.ListSandboxesResponse
+	24, // 61: kubernetes.v1.SandboxService.GetSandbox:output_type -> kubernetes.v1.GetSandboxResponse
+	26, // 62: kubernetes.v1.SandboxService.DeleteSandbox:output_type -> kubernetes.v1.DeleteSandboxResponse
+	28, // 63: kubernetes.v1.SandboxService.SyncSandboxes:output_type -> kubernetes.v1.SyncSandboxesResponse
+	30, // 64: kubernetes.v1.SandboxService.CreateWarmPool:output_type -> kubernetes.v1.CreateWarmPoolResponse
+	32, // 65: kubernetes.v1.SandboxService.ListWarmPools:output_type -> kubernetes.v1.ListWarmPoolsResponse
+	34, // 66: kubernetes.v1.SandboxService.DeleteWarmPool:output_type -> kubernetes.v1.DeleteWarmPoolResponse
+	36, // 67: kubernetes.v1.SandboxService.SyncWarmPools:output_type -> kubernetes.v1.SyncWarmPoolsResponse
+	38, // 68: kubernetes.v1.SandboxService.CreateSandboxClaim:output_type -> kubernetes.v1.CreateSandboxClaimResponse
+	40, // 69: kubernetes.v1.SandboxService.ListSandboxClaims:output_type -> kubernetes.v1.ListSandboxClaimsResponse
+	42, // 70: kubernetes.v1.SandboxService.DeleteSandboxClaim:output_type -> kubernetes.v1.DeleteSandboxClaimResponse
+	44, // 71: kubernetes.v1.SandboxService.SyncSandboxClaims:output_type -> kubernetes.v1.SyncSandboxClaimsResponse
+	47, // 72: kubernetes.v1.SandboxService.ListSandboxTools:output_type -> kubernetes.v1.ListSandboxToolsResponse
+	49, // 73: kubernetes.v1.SandboxService.CallSandboxTool:output_type -> kubernetes.v1.CallSandboxToolResponse
+	55, // [55:74] is the sub-list for method output_type
+	36, // [36:55] is the sub-list for method input_type
 	36, // [36:36] is the sub-list for extension type_name
 	36, // [36:36] is the sub-list for extension extendee
 	0,  // [0:36] is the sub-list for field type_name
@@ -3638,7 +3870,7 @@ func file_kubernetes_v1_sandbox_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_kubernetes_v1_sandbox_proto_rawDesc), len(file_kubernetes_v1_sandbox_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   43,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

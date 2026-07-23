@@ -80,8 +80,9 @@ func wireKubernetesRuntime(
 	if sp, ok := resources.KubernetesClientPool.(biz.SandboxProvider); ok {
 		sandboxProvider = sp
 	}
+	var sandboxUC *biz.SandboxUsecase
 	if sandboxProvider != nil {
-		sandboxUC := biz.NewSandboxUsecase(
+		sandboxUC = biz.NewSandboxUsecase(
 			sandboxRepo,
 			namespaceRepo,
 			clusterRepo,
@@ -136,6 +137,25 @@ func wireKubernetesRuntime(
 		}); err != nil {
 			_ = closeLocker()
 			return nil, fmt.Errorf("register visibility reconciler: %w", err)
+		}
+
+		// Sandbox sync reconciler — periodically converges sandbox/warm-pool/claim
+		// runtime state for all READY namespaces (design §11). Only registered when
+		// the sandbox usecase is wired (K8s enabled + provider available).
+		if sandboxUC != nil {
+			sandboxReconciler := biz.NewSandboxSyncReconciler(sandboxUC, namespaceRepo, logger, 100)
+			if err := scheduler.Register(taskx.Job{
+				Name:       "k8s-sandbox-sync-reconciler",
+				Schedule:   taskx.Every(interval),
+				Handler:    sandboxReconciler.Run,
+				RunOnStart: true,
+				Timeout:    2 * time.Minute,
+				Retry:      retry,
+				Lease:      lease,
+			}); err != nil {
+				_ = closeLocker()
+				return nil, fmt.Errorf("register sandbox sync reconciler: %w", err)
+			}
 		}
 
 		cleanupWorker, err := data.NewCredentialCleanupWorker(

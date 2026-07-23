@@ -142,6 +142,22 @@ func (s *SandboxService) SyncSandboxes(ctx context.Context, req *kubernetesv1.Sy
 	return &kubernetesv1.SyncSandboxesResponse{Imported: int32(imported), Updated: int32(updated), Removed: int32(removed)}, nil
 }
 
+func (s *SandboxService) SyncWarmPools(ctx context.Context, req *kubernetesv1.SyncWarmPoolsRequest) (*kubernetesv1.SyncWarmPoolsResponse, error) {
+	imported, updated, removed, err := s.uc.SyncWarmPools(ctx, principalFromContext(ctx), req.GetNamespaceId())
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesv1.SyncWarmPoolsResponse{Imported: int32(imported), Updated: int32(updated), Removed: int32(removed)}, nil
+}
+
+func (s *SandboxService) SyncSandboxClaims(ctx context.Context, req *kubernetesv1.SyncSandboxClaimsRequest) (*kubernetesv1.SyncSandboxClaimsResponse, error) {
+	imported, updated, removed, err := s.uc.SyncSandboxClaims(ctx, principalFromContext(ctx), req.GetNamespaceId())
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesv1.SyncSandboxClaimsResponse{Imported: int32(imported), Updated: int32(updated), Removed: int32(removed)}, nil
+}
+
 // ---- WarmPool CRUD ----
 
 func (s *SandboxService) CreateWarmPool(ctx context.Context, req *kubernetesv1.CreateWarmPoolRequest) (*kubernetesv1.CreateWarmPoolResponse, error) {

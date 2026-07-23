@@ -100,6 +100,13 @@ func SandboxServiceGatewayManifest() gatewayx.Manifest {
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
+				ID:       "sandbox.sync.warm.pools",
+				Method:   "POST",
+				Path:     "/v1/namespaces/{namespace_id}/warm-pools:sync",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/SyncWarmPools"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
 				ID:       "sandbox.create.sandbox.claim",
 				Method:   "POST",
 				Path:     "/v1/namespaces/{namespace_id}/sandbox-claims",
@@ -118,6 +125,13 @@ func SandboxServiceGatewayManifest() gatewayx.Manifest {
 				Method:   "DELETE",
 				Path:     "/v1/sandbox-claims/{id}",
 				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/DeleteSandboxClaim"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "sandbox.sync.sandbox.claims",
+				Method:   "POST",
+				Path:     "/v1/namespaces/{namespace_id}/sandbox-claims:sync",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/SyncSandboxClaims"},
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
@@ -306,6 +320,20 @@ func SandboxServiceGatewayBindDeleteWarmPool(req gatewayx.DispatchRequest, match
 	return out, nil
 }
 
+func SandboxServiceGatewayBindSyncWarmPools(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*SyncWarmPoolsRequest, error) {
+	out := &SyncWarmPoolsRequest{}
+	if v, ok := req.Body.(*SyncWarmPoolsRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(SyncWarmPoolsRequest); ok {
+		out = &v
+	}
+	if v := match.Params["namespace_id"]; v != "" {
+		out.NamespaceId = v
+	}
+	return out, nil
+}
+
 func SandboxServiceGatewayBindCreateSandboxClaim(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*CreateSandboxClaimRequest, error) {
 	out := &CreateSandboxClaimRequest{}
 	if v, ok := req.Body.(*CreateSandboxClaimRequest); ok && v != nil {
@@ -344,6 +372,20 @@ func SandboxServiceGatewayBindDeleteSandboxClaim(req gatewayx.DispatchRequest, m
 	}
 	if v := match.Params["id"]; v != "" {
 		out.Id = v
+	}
+	return out, nil
+}
+
+func SandboxServiceGatewayBindSyncSandboxClaims(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*SyncSandboxClaimsRequest, error) {
+	out := &SyncSandboxClaimsRequest{}
+	if v, ok := req.Body.(*SyncSandboxClaimsRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(SyncSandboxClaimsRequest); ok {
+		out = &v
+	}
+	if v := match.Params["namespace_id"]; v != "" {
+		out.NamespaceId = v
 	}
 	return out, nil
 }
@@ -413,6 +455,9 @@ func RegisterSandboxServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, c
 	if err := registry.Register("/kubernetes.v1.SandboxService/DeleteWarmPool", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindDeleteWarmPool, client.DeleteWarmPool)); err != nil {
 		return err
 	}
+	if err := registry.Register("/kubernetes.v1.SandboxService/SyncWarmPools", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindSyncWarmPools, client.SyncWarmPools)); err != nil {
+		return err
+	}
 	if err := registry.Register("/kubernetes.v1.SandboxService/CreateSandboxClaim", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindCreateSandboxClaim, client.CreateSandboxClaim)); err != nil {
 		return err
 	}
@@ -420,6 +465,9 @@ func RegisterSandboxServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, c
 		return err
 	}
 	if err := registry.Register("/kubernetes.v1.SandboxService/DeleteSandboxClaim", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindDeleteSandboxClaim, client.DeleteSandboxClaim)); err != nil {
+		return err
+	}
+	if err := registry.Register("/kubernetes.v1.SandboxService/SyncSandboxClaims", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindSyncSandboxClaims, client.SyncSandboxClaims)); err != nil {
 		return err
 	}
 	if err := registry.Register("/kubernetes.v1.SandboxService/ListSandboxTools", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindListSandboxTools, client.ListSandboxTools)); err != nil {

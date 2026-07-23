@@ -588,6 +588,25 @@ func (r *sandboxRepo) ListWarmPoolsByNamespace(ctx context.Context, namespaceID 
 	return out, nil
 }
 
+func (r *sandboxRepo) ListWarmPoolsByCluster(ctx context.Context, clusterID string) ([]*biz.WarmPool, error) {
+	db := r.db(ctx)
+	if db == nil {
+		return nil, errors.New("sandbox repo: database not configured")
+	}
+	var rows []k8sSandboxWarmPoolModel
+	if err := db.WithContext(ctx).
+		Where("cluster_id = ? AND deleted_at IS NULL", clusterID).
+		Order("name ASC").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("sandbox repo: list warm pools by cluster: %w", err)
+	}
+	out := make([]*biz.WarmPool, len(rows))
+	for i, row := range rows {
+		out[i] = warmPoolModelToBiz(row)
+	}
+	return out, nil
+}
+
 // DeleteWarmPool soft-deletes guarded by expected_revision (design §11).
 func (r *sandboxRepo) DeleteWarmPool(ctx context.Context, id string, expectedRevision int64) (*biz.WarmPool, error) {
 	db := r.db(ctx)
@@ -646,6 +665,48 @@ func (r *sandboxRepo) UpdateWarmPoolStatus(ctx context.Context, id, status strin
 			Updates(updates)
 		if res.Error != nil {
 			return fmt.Errorf("sandbox repo: update warm pool status %s: %w", id, res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return biz.ErrWarmPoolNotFound
+		}
+		var row k8sSandboxWarmPoolModel
+		if err := tx.Where("id = ?", id).First(&row).Error; err != nil {
+			return err
+		}
+		updated = warmPoolModelToBiz(row)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+// UpdateWarmPoolSync stamps reconciler-observed fields (kubernetes_uid,
+// resource_version, ready_replicas, health_message, last_sync_at, labels, …)
+// + revision++ without changing status. RowsAffected==0 → ErrWarmPoolNotFound.
+func (r *sandboxRepo) UpdateWarmPoolSync(ctx context.Context, id string, fields map[string]any) (*biz.WarmPool, error) {
+	db := r.db(ctx)
+	if db == nil {
+		return nil, errors.New("sandbox repo: database not configured")
+	}
+	if len(fields) == 0 {
+		return r.GetWarmPool(ctx, id)
+	}
+	updates := map[string]any{
+		"updated_at": r.now(),
+		"revision":   gorm.Expr("revision + 1"),
+	}
+	if err := applySandboxFieldUpdates(updates, fields); err != nil {
+		return nil, err
+	}
+	var updated *biz.WarmPool
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&k8sSandboxWarmPoolModel{}).
+			Where("id = ? AND deleted_at IS NULL", id).
+			Updates(updates)
+		if res.Error != nil {
+			return fmt.Errorf("sandbox repo: update warm pool sync %s: %w", id, res.Error)
 		}
 		if res.RowsAffected == 0 {
 			return biz.ErrWarmPoolNotFound
@@ -726,6 +787,25 @@ func (r *sandboxRepo) ListSandboxClaimsByNamespace(ctx context.Context, namespac
 	return out, nil
 }
 
+func (r *sandboxRepo) ListSandboxClaimsByCluster(ctx context.Context, clusterID string) ([]*biz.SandboxClaim, error) {
+	db := r.db(ctx)
+	if db == nil {
+		return nil, errors.New("sandbox repo: database not configured")
+	}
+	var rows []k8sSandboxClaimModel
+	if err := db.WithContext(ctx).
+		Where("cluster_id = ? AND deleted_at IS NULL", clusterID).
+		Order("name ASC").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("sandbox repo: list sandbox claims by cluster: %w", err)
+	}
+	out := make([]*biz.SandboxClaim, len(rows))
+	for i, row := range rows {
+		out[i] = sandboxClaimModelToBiz(row)
+	}
+	return out, nil
+}
+
 // DeleteSandboxClaim soft-deletes guarded by expected_revision (design §11).
 func (r *sandboxRepo) DeleteSandboxClaim(ctx context.Context, id string, expectedRevision int64) (*biz.SandboxClaim, error) {
 	db := r.db(ctx)
@@ -784,6 +864,49 @@ func (r *sandboxRepo) UpdateSandboxClaimStatus(ctx context.Context, id, status s
 			Updates(updates)
 		if res.Error != nil {
 			return fmt.Errorf("sandbox repo: update sandbox claim status %s: %w", id, res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return biz.ErrSandboxClaimNotFound
+		}
+		var row k8sSandboxClaimModel
+		if err := tx.Where("id = ?", id).First(&row).Error; err != nil {
+			return err
+		}
+		updated = sandboxClaimModelToBiz(row)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+// UpdateSandboxClaimSync stamps reconciler-observed fields (kubernetes_uid,
+// resource_version, sandbox_kube_name, sandbox_pod_ip, sandbox_id, status,
+// last_sync_at, …) + revision++ without the status-machine guard.
+// RowsAffected==0 → ErrSandboxClaimNotFound.
+func (r *sandboxRepo) UpdateSandboxClaimSync(ctx context.Context, id string, fields map[string]any) (*biz.SandboxClaim, error) {
+	db := r.db(ctx)
+	if db == nil {
+		return nil, errors.New("sandbox repo: database not configured")
+	}
+	if len(fields) == 0 {
+		return r.GetSandboxClaim(ctx, id)
+	}
+	updates := map[string]any{
+		"updated_at": r.now(),
+		"revision":   gorm.Expr("revision + 1"),
+	}
+	if err := applySandboxFieldUpdates(updates, fields); err != nil {
+		return nil, err
+	}
+	var updated *biz.SandboxClaim
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&k8sSandboxClaimModel{}).
+			Where("id = ? AND deleted_at IS NULL", id).
+			Updates(updates)
+		if res.Error != nil {
+			return fmt.Errorf("sandbox repo: update sandbox claim sync %s: %w", id, res.Error)
 		}
 		if res.RowsAffected == 0 {
 			return biz.ErrSandboxClaimNotFound

@@ -505,8 +505,23 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 		return created, nil
 	}
 
-	// Step 8: stamp READY.
-	ready, err := uc.sandboxes.UpdateSandboxStatus(ctx, created.ID, SandboxLifecycleReady, "", nil)
+	// Step 8: best-effort runtime status backfill, then stamp READY.
+	// SandboxRuntimeStatus carries PodName/PodIP/NodeName/Image (no UID/
+	// ResourceVersion), so we backfill what is available; the periodic sync
+	// reconciler fills in the rest. The K8s namespace name lives on the Hub
+	// namespace row (ns.KubeName), not on the Sandbox row.
+	fields := map[string]any{}
+	if status, gerr := uc.provider.GetSandboxStatus(ctx, created.ClusterID, locator, ns.KubeName, created.KubernetesName); gerr == nil {
+		fields["pod_name"] = status.PodName
+		fields["pod_ip"] = status.PodIP
+		fields["node_name"] = status.NodeName
+		fields["image"] = status.Image
+	} else {
+		uc.log.WithContext(ctx).Debug("sandbox status backfill deferred; will sync later",
+			logx.String("sandbox_id", created.ID), logx.Err(gerr))
+	}
+	fields["last_sync_at"] = time.Now().UTC()
+	ready, err := uc.sandboxes.UpdateSandboxStatus(ctx, created.ID, SandboxLifecycleReady, "", fields)
 	if err != nil {
 		return created, nil
 	}
@@ -836,6 +851,28 @@ func (uc *SandboxUsecase) CreateWarmPool(ctx context.Context, principal authn.Pr
 		return created, nil
 	}
 	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	// Project the template into the target namespace so the WarmPool's
+	// sandboxTemplateRef can resolve it (the agent-sandbox operator requires
+	// the template to be in the same namespace as the WarmPool). This is best-
+	// effort: a failure is logged, not returned, so ApplyWarmPool still proceeds
+	// (the operator may already have the template, or the apply may no-op on an
+	// existing template).
+	templateSpec := SandboxTemplateApplySpec{
+		Name:             tmpl.KubernetesName,
+		Namespace:        ns.KubeName,
+		Image:            tmpl.Image,
+		ContainerCommand: parseContainerCommand(tmpl.ContainerCommand),
+		Labels:           tmpl.Labels,
+	}
+	if err := uc.provider.ApplySandboxTemplate(ctx, created.ClusterID, locator, templateSpec); err != nil {
+		uc.log.WithContext(ctx).Warn("failed to project template to target namespace; warm pool may fail",
+			logx.String("warm_pool_id", created.ID),
+			logx.String("namespace", ns.KubeName),
+			logx.String("template", tmpl.KubernetesName),
+			logx.Err(err))
+		// Don't fail — the operator might already have the template, or the
+		// apply may succeed with an existing template. Let ApplyWarmPool proceed.
+	}
 	spec := WarmPoolApplySpec{
 		Name:        created.KubernetesName,
 		Namespace:   ns.KubeName,
@@ -928,6 +965,168 @@ func (uc *SandboxUsecase) DeleteWarmPool(ctx context.Context, principal authn.Pr
 	}
 
 	return uc.sandboxes.DeleteWarmPool(ctx, id, expectedRevision)
+}
+
+// SyncWarmPools reconciles DB rows with the remote SandboxWarmPool CRDs in a
+// namespace (design §11 sync), mirroring SyncSandboxes: authz `operate` on the
+// namespace, list remote warm pools from the cluster, diff against local rows,
+// then update observed runtime state (flipping status when readiness changes),
+// import new ones, and remove (soft-delete) local ones no longer present
+// remotely. Returns counts. WarmPools are addressed through the parent
+// namespace permission and project no SpiceDB object, so removal is a DB
+// soft-delete only (no revocation). Imported warm pools inherit the namespace
+// owner; their template ref is resolved to a Hub template ID via a cluster-
+// scoped template index, and imports whose ref cannot be resolved are skipped
+// (best-effort) rather than creating an orphaned row.
+func (uc *SandboxUsecase) SyncWarmPools(ctx context.Context, principal authn.Principal, namespaceID string) (imported, updated, removed int, err error) {
+	subject, err := canonicalSubject(principal)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
+		Subject:    subject,
+		Resource:   namespaceResource(namespaceID),
+		Permission: "operate",
+		OrgID:      principal.OrgID,
+	})
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	if !dec.Allowed {
+		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
+	}
+
+	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	cluster, err := uc.clusters.GetCluster(ctx, ns.ClusterID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	remote, err := uc.provider.ListWarmPools(ctx, ns.ClusterID, locator, ns.KubeName)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	local, err := uc.sandboxes.ListWarmPoolsByNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	localByName := make(map[string]*WarmPool, len(local))
+	for _, w := range local {
+		localByName[w.KubernetesName] = w
+	}
+	remoteByName := make(map[string]bool, len(remote))
+	now := time.Now().UTC()
+
+	// Build a template K8s-name → Hub ID index so imported warm pools can
+	// resolve their sandboxTemplateRef to a Hub template row. A failure to load
+	// templates is non-fatal: imports are simply skipped with a warning.
+	templates, _ := uc.sandboxes.ListSandboxTemplatesByCluster(ctx, ns.ClusterID)
+	templateByName := make(map[string]string, len(templates))
+	for _, t := range templates {
+		templateByName[t.KubernetesName] = t.ID
+	}
+
+	for _, r := range remote {
+		remoteByName[r.Name] = true
+		if existing, ok := localByName[r.Name]; ok {
+			// Update observed runtime state.
+			fields := map[string]any{
+				"ready_replicas":   r.ReadyReplicas,
+				"kubernetes_uid":   r.UID,
+				"resource_version": r.ResourceVersion,
+				"last_sync_at":     now,
+			}
+			if _, e := uc.sandboxes.UpdateWarmPoolSync(ctx, existing.ID, fields); e != nil {
+				uc.log.WithContext(ctx).Warn("sync: warm pool update failed",
+					logx.String("warm_pool_id", existing.ID), logx.String("kube_name", r.Name), logx.Err(e))
+				continue
+			}
+			// Flip status when readiness changed: all desired replicas ready →
+			// READY; some but not all → DEGRADED; none ready → leave unchanged.
+			var newStatus string
+			switch {
+			case r.ReadyReplicas == r.Replicas:
+				newStatus = WarmPoolStatusReady
+			case r.ReadyReplicas > 0:
+				newStatus = WarmPoolStatusDegraded
+			default:
+				newStatus = "" // not enough ready replicas; leave status unchanged
+			}
+			if newStatus != "" && newStatus != existing.Status {
+				if _, se := uc.sandboxes.UpdateWarmPoolStatus(ctx, existing.ID, newStatus, nil); se != nil {
+					uc.log.WithContext(ctx).Warn("sync: warm pool status flip failed",
+						logx.String("warm_pool_id", existing.ID), logx.String("kube_name", r.Name), logx.Err(se))
+				}
+			}
+			updated++
+			continue
+		}
+		// Import: a remote warm pool with no matching Hub row. Resolve the
+		// template ref to a Hub template ID; skip (best-effort) if unresolved so
+		// we never insert a row with a dangling template_id.
+		templateID, resolved := templateByName[r.TemplateRef]
+		if !resolved {
+			uc.log.WithContext(ctx).Warn("sync: warm pool import skipped; template ref unresolved",
+				logx.String("kube_name", r.Name), logx.String("template_ref", r.TemplateRef))
+			continue
+		}
+		impStatus := WarmPoolStatusCreating
+		switch {
+		case r.ReadyReplicas == r.Replicas:
+			impStatus = WarmPoolStatusReady
+		case r.ReadyReplicas > 0:
+			impStatus = WarmPoolStatusDegraded
+		}
+		imp := &WarmPool{
+			ID:              uuid.NewString(),
+			NamespaceID:     namespaceID,
+			ClusterID:       ns.ClusterID,
+			OrgID:           cluster.OrgID,
+			Name:            r.Name,
+			KubernetesName:  r.Name,
+			KubernetesUID:   r.UID,
+			ResourceVersion: r.ResourceVersion,
+			TemplateID:      templateID,
+			Replicas:        r.Replicas,
+			ReadyReplicas:   r.ReadyReplicas,
+			Status:          impStatus,
+			OwnerType:       ns.OwnerType,
+			OwnerID:         ns.OwnerID,
+			CreatedByType:   ns.OwnerType,
+			CreatedBy:       ns.OwnerID,
+			Revision:        1,
+			LastSyncAt:      now,
+		}
+		if _, cerr := uc.sandboxes.CreateWarmPool(ctx, imp); cerr != nil {
+			uc.log.WithContext(ctx).Warn("sync: warm pool import create failed",
+				logx.String("kube_name", r.Name), logx.Err(cerr))
+			continue
+		}
+		imported++
+	}
+
+	// Remove local warm pools no longer present remotely. Skip rows that are
+	// mid-flight (CREATING) or already DELETED so we never clobber an in-progress
+	// create or a finalized delete.
+	for name, w := range localByName {
+		if remoteByName[name] {
+			continue
+		}
+		if w.Status == WarmPoolStatusCreating || w.Status == WarmPoolStatusDeleted {
+			continue
+		}
+		if _, derr := uc.sandboxes.DeleteWarmPool(ctx, w.ID, w.Revision); derr != nil {
+			uc.log.WithContext(ctx).Warn("sync: warm pool remove failed",
+				logx.String("warm_pool_id", w.ID), logx.String("kube_name", name), logx.Err(derr))
+			continue
+		}
+		removed++
+	}
+	return imported, updated, removed, nil
 }
 
 // ===================== SandboxClaim operations =====================
@@ -1105,6 +1304,198 @@ func (uc *SandboxUsecase) DeleteSandboxClaim(ctx context.Context, principal auth
 	}
 
 	return uc.sandboxes.DeleteSandboxClaim(ctx, id, expectedRevision)
+}
+
+// SyncSandboxClaims reconciles DB rows with the remote SandboxClaim CRDs in a
+// namespace (design §11 sync), mirroring SyncSandboxes/SyncWarmPools: authz
+// `operate` on the namespace, list remote claims from the cluster, diff against
+// local rows, then update observed runtime state (flipping status when
+// readiness changes), import new ones, and remove (soft-delete) local ones no
+// longer present remotely. Returns counts. SandboxClaims are addressed through
+// the parent namespace permission and project no SpiceDB object, so removal is
+// a DB soft-delete only (no revocation). Imported claims inherit the namespace
+// owner; their warm pool ref is resolved to a Hub warm pool ID via a
+// namespace-scoped warm pool index, and imports whose ref cannot be resolved
+// are skipped (best-effort) rather than creating an orphaned row.
+func (uc *SandboxUsecase) SyncSandboxClaims(ctx context.Context, principal authn.Principal, namespaceID string) (imported, updated, removed int, err error) {
+	subject, err := canonicalSubject(principal)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
+		Subject:    subject,
+		Resource:   namespaceResource(namespaceID),
+		Permission: "operate",
+		OrgID:      principal.OrgID,
+	})
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	if !dec.Allowed {
+		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
+	}
+
+	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	cluster, err := uc.clusters.GetCluster(ctx, ns.ClusterID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	remote, err := uc.provider.ListSandboxClaims(ctx, ns.ClusterID, locator, ns.KubeName)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	local, err := uc.sandboxes.ListSandboxClaimsByNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	localByName := make(map[string]*SandboxClaim, len(local))
+	for _, c := range local {
+		localByName[c.KubernetesName] = c
+	}
+	remoteByName := make(map[string]bool, len(remote))
+	now := time.Now().UTC()
+
+	// Build a warm-pool K8s-name → Hub ID index so imported claims can resolve
+	// their warmPoolRef to a Hub warm pool row. A failure to load pools is
+	// non-fatal: imports are simply skipped with a warning.
+	pools, _ := uc.sandboxes.ListWarmPoolsByNamespace(ctx, namespaceID)
+	poolByName := make(map[string]string, len(pools))
+	for _, p := range pools {
+		poolByName[p.KubernetesName] = p.ID
+	}
+
+	for _, r := range remote {
+		remoteByName[r.Name] = true
+		if existing, ok := localByName[r.Name]; ok {
+			// Update observed runtime state.
+			fields := map[string]any{
+				"sandbox_kube_name": r.SandboxName,
+				"sandbox_pod_ip":    r.SandboxPodIP,
+				"kubernetes_uid":    r.UID,
+				"resource_version":  r.ResourceVersion,
+				"last_sync_at":      now,
+			}
+			if _, e := uc.sandboxes.UpdateSandboxClaimSync(ctx, existing.ID, fields); e != nil {
+				uc.log.WithContext(ctx).Warn("sync: sandbox claim update failed",
+					logx.String("claim_id", existing.ID), logx.String("kube_name", r.Name), logx.Err(e))
+				continue
+			}
+			// Flip status when readiness changed: Ready → READY, else PENDING.
+			newStatus := SandboxClaimStatusPending
+			if r.Ready {
+				newStatus = SandboxClaimStatusReady
+			}
+			if newStatus != existing.Status {
+				if _, se := uc.sandboxes.UpdateSandboxClaimStatus(ctx, existing.ID, newStatus, nil); se != nil {
+					uc.log.WithContext(ctx).Warn("sync: sandbox claim status flip failed",
+						logx.String("claim_id", existing.ID), logx.String("kube_name", r.Name), logx.Err(se))
+				}
+			}
+			updated++
+			continue
+		}
+		// Import: a remote claim with no matching Hub row. Resolve the warm pool
+		// ref to a Hub warm pool ID; skip (best-effort) if unresolved so we never
+		// insert a row with a dangling warm_pool_id.
+		warmPoolID, resolved := poolByName[r.WarmPoolRef]
+		if !resolved {
+			uc.log.WithContext(ctx).Warn("sync: sandbox claim import skipped; warm pool ref unresolved",
+				logx.String("kube_name", r.Name), logx.String("warm_pool_ref", r.WarmPoolRef))
+			continue
+		}
+		impStatus := SandboxClaimStatusPending
+		if r.Ready {
+			impStatus = SandboxClaimStatusReady
+		}
+		imp := &SandboxClaim{
+			ID:              uuid.NewString(),
+			NamespaceID:     namespaceID,
+			ClusterID:       ns.ClusterID,
+			OrgID:           cluster.OrgID,
+			Name:            r.Name,
+			KubernetesName:  r.Name,
+			KubernetesUID:   r.UID,
+			ResourceVersion: r.ResourceVersion,
+			WarmPoolID:      warmPoolID,
+			SandboxKubeName: r.SandboxName,
+			SandboxPodIP:    r.SandboxPodIP,
+			Status:          impStatus,
+			OwnerType:       ns.OwnerType,
+			OwnerID:         ns.OwnerID,
+			CreatedByType:   ns.OwnerType,
+			CreatedBy:       ns.OwnerID,
+			Revision:        1,
+			LastSyncAt:      now,
+		}
+		if _, cerr := uc.sandboxes.CreateSandboxClaim(ctx, imp); cerr != nil {
+			uc.log.WithContext(ctx).Warn("sync: sandbox claim import create failed",
+				logx.String("kube_name", r.Name), logx.Err(cerr))
+			continue
+		}
+		imported++
+	}
+
+	// Remove local claims no longer present remotely. Skip rows that are
+	// mid-flight (PENDING create) or already DELETED so we never clobber an
+	// in-progress create or a finalized delete.
+	for name, c := range localByName {
+		if remoteByName[name] {
+			continue
+		}
+		if c.Status == SandboxClaimStatusPending || c.Status == SandboxClaimStatusDeleted {
+			continue
+		}
+		if _, derr := uc.sandboxes.DeleteSandboxClaim(ctx, c.ID, c.Revision); derr != nil {
+			uc.log.WithContext(ctx).Warn("sync: sandbox claim remove failed",
+				logx.String("claim_id", c.ID), logx.String("kube_name", name), logx.Err(derr))
+			continue
+		}
+		removed++
+	}
+	return imported, updated, removed, nil
+}
+
+// ReconcileNamespaceSync is the authz-free internal sync entry point used by
+// the SandboxSyncReconciler. It runs SyncSandboxes + SyncWarmPools +
+// SyncSandboxClaims against the given namespace without a principal authz
+// check (the reconciler is a trusted internal worker). Returns aggregated
+// counts and the first error encountered (subsequent syncs still run).
+func (uc *SandboxUsecase) ReconcileNamespaceSync(ctx context.Context, namespaceID string) (sbImp, sbUpd, sbRem, wpImp, wpUpd, wpRem, clImp, clUpd, clRem int, err error) {
+	// Internal principal with system identity — authz is skipped by the
+	// reconciler, but the sync methods still call canonicalSubject. We use a
+	// service_account principal so WriteRelationships (import path) can project
+	// ownership without surprising SpiceDB subject shape.
+	sysPrincipal := authn.Principal{SubjectType: "service_account", SubjectID: "system:sandbox-reconciler"}
+
+	var firstErr error
+	sbImp, sbUpd, sbRem, e1 := uc.SyncSandboxes(ctx, sysPrincipal, namespaceID)
+	if e1 != nil {
+		firstErr = e1
+		uc.log.WithContext(ctx).Warn("reconciler: sync sandboxes failed",
+			logx.String("namespace_id", namespaceID), logx.Err(e1))
+	}
+	wpImp, wpUpd, wpRem, e2 := uc.SyncWarmPools(ctx, sysPrincipal, namespaceID)
+	if e2 != nil && firstErr == nil {
+		firstErr = e2
+	}
+	if e2 != nil {
+		uc.log.WithContext(ctx).Warn("reconciler: sync warm pools failed",
+			logx.String("namespace_id", namespaceID), logx.Err(e2))
+	}
+	clImp, clUpd, clRem, e3 := uc.SyncSandboxClaims(ctx, sysPrincipal, namespaceID)
+	if e3 != nil && firstErr == nil {
+		firstErr = e3
+	}
+	if e3 != nil {
+		uc.log.WithContext(ctx).Warn("reconciler: sync sandbox claims failed",
+			logx.String("namespace_id", namespaceID), logx.Err(e3))
+	}
+	return sbImp, sbUpd, sbRem, wpImp, wpUpd, wpRem, clImp, clUpd, clRem, firstErr
 }
 
 // ===================== Tool operations =====================

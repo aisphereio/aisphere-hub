@@ -412,6 +412,19 @@ type WarmPoolSyncResult struct {
 	ReadyReplicas   int32
 }
 
+// SandboxClaimSyncResult is returned by ListSandboxClaims for each remote
+// SandboxClaim CRD.
+type SandboxClaimSyncResult struct {
+	Name              string
+	Namespace         string
+	UID               string
+	ResourceVersion   string
+	WarmPoolRef       string
+	SandboxName       string // resolved sandbox kube name (empty until Ready)
+	SandboxPodIP      string
+	Ready             bool
+}
+
 // SandboxClaimApplySpec is the biz-layer view of a SandboxClaim CRD.
 type SandboxClaimApplySpec struct {
 	Name        string // K8s SandboxClaim name
@@ -553,6 +566,7 @@ type SandboxProvider interface {
 	// SandboxClaim operations.
 	ApplySandboxClaim(ctx context.Context, clusterID string, locator CredentialLocator, spec SandboxClaimApplySpec) error
 	DeleteSandboxClaim(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) error
+	ListSandboxClaims(ctx context.Context, clusterID string, locator CredentialLocator, namespace string) ([]SandboxClaimSyncResult, error)
 }
 
 // ClusterRepository is the persistence interface for k8s_clusters (design §5.3).
@@ -646,6 +660,10 @@ type NamespaceRepository interface {
 	// visibility_sync_status for the reconciler (design §7.5.5).
 	ListNamespacesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*Namespace, error)
 
+	// ListReadyNamespaces returns namespaces with lifecycle=READY (non-deleted)
+	// for the SandboxSyncReconciler to reconcile sandbox/warm-pool/claim state.
+	ListReadyNamespaces(ctx context.Context, limit int) ([]*Namespace, error)
+
 	// ListSharesBySyncStatus returns shares with a given sync_status for the
 	// reconciler.
 	ListSharesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*NamespaceShare, error)
@@ -677,13 +695,17 @@ type SandboxRepository interface {
 	CreateWarmPool(ctx context.Context, w *WarmPool) (*WarmPool, error)
 	GetWarmPool(ctx context.Context, id string) (*WarmPool, error)
 	ListWarmPoolsByNamespace(ctx context.Context, namespaceID string) ([]*WarmPool, error)
+	ListWarmPoolsByCluster(ctx context.Context, clusterID string) ([]*WarmPool, error)
 	DeleteWarmPool(ctx context.Context, id string, expectedRevision int64) (*WarmPool, error)
 	UpdateWarmPoolStatus(ctx context.Context, id string, status string, fields map[string]any) (*WarmPool, error)
+	UpdateWarmPoolSync(ctx context.Context, id string, fields map[string]any) (*WarmPool, error)
 
 	// SandboxClaim CRUD
 	CreateSandboxClaim(ctx context.Context, c *SandboxClaim) (*SandboxClaim, error)
 	GetSandboxClaim(ctx context.Context, id string) (*SandboxClaim, error)
 	ListSandboxClaimsByNamespace(ctx context.Context, namespaceID string) ([]*SandboxClaim, error)
+	ListSandboxClaimsByCluster(ctx context.Context, clusterID string) ([]*SandboxClaim, error)
 	DeleteSandboxClaim(ctx context.Context, id string, expectedRevision int64) (*SandboxClaim, error)
 	UpdateSandboxClaimStatus(ctx context.Context, id string, status string, fields map[string]any) (*SandboxClaim, error)
+	UpdateSandboxClaimSync(ctx context.Context, id string, fields map[string]any) (*SandboxClaim, error)
 }

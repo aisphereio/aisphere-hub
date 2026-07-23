@@ -374,6 +374,50 @@ func (p *k8sClientPool) DeleteSandboxClaim(ctx context.Context, clusterID string
 	return client.Delete(ctx, obj)
 }
 
+func (p *k8sClientPool) ListSandboxClaims(ctx context.Context, clusterID string, locator biz.CredentialLocator, namespace string) ([]biz.SandboxClaimSyncResult, error) {
+	client, err := p.getOrBuild(ctx, clusterID, locator, kubernetesx.Credential{})
+	if err != nil {
+		return nil, err
+	}
+	dyn := client.Dynamic()
+	if dyn == nil {
+		return nil, errors.New("dynamic client not available")
+	}
+	list, err := dyn.Resource(sandboxClaimGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list sandbox claims: %w", err)
+	}
+	out := make([]biz.SandboxClaimSyncResult, 0, len(list.Items))
+	for _, item := range list.Items {
+		// spec.warmPoolRef.name → WarmPoolRef.
+		warmPoolRef := getNestedString(item.Object, "spec", "warmPoolRef", "name")
+		// status.sandbox.name → SandboxName (empty until the operator resolves
+		// the claim to a concrete Sandbox).
+		sandboxName := getNestedString(item.Object, "status", "sandbox", "name")
+		// status.sandbox.podIPs is a list; take the first element.
+		var sandboxPodIP string
+		if ips, found, _ := unstructured.NestedStringSlice(item.Object, "status", "sandbox", "podIPs"); found && len(ips) > 0 {
+			sandboxPodIP = ips[0]
+		}
+		// Ready reflects the Ready condition with status "True". sandboxReadyReason
+		// returns the condition's reason when present (e.g. "DependenciesReady")
+		// or "Ready" when the status is True without an explicit reason.
+		reason := sandboxReadyReason(item.Object)
+		ready := reason == "DependenciesReady" || reason == "Ready"
+		out = append(out, biz.SandboxClaimSyncResult{
+			Name:            item.GetName(),
+			Namespace:       item.GetNamespace(),
+			UID:             string(item.GetUID()),
+			ResourceVersion: item.GetResourceVersion(),
+			WarmPoolRef:     warmPoolRef,
+			SandboxName:     sandboxName,
+			SandboxPodIP:    sandboxPodIP,
+			Ready:           ready,
+		})
+	}
+	return out, nil
+}
+
 // ---- Helpers ----
 
 // sandboxReadyReason extracts the Ready condition reason from a Sandbox CRD's

@@ -605,6 +605,45 @@ func local_request_SandboxService_DeleteWarmPool_0(ctx context.Context, marshale
 	return msg, metadata, err
 }
 
+func request_SandboxService_SyncWarmPools_0(ctx context.Context, marshaler runtime.Marshaler, client SandboxServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq SyncWarmPoolsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["namespace_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "namespace_id")
+	}
+	protoReq.NamespaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "namespace_id", err)
+	}
+	msg, err := client.SyncWarmPools(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_SandboxService_SyncWarmPools_0(ctx context.Context, marshaler runtime.Marshaler, server SandboxServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq SyncWarmPoolsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["namespace_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "namespace_id")
+	}
+	protoReq.NamespaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "namespace_id", err)
+	}
+	msg, err := server.SyncWarmPools(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_SandboxService_CreateSandboxClaim_0(ctx context.Context, marshaler runtime.Marshaler, client SandboxServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq CreateSandboxClaimRequest
@@ -753,6 +792,45 @@ func local_request_SandboxService_DeleteSandboxClaim_0(ctx context.Context, mars
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.DeleteSandboxClaim(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_SandboxService_SyncSandboxClaims_0(ctx context.Context, marshaler runtime.Marshaler, client SandboxServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq SyncSandboxClaimsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["namespace_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "namespace_id")
+	}
+	protoReq.NamespaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "namespace_id", err)
+	}
+	msg, err := client.SyncSandboxClaims(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_SandboxService_SyncSandboxClaims_0(ctx context.Context, marshaler runtime.Marshaler, server SandboxServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq SyncSandboxClaimsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["namespace_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "namespace_id")
+	}
+	protoReq.NamespaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "namespace_id", err)
+	}
+	msg, err := server.SyncSandboxClaims(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -1086,6 +1164,26 @@ func RegisterSandboxServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		}
 		forward_SandboxService_DeleteWarmPool_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_SandboxService_SyncWarmPools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SyncWarmPools", runtime.WithHTTPPathPattern("/v1/namespaces/{namespace_id}/warm-pools:sync"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SandboxService_SyncWarmPools_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SandboxService_SyncWarmPools_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_SandboxService_CreateSandboxClaim_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1145,6 +1243,26 @@ func RegisterSandboxServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 			return
 		}
 		forward_SandboxService_DeleteSandboxClaim_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_SandboxService_SyncSandboxClaims_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SyncSandboxClaims", runtime.WithHTTPPathPattern("/v1/namespaces/{namespace_id}/sandbox-claims:sync"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SandboxService_SyncSandboxClaims_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SandboxService_SyncSandboxClaims_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodGet, pattern_SandboxService_ListSandboxTools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -1430,6 +1548,23 @@ func RegisterSandboxServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		}
 		forward_SandboxService_DeleteWarmPool_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_SandboxService_SyncWarmPools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SyncWarmPools", runtime.WithHTTPPathPattern("/v1/namespaces/{namespace_id}/warm-pools:sync"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SandboxService_SyncWarmPools_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SandboxService_SyncWarmPools_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_SandboxService_CreateSandboxClaim_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1480,6 +1615,23 @@ func RegisterSandboxServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 			return
 		}
 		forward_SandboxService_DeleteSandboxClaim_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_SandboxService_SyncSandboxClaims_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SyncSandboxClaims", runtime.WithHTTPPathPattern("/v1/namespaces/{namespace_id}/sandbox-claims:sync"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SandboxService_SyncSandboxClaims_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SandboxService_SyncSandboxClaims_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodGet, pattern_SandboxService_ListSandboxTools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -1585,9 +1737,11 @@ var (
 	pattern_SandboxService_CreateWarmPool_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "warm-pools"}, ""))
 	pattern_SandboxService_ListWarmPools_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "warm-pools"}, ""))
 	pattern_SandboxService_DeleteWarmPool_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "warm-pools", "id"}, ""))
+	pattern_SandboxService_SyncWarmPools_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "warm-pools"}, "sync"))
 	pattern_SandboxService_CreateSandboxClaim_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "sandbox-claims"}, ""))
 	pattern_SandboxService_ListSandboxClaims_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "sandbox-claims"}, ""))
 	pattern_SandboxService_DeleteSandboxClaim_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandbox-claims", "id"}, ""))
+	pattern_SandboxService_SyncSandboxClaims_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "sandbox-claims"}, "sync"))
 	pattern_SandboxService_ListSandboxTools_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sandboxes", "id", "tools"}, ""))
 	pattern_SandboxService_CallSandboxTool_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sandboxes", "id", "tools"}, "call"))
 )
@@ -1605,9 +1759,11 @@ var (
 	forward_SandboxService_CreateWarmPool_0        = runtime.ForwardResponseMessage
 	forward_SandboxService_ListWarmPools_0         = runtime.ForwardResponseMessage
 	forward_SandboxService_DeleteWarmPool_0        = runtime.ForwardResponseMessage
+	forward_SandboxService_SyncWarmPools_0         = runtime.ForwardResponseMessage
 	forward_SandboxService_CreateSandboxClaim_0    = runtime.ForwardResponseMessage
 	forward_SandboxService_ListSandboxClaims_0     = runtime.ForwardResponseMessage
 	forward_SandboxService_DeleteSandboxClaim_0    = runtime.ForwardResponseMessage
+	forward_SandboxService_SyncSandboxClaims_0     = runtime.ForwardResponseMessage
 	forward_SandboxService_ListSandboxTools_0      = runtime.ForwardResponseMessage
 	forward_SandboxService_CallSandboxTool_0       = runtime.ForwardResponseMessage
 )

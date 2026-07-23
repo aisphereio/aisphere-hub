@@ -195,6 +195,21 @@ func (r *fakeNamespaceRepo) ListNamespacesBySyncStatus(_ context.Context, syncSt
 	}
 	return out, nil
 }
+func (r *fakeNamespaceRepo) ListReadyNamespaces(_ context.Context, limit int) ([]*Namespace, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := []*Namespace{}
+	for _, ns := range r.namespaces {
+		if ns.Lifecycle == NamespaceLifecycleReady && !r.softDeleted[ns.ID] {
+			stored := *ns
+			out = append(out, &stored)
+			if limit > 0 && len(out) >= limit {
+				break
+			}
+		}
+	}
+	return out, nil
+}
 func (r *fakeNamespaceRepo) ListSharesBySyncStatus(_ context.Context, syncStatus string, limit int) ([]*NamespaceShare, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
