@@ -55,17 +55,35 @@ jobs:
           path: generated-contract.tar.gz
           if-no-files-found: error
       - name: Commit generated contract
+        id: commit-generated
+        continue-on-error: true
         env:
           TARGET_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
         run: |
-          if git diff --quiet -- api docs/openapi dist/api-contract; then
-            echo 'Generated contract is already up to date.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add api docs/openapi dist/api-contract
-          git commit -m 'chore(api): regenerate contract'
-          git fetch origin "$TARGET_REF"
-          git rebase "origin/$TARGET_REF"
-          git push origin HEAD:"$TARGET_REF"
+          set -o pipefail
+          {
+            echo "event=${{ github.event_name }}"
+            echo "target_ref=$TARGET_REF"
+            echo "checkout_sha=$(git rev-parse HEAD)"
+            if git diff --quiet -- api docs/openapi dist/api-contract; then
+              echo 'Generated contract is already up to date.'
+              exit 0
+            fi
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add api docs/openapi dist/api-contract
+            git commit -m 'chore(api): regenerate contract'
+            git fetch origin "$TARGET_REF"
+            git rebase "origin/$TARGET_REF"
+            git push origin HEAD:"$TARGET_REF"
+          } 2>&1 | tee generated-push.log
+      - name: Upload push diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-push-log
+          path: generated-push.log
+          if-no-files-found: warn
+      - name: Fail when generated commit was not pushed
+        if: steps.commit-generated.outcome == 'failure'
+        run: exit 1
