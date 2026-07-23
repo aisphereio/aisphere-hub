@@ -32,14 +32,14 @@ func SandboxServiceGatewayManifest() gatewayx.Manifest {
 			{
 				ID:       "sandbox.get.sandbox.template",
 				Method:   "GET",
-				Path:     "/v1/sandbox-templates/{id}",
+				Path:     "/v1/clusters/{cluster_id}/sandbox-templates/{id}",
 				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/GetSandboxTemplate"},
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
 				ID:       "sandbox.delete.sandbox.template",
 				Method:   "DELETE",
-				Path:     "/v1/sandbox-templates/{id}",
+				Path:     "/v1/clusters/{cluster_id}/sandbox-templates/{id}",
 				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/DeleteSandboxTemplate"},
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
@@ -174,6 +174,9 @@ func SandboxServiceGatewayBindGetSandboxTemplate(req gatewayx.DispatchRequest, m
 	if v, ok := req.Body.(GetSandboxTemplateRequest); ok {
 		out = &v
 	}
+	if v := match.Params["cluster_id"]; v != "" {
+		out.ClusterId = v
+	}
 	if v := match.Params["id"]; v != "" {
 		out.Id = v
 	}
@@ -187,6 +190,9 @@ func SandboxServiceGatewayBindDeleteSandboxTemplate(req gatewayx.DispatchRequest
 	}
 	if v, ok := req.Body.(DeleteSandboxTemplateRequest); ok {
 		out = &v
+	}
+	if v := match.Params["cluster_id"]; v != "" {
+		out.ClusterId = v
 	}
 	if v := match.Params["id"]; v != "" {
 		out.Id = v

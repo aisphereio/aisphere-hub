@@ -1459,6 +1459,7 @@ func (x *ListSandboxTemplatesResponse) GetNextPageToken() string {
 type GetSandboxTemplateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ClusterId     string                 `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1496,6 +1497,13 @@ func (*GetSandboxTemplateRequest) Descriptor() ([]byte, []int) {
 func (x *GetSandboxTemplateRequest) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *GetSandboxTemplateRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
 	}
 	return ""
 }
@@ -1548,6 +1556,7 @@ type DeleteSandboxTemplateRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ExpectedRevision int64                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	ClusterId        string                 `protobuf:"bytes,3,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1594,6 +1603,13 @@ func (x *DeleteSandboxTemplateRequest) GetExpectedRevision() int64 {
 		return x.ExpectedRevision
 	}
 	return 0
+}
+
+func (x *DeleteSandboxTemplateRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
 }
 
 type DeleteSandboxTemplateResponse struct {
@@ -3291,14 +3307,18 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"\x84\x01\n" +
 	"\x1cListSandboxTemplatesResponse\x12<\n" +
 	"\ttemplates\x18\x01 \x03(\v2\x1e.kubernetes.v1.SandboxTemplateR\ttemplates\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"0\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"T\n" +
 	"\x19GetSandboxTemplateRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"X\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12\"\n" +
+	"\n" +
+	"cluster_id\x18\x02 \x01(\tB\x03\xe0A\x02R\tclusterId\"X\n" +
 	"\x1aGetSandboxTemplateResponse\x12:\n" +
-	"\btemplate\x18\x01 \x01(\v2\x1e.kubernetes.v1.SandboxTemplateR\btemplate\"e\n" +
+	"\btemplate\x18\x01 \x01(\v2\x1e.kubernetes.v1.SandboxTemplateR\btemplate\"\x89\x01\n" +
 	"\x1cDeleteSandboxTemplateRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
-	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"[\n" +
+	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\x12\"\n" +
+	"\n" +
+	"cluster_id\x18\x03 \x01(\tB\x03\xe0A\x02R\tclusterId\"[\n" +
 	"\x1dDeleteSandboxTemplateResponse\x12:\n" +
 	"\btemplate\x18\x01 \x01(\v2\x1e.kubernetes.v1.SandboxTemplateR\btemplate\"\xa4\x03\n" +
 	"\x14CreateSandboxRequest\x12&\n" +
@@ -3443,16 +3463,16 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x1cSANDBOX_CLAIM_STATUS_PENDING\x10\x01\x12\x1e\n" +
 	"\x1aSANDBOX_CLAIM_STATUS_READY\x10\x02\x12\x1f\n" +
 	"\x1bSANDBOX_CLAIM_STATUS_FAILED\x10\x03\x12 \n" +
-	"\x1cSANDBOX_CLAIM_STATUS_DELETED\x10\x042\xb9\x1f\n" +
+	"\x1cSANDBOX_CLAIM_STATUS_DELETED\x10\x042\xe5\x1f\n" +
 	"\x0eSandboxService\x12\x96\x02\n" +
 	"\x15CreateSandboxTemplate\x12+.kubernetes.v1.CreateSandboxTemplateRequest\x1a,.kubernetes.v1.CreateSandboxTemplateResponse\"\xa1\x01\x92\xf4\x18]\b\x03\x122\n" +
 	"\aoperate\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a%\b\x01\x12\x1bhub.sandbox_template.create\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\btemplate\"+/v1/clusters/{cluster_id}/sandbox-templates\x12\x80\x02\n" +
 	"\x14ListSandboxTemplates\x12*.kubernetes.v1.ListSandboxTemplatesRequest\x1a+.kubernetes.v1.ListSandboxTemplatesResponse\"\x8e\x01\x92\xf4\x18W\b\x03\x12/\n" +
-	"\x04view\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x19hub.sandbox_template.list\x1a\x03low\x82\xd3\xe4\x93\x02-\x12+/v1/clusters/{cluster_id}/sandbox-templates\x12\xf2\x01\n" +
-	"\x12GetSandboxTemplate\x12(.kubernetes.v1.GetSandboxTemplateRequest\x1a).kubernetes.v1.GetSandboxTemplateResponse\"\x86\x01\x92\xf4\x18V\b\x03\x12/\n" +
-	"\x04view\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a!\b\x01\x12\x18hub.sandbox_template.get\x1a\x03low\x82\xd3\xe4\x93\x02&b\btemplate\x12\x1a/v1/sandbox-templates/{id}\x12\xf8\x01\n" +
-	"\x15DeleteSandboxTemplate\x12+.kubernetes.v1.DeleteSandboxTemplateRequest\x1a,.kubernetes.v1.DeleteSandboxTemplateResponse\"\x83\x01\x92\xf4\x18]\b\x03\x122\n" +
-	"\aoperate\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a%\b\x01\x12\x1bhub.sandbox_template.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x1c*\x1a/v1/sandbox-templates/{id}\x12\xf0\x01\n" +
+	"\x04view\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x19hub.sandbox_template.list\x1a\x03low\x82\xd3\xe4\x93\x02-\x12+/v1/clusters/{cluster_id}/sandbox-templates\x12\x88\x02\n" +
+	"\x12GetSandboxTemplate\x12(.kubernetes.v1.GetSandboxTemplateRequest\x1a).kubernetes.v1.GetSandboxTemplateResponse\"\x9c\x01\x92\xf4\x18V\b\x03\x12/\n" +
+	"\x04view\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a!\b\x01\x12\x18hub.sandbox_template.get\x1a\x03low\x82\xd3\xe4\x93\x02<b\btemplate\x120/v1/clusters/{cluster_id}/sandbox-templates/{id}\x12\x8e\x02\n" +
+	"\x15DeleteSandboxTemplate\x12+.kubernetes.v1.DeleteSandboxTemplateRequest\x1a,.kubernetes.v1.DeleteSandboxTemplateResponse\"\x99\x01\x92\xf4\x18]\b\x03\x122\n" +
+	"\aoperate\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a%\b\x01\x12\x1bhub.sandbox_template.delete\x1a\x04high\x82\xd3\xe4\x93\x022*0/v1/clusters/{cluster_id}/sandbox-templates/{id}\x12\xf0\x01\n" +
 	"\rCreateSandbox\x12#.kubernetes.v1.CreateSandboxRequest\x1a$.kubernetes.v1.CreateSandboxResponse\"\x93\x01\x92\xf4\x18T\b\x03\x122\n" +
 	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x12hub.sandbox.create\x1a\x04high\x82\xd3\xe4\x93\x025:\x01*b\asandbox\"'/v1/namespaces/{namespace_id}/sandboxes\x12\xe1\x01\n" +
 	"\rListSandboxes\x12#.kubernetes.v1.ListSandboxesRequest\x1a$.kubernetes.v1.ListSandboxesResponse\"\x84\x01\x92\xf4\x18Q\b\x03\x122\n" +

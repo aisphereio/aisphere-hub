@@ -12,6 +12,7 @@ option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 // SkillReleaseService exposes immutable, Git-tag-backed Skill releases.
 // Runtime consumers must resolve an exact SemVer release and commit SHA;
 // floating branch selectors such as main/latest are intentionally unsupported.
+// All routes are generated from this service definition.
 service SkillReleaseService {
   rpc CreateSkillRelease(CreateSkillReleaseRequest) returns (CreateSkillReleaseResponse) {
     option (google.api.http) = {
@@ -53,8 +54,11 @@ service SkillReleaseService {
 
 message CreateSkillReleaseRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
+  // Accepts SemVer with or without the leading v; the server canonicalizes it.
   string version = 2 [(google.api.field_behavior) = REQUIRED];
+  // Defaults to refs/heads/main when omitted.
   string source_ref = 3;
+  // Compare-and-swap guard: publication fails when source_ref moved.
   string expected_commit_sha = 4 [(google.api.field_behavior) = REQUIRED];
   string release_notes = 5;
 }
@@ -74,6 +78,7 @@ message GetSkillReleaseResponse {
 
 message ResolveSkillReleaseRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
+  // Exact SemVer only; ranges, branches and channels are not accepted.
   string version = 2 [(google.api.field_behavior) = REQUIRED];
 }
 

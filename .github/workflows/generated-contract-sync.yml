@@ -3,7 +3,16 @@ name: Generated Contract Sync
 on:
   push:
     branches:
-      - feat/skill-release-control-plane
+      - 'feat/**'
+      - 'fix/**'
+    paths:
+      - 'api/**/*.proto'
+      - 'buf.gen.yaml'
+      - 'buf.yaml'
+      - '.github/workflows/generated-contract-sync.yml'
+  pull_request:
+    branches:
+      - main
     paths:
       - 'api/**/*.proto'
       - 'buf.gen.yaml'
@@ -15,7 +24,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: generated-contract-${{ github.ref }}
+  group: generated-contract-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -25,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
@@ -37,7 +46,21 @@ jobs:
         run: |
           make api
           make contract-bundle
+      - name: Verify generated API is committed
+        if: github.event_name == 'pull_request'
+        run: git diff --exit-code -- api docs/openapi
+      - name: Package generated contract
+        run: tar -czf generated-contract.tar.gz api docs/openapi dist/api-contract
+      - name: Upload generated contract
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-contract
+          path: generated-contract.tar.gz
+          if-no-files-found: error
       - name: Commit generated contract
+        if: github.event_name == 'push'
+        env:
+          TARGET_REF: ${{ github.ref_name }}
         run: |
           if git diff --quiet -- api docs/openapi dist/api-contract; then
             echo 'Generated contract is already up to date.'
@@ -45,6 +68,9 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add api docs/openapi dist/api-contract
-          git commit -m 'chore(api): regenerate skill release contract'
-          git push origin HEAD:${{ github.ref_name }}
+          git add api docs/openapi
+          git add -f dist/api-contract
+          git commit -m 'chore(api): regenerate contract'
+          git fetch origin "$TARGET_REF"
+          git rebase "origin/$TARGET_REF"
+          git push origin HEAD:"$TARGET_REF"

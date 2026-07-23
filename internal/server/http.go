@@ -93,6 +93,9 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	}
 	if skillSvc != nil {
 		skillSvc.RegisterHTTPServer(srv)
+		if releaseSvc := skillSvc.ReleaseService(); releaseSvc != nil {
+			releaseSvc.RegisterHTTPServer(srv)
+		}
 	}
 	if clusterSvc != nil {
 		clusterSvc.RegisterHTTPServer(srv)

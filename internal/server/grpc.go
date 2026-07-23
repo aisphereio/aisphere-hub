@@ -55,6 +55,9 @@ func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resource
 	}
 	if skillSvc != nil {
 		skillv1.RegisterSkillServiceServer(srv, skillSvc)
+		if releaseSvc := skillSvc.ReleaseService(); releaseSvc != nil {
+			skillv1.RegisterSkillReleaseServiceServer(srv, releaseSvc)
+		}
 	}
 	if clusterSvc != nil {
 		kubernetesv1.RegisterClusterServiceServer(srv, clusterSvc)

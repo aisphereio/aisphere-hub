@@ -58,16 +58,16 @@ type SandboxServiceHTTPServer interface {
 func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServer) {
 	r := s.Route("/")
 	r.Handle("DELETE", "/v1/sandbox-claims/{id}", _SandboxService_DeleteSandboxClaim0_HTTP_Handler(srv))
-	r.Handle("DELETE", "/v1/sandbox-templates/{id}", _SandboxService_DeleteSandboxTemplate0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/v1/sandboxes/{id}", _SandboxService_DeleteSandbox0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/v1/warm-pools/{id}", _SandboxService_DeleteWarmPool0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/v1/clusters/{cluster_id}/sandbox-templates/{id}", _SandboxService_DeleteSandboxTemplate0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/clusters/{cluster_id}/sandbox-templates", _SandboxService_ListSandboxTemplates0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/namespaces/{namespace_id}/sandbox-claims", _SandboxService_ListSandboxClaims0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/namespaces/{namespace_id}/sandboxes", _SandboxService_ListSandboxes0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/namespaces/{namespace_id}/warm-pools", _SandboxService_ListWarmPools0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/sandboxes/{id}/tools", _SandboxService_ListSandboxTools0_HTTP_Handler(srv))
-	r.Handle("GET", "/v1/sandbox-templates/{id}", _SandboxService_GetSandboxTemplate0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/sandboxes/{id}", _SandboxService_GetSandbox0_HTTP_Handler(srv))
+	r.Handle("GET", "/v1/clusters/{cluster_id}/sandbox-templates/{id}", _SandboxService_GetSandboxTemplate0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/clusters/{cluster_id}/sandbox-templates", _SandboxService_CreateSandboxTemplate0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandbox-claims", _SandboxService_CreateSandboxClaim0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes", _SandboxService_CreateSandbox0_HTTP_Handler(srv))
@@ -97,31 +97,6 @@ func _SandboxService_DeleteSandboxClaim0_HTTP_Handler(srv SandboxServiceHTTPServ
 			return err
 		}
 		reply := out.(*DeleteSandboxClaimResponse)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _SandboxService_DeleteSandboxTemplate0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in DeleteSandboxTemplateRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		if err := http.ValidateRequest(ctx, &in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationSandboxServiceDeleteSandboxTemplate)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteSandboxTemplate(ctx, req.(*DeleteSandboxTemplateRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*DeleteSandboxTemplateResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -172,6 +147,31 @@ func _SandboxService_DeleteWarmPool0_HTTP_Handler(srv SandboxServiceHTTPServer) 
 			return err
 		}
 		reply := out.(*DeleteWarmPoolResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _SandboxService_DeleteSandboxTemplate0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteSandboxTemplateRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceDeleteSandboxTemplate)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteSandboxTemplate(ctx, req.(*DeleteSandboxTemplateRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteSandboxTemplateResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -301,31 +301,6 @@ func _SandboxService_ListSandboxTools0_HTTP_Handler(srv SandboxServiceHTTPServer
 	}
 }
 
-func _SandboxService_GetSandboxTemplate0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in GetSandboxTemplateRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		if err := http.ValidateRequest(ctx, &in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationSandboxServiceGetSandboxTemplate)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.GetSandboxTemplate(ctx, req.(*GetSandboxTemplateRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*GetSandboxTemplateResponse)
-		return ctx.Result(200, reply.Template)
-	}
-}
-
 func _SandboxService_GetSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in GetSandboxRequest
@@ -348,6 +323,31 @@ func _SandboxService_GetSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func
 		}
 		reply := out.(*GetSandboxResponse)
 		return ctx.Result(200, reply.Sandbox)
+	}
+}
+
+func _SandboxService_GetSandboxTemplate0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetSandboxTemplateRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceGetSandboxTemplate)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetSandboxTemplate(ctx, req.(*GetSandboxTemplateRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*GetSandboxTemplateResponse)
+		return ctx.Result(200, reply.Template)
 	}
 }
 
@@ -648,7 +648,7 @@ func (c *SandboxServiceHTTPClientImpl) DeleteSandboxClaim(ctx context.Context, i
 
 func (c *SandboxServiceHTTPClientImpl) DeleteSandboxTemplate(ctx context.Context, in *DeleteSandboxTemplateRequest, opts ...http.CallOption) (*DeleteSandboxTemplateResponse, error) {
 	var out DeleteSandboxTemplateResponse
-	pattern := "/v1/sandbox-templates/{id}"
+	pattern := "/v1/clusters/{cluster_id}/sandbox-templates/{id}"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
@@ -696,7 +696,7 @@ func (c *SandboxServiceHTTPClientImpl) GetSandbox(ctx context.Context, in *GetSa
 
 func (c *SandboxServiceHTTPClientImpl) GetSandboxTemplate(ctx context.Context, in *GetSandboxTemplateRequest, opts ...http.CallOption) (*GetSandboxTemplateResponse, error) {
 	var out GetSandboxTemplateResponse
-	pattern := "/v1/sandbox-templates/{id}"
+	pattern := "/v1/clusters/{cluster_id}/sandbox-templates/{id}"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
