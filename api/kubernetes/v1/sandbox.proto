@@ -37,7 +37,7 @@ service SandboxService {
   }
 
   rpc GetSandboxTemplate(GetSandboxTemplateRequest) returns (GetSandboxTemplateResponse) {
-    option (google.api.http) = { get: "/v1/sandbox-templates/{id}" response_body: "template" };
+    option (google.api.http) = { get: "/v1/clusters/{cluster_id}/sandbox-templates/{id}" response_body: "template" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
       authz: { action: "view" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
@@ -46,7 +46,7 @@ service SandboxService {
   }
 
   rpc DeleteSandboxTemplate(DeleteSandboxTemplateRequest) returns (DeleteSandboxTemplateResponse) {
-    option (google.api.http) = { delete: "/v1/sandbox-templates/{id}" };
+    option (google.api.http) = { delete: "/v1/clusters/{cluster_id}/sandbox-templates/{id}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
       authz: { action: "operate" resource: "k8s_cluster:{cluster_id}" audience: "hub-service" mode: CHECK_ONLY }
@@ -368,6 +368,7 @@ message ListSandboxTemplatesResponse {
 
 message GetSandboxTemplateRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string cluster_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message GetSandboxTemplateResponse {
@@ -377,6 +378,7 @@ message GetSandboxTemplateResponse {
 message DeleteSandboxTemplateRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
   int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  string cluster_id = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteSandboxTemplateResponse {
