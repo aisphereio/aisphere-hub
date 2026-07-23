@@ -1,0 +1,50 @@
+name: Generated Contract Sync
+
+on:
+  push:
+    branches:
+      - feat/skill-release-control-plane
+    paths:
+      - 'api/**/*.proto'
+      - 'buf.gen.yaml'
+      - 'buf.yaml'
+      - '.github/workflows/generated-contract-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generated-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install API toolchain
+        run: make tools
+      - name: Generate API and contract bundle
+        run: |
+          make api
+          make contract-bundle
+      - name: Commit generated contract
+        run: |
+          if git diff --quiet -- api docs/openapi dist/api-contract; then
+            echo 'Generated contract is already up to date.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add api docs/openapi dist/api-contract
+          git commit -m 'chore(api): regenerate skill release contract'
+          git push origin HEAD:${{ github.ref_name }}
