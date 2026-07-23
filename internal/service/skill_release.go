@@ -20,6 +20,15 @@ func NewSkillReleaseService(uc *biz.SkillUsecase) *SkillReleaseService {
 	return &SkillReleaseService{uc: uc}
 }
 
+// ReleaseService reuses the SkillService use case so transport assembly does
+// not create a second release domain graph.
+func (s *SkillService) ReleaseService() *SkillReleaseService {
+	if s == nil {
+		return nil
+	}
+	return NewSkillReleaseService(s.uc)
+}
+
 func (s *SkillReleaseService) RegisterHTTPServer(server *khttp.Server) {
 	skillv1.RegisterSkillReleaseServiceHTTPServer(server, s)
 }
