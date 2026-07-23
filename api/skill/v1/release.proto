@@ -5,7 +5,7 @@ package skill.v1;
 import "aisphere/access/v1/access.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
-import "google/protobuf/timestamp.proto";
+import "skill/v1/skill.proto";
 
 option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 
@@ -79,11 +79,4 @@ message ResolveSkillReleaseRequest {
 
 message ResolveSkillReleaseResponse {
   SkillRelease release = 1;
-}
-
-message SkillRelease {
-  string tag = 1;
-  string commit_sha = 2;
-  string manifest_sha256 = 3;
-  google.protobuf.Timestamp create_time = 4;
 }
