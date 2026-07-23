@@ -55,7 +55,8 @@ jobs:
           path: generated-contract.tar.gz
           if-no-files-found: error
       - name: Commit generated contract
-        if: github.event_name == 'push'
+        env:
+          TARGET_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
         run: |
           if git diff --quiet -- api docs/openapi dist/api-contract; then
             echo 'Generated contract is already up to date.'
@@ -65,4 +66,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add api docs/openapi dist/api-contract
           git commit -m 'chore(api): regenerate contract'
-          git push origin HEAD:${{ github.ref_name }}
+          git push origin HEAD:"$TARGET_REF"
