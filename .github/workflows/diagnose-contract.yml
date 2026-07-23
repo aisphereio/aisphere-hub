@@ -1,0 +1,48 @@
+name: Diagnose Contract
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/diagnose-contract.yml'
+      - 'api/**'
+      - 'docs/openapi/**'
+      - 'Makefile'
+      - 'buf.yaml'
+      - 'buf.gen.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Materialize base branch
+        run: git branch -f main origin/main
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install pinned generators
+        run: make tools
+      - name: Run contract checks
+        id: contract
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          make BASE_REF=main contract-check 2>&1 | tee contract-check.log
+      - name: Upload contract log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-check-log
+          path: contract-check.log
+          if-no-files-found: error
+      - name: Fail on contract error
+        if: steps.contract.outcome == 'failure'
+        run: exit 1
