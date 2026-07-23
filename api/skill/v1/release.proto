@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package skill.v1;
+
+import "aisphere/access/v1/access.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
+
+// SkillReleaseService exposes immutable, Git-tag-backed Skill releases.
+// Runtime consumers must resolve an exact SemVer release and commit SHA;
+// floating branch selectors such as main/latest are intentionally unsupported.
+service SkillReleaseService {
+  rpc CreateSkillRelease(CreateSkillReleaseRequest) returns (CreateSkillReleaseResponse) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}/releases"
+      body: "*"
+      response_body: "release"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "publish" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.release.create" risk: "high" }
+    };
+  }
+
+  rpc GetSkillRelease(GetSkillReleaseRequest) returns (GetSkillReleaseResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/releases/{version}"
+      response_body: "release"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.release.get" risk: "low" }
+    };
+  }
+
+  rpc ResolveSkillRelease(ResolveSkillReleaseRequest) returns (ResolveSkillReleaseResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/releases/{version}:resolve"
+      response_body: "release"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.release.resolve" risk: "low" }
+    };
+  }
+}
+
+message CreateSkillReleaseRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+  string source_ref = 3;
+  string expected_commit_sha = 4 [(google.api.field_behavior) = REQUIRED];
+  string release_notes = 5;
+}
+
+message CreateSkillReleaseResponse {
+  SkillRelease release = 1;
+}
+
+message GetSkillReleaseRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetSkillReleaseResponse {
+  SkillRelease release = 1;
+}
+
+message ResolveSkillReleaseRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ResolveSkillReleaseResponse {
+  SkillRelease release = 1;
+}
+
+message SkillRelease {
+  string tag = 1;
+  string commit_sha = 2;
+  string manifest_sha256 = 3;
+  google.protobuf.Timestamp create_time = 4;
+}
