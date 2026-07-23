@@ -3,7 +3,8 @@ name: Generated Contract Sync
 on:
   push:
     branches:
-      - feat/skill-release-control-plane
+      - 'feat/**'
+      - 'fix/**'
     paths:
       - 'api/**/*.proto'
       - 'buf.gen.yaml'
@@ -46,5 +47,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add api docs/openapi dist/api-contract
-          git commit -m 'chore(api): regenerate skill release contract'
+          git commit -m 'chore(api): regenerate contract'
           git push origin HEAD:${{ github.ref_name }}
