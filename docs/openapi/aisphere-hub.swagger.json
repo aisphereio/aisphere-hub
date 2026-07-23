@@ -4065,6 +4065,83 @@
         ]
       }
     },
+    "/v1/clusters/{clusterId}/sandbox-templates/{id}": {
+      "delete": {
+        "operationId": "SandboxService_DeleteSandboxTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clusterId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "int64",
+            "in": "query",
+            "name": "expectedRevision",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSandboxTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SandboxService"
+        ]
+      },
+      "get": {
+        "operationId": "SandboxService_GetSandboxTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clusterId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SandboxTemplate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SandboxService"
+        ]
+      }
+    },
     "/v1/clusters/{id}": {
       "delete": {
         "operationId": "ClusterService_DeleteCluster",
@@ -4850,71 +4927,6 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/v1DeleteSandboxClaimResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/KernelErrorResponse"
-            }
-          }
-        },
-        "tags": [
-          "SandboxService"
-        ]
-      }
-    },
-    "/v1/sandbox-templates/{id}": {
-      "delete": {
-        "operationId": "SandboxService_DeleteSandboxTemplate",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "format": "int64",
-            "in": "query",
-            "name": "expectedRevision",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteSandboxTemplateResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/KernelErrorResponse"
-            }
-          }
-        },
-        "tags": [
-          "SandboxService"
-        ]
-      },
-      "get": {
-        "operationId": "SandboxService_GetSandboxTemplate",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/v1SandboxTemplate"
             }
           },
           "default": {

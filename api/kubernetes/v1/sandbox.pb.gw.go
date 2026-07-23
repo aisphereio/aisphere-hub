@@ -142,7 +142,15 @@ func request_SandboxService_GetSandboxTemplate_0(ctx context.Context, marshaler 
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["id"]
+	val, ok := pathParams["cluster_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cluster_id")
+	}
+	protoReq.ClusterId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cluster_id", err)
+	}
+	val, ok = pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -160,7 +168,15 @@ func local_request_SandboxService_GetSandboxTemplate_0(ctx context.Context, mars
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["id"]
+	val, ok := pathParams["cluster_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cluster_id")
+	}
+	protoReq.ClusterId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cluster_id", err)
+	}
+	val, ok = pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -172,7 +188,7 @@ func local_request_SandboxService_GetSandboxTemplate_0(ctx context.Context, mars
 	return msg, metadata, err
 }
 
-var filter_SandboxService_DeleteSandboxTemplate_0 = &utilities.DoubleArray{Encoding: map[string]int{"id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_SandboxService_DeleteSandboxTemplate_0 = &utilities.DoubleArray{Encoding: map[string]int{"cluster_id": 0, "id": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
 
 func request_SandboxService_DeleteSandboxTemplate_0(ctx context.Context, marshaler runtime.Marshaler, client SandboxServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
@@ -183,7 +199,15 @@ func request_SandboxService_DeleteSandboxTemplate_0(ctx context.Context, marshal
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["id"]
+	val, ok := pathParams["cluster_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cluster_id")
+	}
+	protoReq.ClusterId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cluster_id", err)
+	}
+	val, ok = pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -207,7 +231,15 @@ func local_request_SandboxService_DeleteSandboxTemplate_0(ctx context.Context, m
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["id"]
+	val, ok := pathParams["cluster_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cluster_id")
+	}
+	protoReq.ClusterId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cluster_id", err)
+	}
+	val, ok = pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -892,7 +924,7 @@ func RegisterSandboxServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/GetSandboxTemplate", runtime.WithHTTPPathPattern("/v1/sandbox-templates/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/GetSandboxTemplate", runtime.WithHTTPPathPattern("/v1/clusters/{cluster_id}/sandbox-templates/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -912,7 +944,7 @@ func RegisterSandboxServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/DeleteSandboxTemplate", runtime.WithHTTPPathPattern("/v1/sandbox-templates/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/DeleteSandboxTemplate", runtime.WithHTTPPathPattern("/v1/clusters/{cluster_id}/sandbox-templates/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1264,7 +1296,7 @@ func RegisterSandboxServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/GetSandboxTemplate", runtime.WithHTTPPathPattern("/v1/sandbox-templates/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/GetSandboxTemplate", runtime.WithHTTPPathPattern("/v1/clusters/{cluster_id}/sandbox-templates/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1281,7 +1313,7 @@ func RegisterSandboxServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/DeleteSandboxTemplate", runtime.WithHTTPPathPattern("/v1/sandbox-templates/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/DeleteSandboxTemplate", runtime.WithHTTPPathPattern("/v1/clusters/{cluster_id}/sandbox-templates/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1575,8 +1607,8 @@ func (m response_SandboxService_CreateSandboxClaim_0) XXX_ResponseBody() interfa
 var (
 	pattern_SandboxService_CreateSandboxTemplate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "clusters", "cluster_id", "sandbox-templates"}, ""))
 	pattern_SandboxService_ListSandboxTemplates_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "clusters", "cluster_id", "sandbox-templates"}, ""))
-	pattern_SandboxService_GetSandboxTemplate_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandbox-templates", "id"}, ""))
-	pattern_SandboxService_DeleteSandboxTemplate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandbox-templates", "id"}, ""))
+	pattern_SandboxService_GetSandboxTemplate_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "clusters", "cluster_id", "sandbox-templates", "id"}, ""))
+	pattern_SandboxService_DeleteSandboxTemplate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "clusters", "cluster_id", "sandbox-templates", "id"}, ""))
 	pattern_SandboxService_CreateSandbox_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "sandboxes"}, ""))
 	pattern_SandboxService_ListSandboxes_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "sandboxes"}, ""))
 	pattern_SandboxService_GetSandbox_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandboxes", "id"}, ""))

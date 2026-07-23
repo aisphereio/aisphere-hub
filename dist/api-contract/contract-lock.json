@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "16707a452cfc2f853fb947f7de98b289bcd844e8",
+  "git_sha": "36f08698f07a4e876b73d60fba48b2969bd2b39f",
   "ref": "fix/skill-release-end-to-end",
-  "sha256": "e3d3b1e99c83e1bfb9b24e18ab0e322731bb188405a27cfa70f46df5489fd14c",
+  "sha256": "b6b5b391d33a952aeca9e3767eac32d83e582bac43d7b74cdda8643ee2bc9527",
   "kernel_version": "v0.4.18",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }
