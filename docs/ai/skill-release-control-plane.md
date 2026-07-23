@@ -1,6 +1,6 @@
 # Skill Release Control Plane
 
-Status: implemented in this branch.
+Status: implemented end to end by the Hub release service.
 
 ## Contract
 
@@ -22,14 +22,14 @@ Release tags:
 - are validated against the caller supplied expected commit SHA;
 - require the Skill `publish` permission.
 
-This first control-plane increment keeps Git as the source of truth and exposes release creation and exact resolution through the Skill API. Durable release metadata, channels, bundle building, yanking, and Git ref outbox events are follow-up increments.
+This increment keeps Git as the source of truth and exposes release creation and exact resolution through generated HTTP and gRPC transports. Durable release metadata, channels, bundle building, yanking, and Git ref outbox events are follow-up increments.
 
 ## API
 
 - `POST /v1/skills/{name}/releases`
 - `GET /v1/skills/{name}/releases`
-- `GET /v1/skills/{name}/releases/{tag}`
-- `POST /v1/skills/{name}/versions:resolve`
+- `GET /v1/skills/{name}/releases/{version}`
+- `GET /v1/skills/{name}/releases/{version}:resolve`
 
 Create release request:
 
@@ -37,19 +37,17 @@ Create release request:
 {
   "version": "1.4.0",
   "sourceRef": "refs/heads/main",
-  "expectedCommitSha": "<40-char commit sha>",
+  "expectedCommitSha": "<exact commit sha>",
   "releaseNotes": "optional notes"
 }
 ```
 
-The server normalizes the version to tag `v1.4.0`, validates `SKILL.md` at the source commit, and creates an annotated tag. Duplicate or moved tags fail with conflict instead of overwriting the existing release.
+The server normalizes the version to tag `v1.4.0`, verifies that `sourceRef` still resolves to `expectedCommitSha`, validates `SKILL.md` at that commit, and creates an annotated tag. Duplicate tags and stale source refs fail with conflict instead of moving an existing release.
 
-Resolve request:
+Exact resolution is encoded in the URL:
 
-```json
-{
-  "selector": "v1.4.0"
-}
+```text
+GET /v1/skills/search/releasess/v1.4.0:resolve
 ```
 
-Only exact release selectors are accepted in this increment. Floating selectors such as `latest`, `main`, and SemVer ranges remain intentionally unsupported until channel and SkillSet revision resolution are implemented.
+Only exact release versions are accepted in this increment. Floating selectors such as `latest`, `main`, and SemVer ranges remain intentionally unsupported until channel and SkillSet revision resolution are implemented.
