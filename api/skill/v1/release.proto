@@ -12,6 +12,7 @@ option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 // SkillReleaseService exposes immutable, Git-tag-backed Skill releases.
 // Runtime consumers must resolve an exact SemVer release and commit SHA;
 // floating branch selectors such as main/latest are intentionally unsupported.
+// All routes are generated from this service definition.
 service SkillReleaseService {
   rpc CreateSkillRelease(CreateSkillReleaseRequest) returns (CreateSkillReleaseResponse) {
     option (google.api.http) = {
