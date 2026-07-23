@@ -225,14 +225,16 @@ func (p *k8sClientPool) ListSandboxes(ctx context.Context, clusterID string, loc
 			ResourceVersion: item.GetResourceVersion(),
 			Labels:          item.GetLabels(),
 		}
-		// Extract status fields.
+		// Extract status fields. The agent-sandbox operator puts the pod name in
+		// an annotation and pod IPs in a status.podIPs array (not status.podName/
+		// status.podIP). Image lives in spec.podTemplate.spec.containers[0].image.
 		result.Phase = sandboxReadyReason(item.Object)
-		result.PodName, _, _ = unstructured.NestedString(item.Object, "status", "podName")
-		result.PodIP, _, _ = unstructured.NestedString(item.Object, "status", "podIP")
+		result.PodName, _, _ = unstructured.NestedString(item.Object, "metadata", "annotations", "agents.x-k8s.io/pod-name")
+		if ips, found, _ := unstructured.NestedStringSlice(item.Object, "status", "podIPs"); found && len(ips) > 0 {
+			result.PodIP = ips[0]
+		}
 		result.NodeName, _, _ = unstructured.NestedString(item.Object, "status", "nodeName")
-		// Image from spec.sandboxTemplateRef is not in the Sandbox itself; try
-		// status.image if the operator populates it, else leave empty.
-		result.Image, _, _ = unstructured.NestedString(item.Object, "status", "image")
+		result.Image = firstContainerImage(item.Object)
 		out = append(out, result)
 	}
 	return out, nil
@@ -255,11 +257,13 @@ func (p *k8sClientPool) GetSandboxStatus(ctx context.Context, clusterID string, 
 		Name:          obj.GetName(),
 		Namespace:     obj.GetNamespace(),
 		Phase:         sandboxReadyReason(obj.Object),
-		PodName:       getNestedString(obj.Object, "status", "podName"),
-		PodIP:         getNestedString(obj.Object, "status", "podIP"),
+		PodName:       getNestedString(obj.Object, "metadata", "annotations", "agents.x-k8s.io/pod-name"),
 		NodeName:      getNestedString(obj.Object, "status", "nodeName"),
-		Image:         getNestedString(obj.Object, "status", "image"),
+		Image:         firstContainerImage(obj.Object),
 		OperatingMode: getNestedString(obj.Object, "spec", "operatingMode"),
+	}
+	if ips, found, _ := unstructured.NestedStringSlice(obj.Object, "status", "podIPs"); found && len(ips) > 0 {
+		status.PodIP = ips[0]
 	}
 	return status, nil
 }
@@ -450,6 +454,22 @@ func sandboxReadyReason(obj map[string]interface{}) string {
 func getNestedString(obj map[string]interface{}, fields ...string) string {
 	v, _, _ := unstructured.NestedString(obj, fields...)
 	return v
+}
+
+// firstContainerImage extracts the image of the first container from
+// spec.podTemplate.spec.containers[0].image. Returns empty if the path is
+// missing or the containers array is empty.
+func firstContainerImage(obj map[string]interface{}) string {
+	containers, found, _ := unstructured.NestedSlice(obj, "spec", "podTemplate", "spec", "containers")
+	if !found || len(containers) == 0 {
+		return ""
+	}
+	c, ok := containers[0].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	img, _ := c["image"].(string)
+	return img
 }
 
 // ensure json import is used (for potential future status marshaling).
