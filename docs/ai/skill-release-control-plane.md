@@ -8,7 +8,7 @@ A Git commit is an authored change, a branch is a mutable development line, and 
 
 Runtime consumers MUST resolve a Skill to a release tag and commit SHA. `main` is not a production version.
 
-The protobuf service is the only transport contract source. Go HTTP/gRPC bindings, Swagger, the contract bundle, and frontend SDKs must be generated from it and committed together.
+The protobuf service is the only transport contract source. Go HTTP/gRPC bindings, Swagger, the contract bundle, and frontend SDKs must be generated from it and committed together. Downstream consumers pin the generated contract by an immutable Hub commit and verify the SHA-256 recorded in its contract lock.
 
 ## Release lifecycle
 
