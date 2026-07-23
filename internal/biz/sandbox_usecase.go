@@ -654,7 +654,11 @@ func (uc *SandboxUsecase) SyncSandboxes(ctx context.Context, principal authn.Pri
 	if !dec.Allowed {
 		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
 	}
+	return uc.syncSandboxesCore(ctx, namespaceID)
+}
 
+// syncSandboxesCore is the authz-free internal sync used by the reconciler.
+func (uc *SandboxUsecase) syncSandboxesCore(ctx context.Context, namespaceID string) (imported, updated, removed int, err error) {
 	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
 	if err != nil {
 		return 0, 0, 0, err
@@ -995,7 +999,11 @@ func (uc *SandboxUsecase) SyncWarmPools(ctx context.Context, principal authn.Pri
 	if !dec.Allowed {
 		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
 	}
+	return uc.syncWarmPoolsCore(ctx, namespaceID)
+}
 
+// syncWarmPoolsCore is the authz-free internal sync used by the reconciler.
+func (uc *SandboxUsecase) syncWarmPoolsCore(ctx context.Context, namespaceID string) (imported, updated, removed int, err error) {
 	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
 	if err != nil {
 		return 0, 0, 0, err
@@ -1334,7 +1342,11 @@ func (uc *SandboxUsecase) SyncSandboxClaims(ctx context.Context, principal authn
 	if !dec.Allowed {
 		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
 	}
+	return uc.syncSandboxClaimsCore(ctx, namespaceID)
+}
 
+// syncSandboxClaimsCore is the authz-free internal sync used by the reconciler.
+func (uc *SandboxUsecase) syncSandboxClaimsCore(ctx context.Context, namespaceID string) (imported, updated, removed int, err error) {
 	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
 	if err != nil {
 		return 0, 0, 0, err
@@ -1461,25 +1473,20 @@ func (uc *SandboxUsecase) SyncSandboxClaims(ctx context.Context, principal authn
 }
 
 // ReconcileNamespaceSync is the authz-free internal sync entry point used by
-// the SandboxSyncReconciler. It runs SyncSandboxes + SyncWarmPools +
-// SyncSandboxClaims against the given namespace without a principal authz
-// check (the reconciler is a trusted internal worker). Returns aggregated
-// counts and the first error encountered (subsequent syncs still run).
+// the SandboxSyncReconciler. It runs the core sync logic for sandboxes,
+// warm pools, and sandbox claims against the given namespace without a
+// principal authz check (the reconciler is a trusted internal worker).
+// Returns aggregated counts and the first error encountered (subsequent
+// syncs still run).
 func (uc *SandboxUsecase) ReconcileNamespaceSync(ctx context.Context, namespaceID string) (sbImp, sbUpd, sbRem, wpImp, wpUpd, wpRem, clImp, clUpd, clRem int, err error) {
-	// Internal principal with system identity — authz is skipped by the
-	// reconciler, but the sync methods still call canonicalSubject. We use a
-	// service_account principal so WriteRelationships (import path) can project
-	// ownership without surprising SpiceDB subject shape.
-	sysPrincipal := authn.Principal{SubjectType: "service_account", SubjectID: "system:sandbox-reconciler"}
-
 	var firstErr error
-	sbImp, sbUpd, sbRem, e1 := uc.SyncSandboxes(ctx, sysPrincipal, namespaceID)
+	sbImp, sbUpd, sbRem, e1 := uc.syncSandboxesCore(ctx, namespaceID)
 	if e1 != nil {
 		firstErr = e1
 		uc.log.WithContext(ctx).Warn("reconciler: sync sandboxes failed",
 			logx.String("namespace_id", namespaceID), logx.Err(e1))
 	}
-	wpImp, wpUpd, wpRem, e2 := uc.SyncWarmPools(ctx, sysPrincipal, namespaceID)
+	wpImp, wpUpd, wpRem, e2 := uc.syncWarmPoolsCore(ctx, namespaceID)
 	if e2 != nil && firstErr == nil {
 		firstErr = e2
 	}
@@ -1487,7 +1494,7 @@ func (uc *SandboxUsecase) ReconcileNamespaceSync(ctx context.Context, namespaceI
 		uc.log.WithContext(ctx).Warn("reconciler: sync warm pools failed",
 			logx.String("namespace_id", namespaceID), logx.Err(e2))
 	}
-	clImp, clUpd, clRem, e3 := uc.SyncSandboxClaims(ctx, sysPrincipal, namespaceID)
+	clImp, clUpd, clRem, e3 := uc.syncSandboxClaimsCore(ctx, namespaceID)
 	if e3 != nil && firstErr == nil {
 		firstErr = e3
 	}
