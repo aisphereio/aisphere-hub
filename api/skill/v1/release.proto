@@ -53,8 +53,11 @@ service SkillReleaseService {
 
 message CreateSkillReleaseRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
+  // Accepts SemVer with or without the leading v; the server canonicalizes it.
   string version = 2 [(google.api.field_behavior) = REQUIRED];
+  // Defaults to refs/heads/main when omitted.
   string source_ref = 3;
+  // Compare-and-swap guard: publication fails when source_ref moved.
   string expected_commit_sha = 4 [(google.api.field_behavior) = REQUIRED];
   string release_notes = 5;
 }
@@ -74,6 +77,7 @@ message GetSkillReleaseResponse {
 
 message ResolveSkillReleaseRequest {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
+  // Exact SemVer only; ranges, branches and channels are not accepted.
   string version = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
