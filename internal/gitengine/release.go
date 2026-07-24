@@ -82,14 +82,22 @@ func (e *Engine) GetRelease(ctx context.Context, skill, version string) (*biz.Sk
 }
 
 func (e *Engine) releaseForTag(ctx context.Context, repo *softgit.Repository, tag string) (*biz.SkillRelease, error) {
-	commit, err := repo.TagCommit(tag)
+	commitSHA, err := runGitRepo(ctx, repo.Path, nil, "rev-parse", "--verify", "refs/tags/"+tag+"^{commit}")
 	if err != nil {
 		return nil, biz.ErrSkillReleaseNotFound
 	}
-	commitSHA := commit.ID.String()
+	commitSHA = strings.TrimSpace(commitSHA)
 	treeSHA, err := runGitRepo(ctx, repo.Path, nil, "show", "-s", "--format=%T", commitSHA)
 	if err != nil {
 		return nil, fmt.Errorf("gitengine: read release tree: %w", err)
+	}
+	committedAtRaw, err := runGitRepo(ctx, repo.Path, nil, "show", "-s", "--format=%cI", commitSHA)
+	if err != nil {
+		return nil, fmt.Errorf("gitengine: read release commit time: %w", err)
+	}
+	committedAt, err := time.Parse(time.RFC3339, strings.TrimSpace(committedAtRaw))
+	if err != nil {
+		return nil, fmt.Errorf("gitengine: parse release commit time: %w", err)
 	}
 	manifest, err := runGitRepoRaw(ctx, repo.Path, "show", commitSHA+":SKILL.md")
 	if err != nil {
@@ -109,7 +117,7 @@ func (e *Engine) releaseForTag(ctx context.Context, repo *softgit.Repository, ta
 		CommitSHA:      commitSHA,
 		TreeSHA:        strings.TrimSpace(treeSHA),
 		ManifestSHA256: manifestHash,
-		CreateTime:     commit.Committer.When.UTC(),
+		CreateTime:     committedAt.UTC(),
 	}
 	if len(parts) == 5 && strings.TrimSpace(parts[0]) == "tag" {
 		release.PublisherName = strings.TrimSpace(parts[1])
