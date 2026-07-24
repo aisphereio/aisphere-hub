@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/aisphereio/kernel v0.4.18
+	github.com/aisphereio/kernel v0.4.19
 	github.com/aisphereio/soft-serve v0.0.0-20260721011708-31d466419f2b
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	go.yaml.in/yaml/v3 v3.0.4
@@ -143,7 +143,7 @@ require (
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
-	github.com/redis/go-redis/v9 v9.21.0 // indirect
+	github.com/redis/go-redis/v9 v9.21.0
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rs/xid v1.6.0 // indirect

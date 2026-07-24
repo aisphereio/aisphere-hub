@@ -30,8 +30,8 @@ github.com/ProtonMail/go-crypto v1.1.6 h1:ZcV+Ropw6Qn0AX9brlQLAUXfqLBc7Bl+f/DmNx
 github.com/ProtonMail/go-crypto v1.1.6/go.mod h1:rA3QumHc/FZ8pAHreoekgiAbzpNsfQAosU5td4SnOrE=
 github.com/aisphereio/aisphere-iam v0.2.0 h1:CPET2mbZjG85dPynFOvBkel4PV02O6kTz0VH6bW93LE=
 github.com/aisphereio/aisphere-iam v0.2.0/go.mod h1:1pn4XBqxYU38ysBbelokJvK9cwMFo78wBiO5Li9yvPc=
-github.com/aisphereio/kernel v0.4.18 h1:sPMtqy43FRIxE9UA/LejLSZSKfaYgWWkSv8XqUFmqmc=
-github.com/aisphereio/kernel v0.4.18/go.mod h1:W1bzhSVcU5o9skngjMKIc/oNYe/0GV80CTcCcTiocos=
+github.com/aisphereio/kernel v0.4.19 h1:Osv64cmMLBoy3iPKmFfJHMVt2KIaXp4wZIQsRwTnuOo=
+github.com/aisphereio/kernel v0.4.19/go.mod h1:W1bzhSVcU5o9skngjMKIc/oNYe/0GV80CTcCcTiocos=
 github.com/aisphereio/soft-serve v0.0.0-20260721011708-31d466419f2b h1:dCt+uRpQ1vr0FpL45gR/taisK1WUkZrxsM8OIBaUwuc=
 github.com/aisphereio/soft-serve v0.0.0-20260721011708-31d466419f2b/go.mod h1:kY0+O2kxZyMkOuW/SS+RmpOxFoI42luliUhXNv6h8vw=
 github.com/alicebob/miniredis/v2 v2.38.0 h1:nZAzCR+Lj+Vxk4ZXzm2NuKq2O33RXj1XxJ2e2uP9jiw=
