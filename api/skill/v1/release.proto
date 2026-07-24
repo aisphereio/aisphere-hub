@@ -5,6 +5,7 @@ package skill.v1;
 import "aisphere/access/v1/access.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
 import "skill/v1/skill.proto";
 
 option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
@@ -50,6 +51,54 @@ service SkillReleaseService {
       audit: { enabled: true event: "hub.skill.release.resolve" risk: "low" }
     };
   }
+
+  rpc ListSkillRefs(ListSkillRefsRequest) returns (ListSkillRefsResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/refs"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.ref.list" risk: "low" }
+    };
+  }
+
+  rpc ListSkillCommits(ListSkillCommitsRequest) returns (ListSkillCommitsResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/commits"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.commit.list" risk: "low" }
+    };
+  }
+
+  rpc CompareSkillRefs(CompareSkillRefsRequest) returns (CompareSkillRefsResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/compare"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.ref.compare" risk: "low" }
+    };
+  }
+
+  // RestoreSkillRef creates a new commit whose tree exactly matches source_ref
+  // and advances target_branch with compare-and-swap. Existing release tags
+  // remain immutable; rollback is therefore auditable and non-destructive.
+  rpc RestoreSkillRef(RestoreSkillRefRequest) returns (RestoreSkillRefResponse) {
+    option (google.api.http) = {
+      post: "/v1/skills/{name}:restore"
+      body: "*"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.ref.restore" risk: "high" }
+    };
+  }
 }
 
 message CreateSkillReleaseRequest {
@@ -84,4 +133,84 @@ message ResolveSkillReleaseRequest {
 
 message ResolveSkillReleaseResponse {
   SkillRelease release = 1;
+}
+
+message ListSkillRefsRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListSkillRefsResponse {
+  repeated SkillGitRef refs = 1;
+}
+
+message SkillGitRef {
+  string name = 1;
+  string full_ref = 2;
+  string type = 3;
+  string commit_sha = 4;
+  bool is_default = 5;
+}
+
+message ListSkillCommitsRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string ref = 2;
+  int32 page_size = 3;
+  int32 offset = 4;
+}
+
+message ListSkillCommitsResponse {
+  repeated SkillCommit commits = 1;
+}
+
+message SkillCommit {
+  string commit_sha = 1;
+  string tree_sha = 2;
+  repeated string parent_shas = 3;
+  string author_name = 4;
+  string author_email = 5;
+  string subject = 6;
+  google.protobuf.Timestamp create_time = 7;
+}
+
+message CompareSkillRefsRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string base_ref = 2 [(google.api.field_behavior) = REQUIRED];
+  string target_ref = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message CompareSkillRefsResponse {
+  SkillComparison comparison = 1;
+}
+
+message SkillComparison {
+  string base_ref = 1;
+  string target_ref = 2;
+  string base_commit_sha = 3;
+  string target_commit_sha = 4;
+  string merge_base_sha = 5;
+  repeated SkillDiffFile files = 6;
+  string patch = 7;
+  bool patch_truncated = 8;
+}
+
+message SkillDiffFile {
+  string path = 1;
+  string previous_path = 2;
+  string status = 3;
+  int64 additions = 4;
+  int64 deletions = 5;
+  bool binary = 6;
+}
+
+message RestoreSkillRefRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string source_ref = 2 [(google.api.field_behavior) = REQUIRED];
+  string target_branch = 3;
+  string expected_head_sha = 4 [(google.api.field_behavior) = REQUIRED];
+  string commit_message = 5;
+}
+
+message RestoreSkillRefResponse {
+  SkillCommit commit = 1;
+  string target_ref = 2;
 }

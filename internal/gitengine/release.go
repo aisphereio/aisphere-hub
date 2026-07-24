@@ -2,11 +2,13 @@ package gitengine
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/aisphereio/aisphere-hub/internal/biz"
+	softgit "github.com/aisphereio/soft-serve/git"
 )
 
 func (e *Engine) CreateRelease(ctx context.Context, in biz.CreateSkillRelease) (*biz.SkillRelease, error) {
@@ -46,10 +48,13 @@ func (e *Engine) CreateRelease(ctx context.Context, in biz.CreateSkillRelease) (
 	if actorEmail == "" {
 		actorEmail = "noreply@aisphere.io"
 	}
-	message := strings.TrimSpace(in.ReleaseNotes)
-	if message == "" {
-		message = "Release " + tag
+	notes := strings.TrimSpace(in.ReleaseNotes)
+	if notes == "" {
+		notes = "Release " + tag
 	}
+	message := notes + "\n\n" +
+		"AISphere-Source-Ref: " + strings.TrimSpace(in.SourceRef) + "\n" +
+		"AISphere-Publisher-ID: " + strings.TrimSpace(in.ActorID) + "\n"
 	env := []string{
 		"GIT_COMMITTER_NAME=" + actorName,
 		"GIT_COMMITTER_EMAIL=" + actorEmail,
@@ -73,13 +78,62 @@ func (e *Engine) GetRelease(ctx context.Context, skill, version string) (*biz.Sk
 	if !valid {
 		return nil, biz.ErrSkillInvalidArgument
 	}
+	return e.releaseForTag(ctx, repo, tag)
+}
+
+func (e *Engine) releaseForTag(ctx context.Context, repo *softgit.Repository, tag string) (*biz.SkillRelease, error) {
 	commit, err := repo.TagCommit(tag)
 	if err != nil {
 		return nil, biz.ErrSkillReleaseNotFound
 	}
-	return &biz.SkillRelease{
-		Tag:        tag,
-		CommitSHA:  commit.ID.String(),
-		CreateTime: commit.Committer.When,
-	}, nil
+	commitSHA := commit.ID.String()
+	treeSHA, err := runGitRepo(ctx, repo.Path, nil, "show", "-s", "--format=%T", commitSHA)
+	if err != nil {
+		return nil, fmt.Errorf("gitengine: read release tree: %w", err)
+	}
+	manifest, err := runGitRepoRaw(ctx, repo.Path, "show", commitSHA+":SKILL.md")
+	if err != nil {
+		return nil, fmt.Errorf("gitengine: read release manifest: %w", err)
+	}
+	manifestHash := fmt.Sprintf("%x", sha256.Sum256(manifest))
+
+	raw, err := runGitRepo(ctx, repo.Path, nil, "for-each-ref",
+		"--format=%(objecttype)%00%(taggername)%00%(taggeremail)%00%(taggerdate:iso-strict)%00%(contents)",
+		"refs/tags/"+tag)
+	if err != nil {
+		return nil, fmt.Errorf("gitengine: read release tag: %w", err)
+	}
+	parts := strings.SplitN(raw, "\x00", 5)
+	release := &biz.SkillRelease{
+		Tag:            tag,
+		CommitSHA:      commitSHA,
+		TreeSHA:        strings.TrimSpace(treeSHA),
+		ManifestSHA256: manifestHash,
+		CreateTime:     commit.Committer.When.UTC(),
+	}
+	if len(parts) == 5 && strings.TrimSpace(parts[0]) == "tag" {
+		release.PublisherName = strings.TrimSpace(parts[1])
+		release.PublisherEmail = strings.Trim(strings.TrimSpace(parts[2]), "<>")
+		if publishedAt, parseErr := time.Parse(time.RFC3339, strings.TrimSpace(parts[3])); parseErr == nil {
+			release.CreateTime = publishedAt.UTC()
+		}
+		release.ReleaseNotes, release.SourceRef, release.PublisherID = parseReleaseMessage(parts[4])
+	}
+	return release, nil
+}
+
+func parseReleaseMessage(message string) (notes, sourceRef, publisherID string) {
+	lines := strings.Split(strings.TrimSpace(message), "\n")
+	noteLines := make([]string, 0, len(lines))
+	for _, line := range lines {
+		switch {
+		case strings.HasPrefix(line, "AISphere-Source-Ref:"):
+			sourceRef = strings.TrimSpace(strings.TrimPrefix(line, "AISphere-Source-Ref:"))
+		case strings.HasPrefix(line, "AISphere-Publisher-ID:"):
+			publisherID = strings.TrimSpace(strings.TrimPrefix(line, "AISphere-Publisher-ID:"))
+		default:
+			noteLines = append(noteLines, line)
+		}
+	}
+	return strings.TrimSpace(strings.Join(noteLines, "\n")), sourceRef, publisherID
 }

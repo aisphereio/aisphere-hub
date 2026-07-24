@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -334,6 +335,19 @@ func runGitRepo(ctx context.Context, gitDir string, stdin io.Reader, args ...str
 	return runGitRepoEnv(ctx, gitDir, stdin, nil, args...)
 }
 
+func runGitRepoRaw(ctx context.Context, gitDir string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"--git-dir", gitDir}, args...)...)
+	out, err := cmd.Output()
+	if err != nil {
+		stderr := ""
+		if ee, ok := err.(*exec.ExitError); ok {
+			stderr = strings.TrimSpace(string(ee.Stderr))
+		}
+		return nil, fmt.Errorf("git %s: %w%s", strings.Join(args, " "), err, nonemptyPrefix(stderr))
+	}
+	return out, nil
+}
+
 // runGitRepoEnv is runGitRepo with extra environment variables (for
 // GIT_AUTHOR_*/GIT_COMMITTER_* identity on commit-tree).
 func runGitRepoEnv(ctx context.Context, gitDir string, stdin io.Reader, env []string, args ...string) (string, error) {
@@ -459,12 +473,13 @@ func (e *Engine) ListReleases(ctx context.Context, name string) ([]biz.SkillRele
 	}
 	out := make([]biz.SkillRelease, 0, len(tags))
 	for _, tag := range tags {
-		commit, err := repo.TagCommit(tag)
+		release, err := e.releaseForTag(ctx, repo, tag)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, biz.SkillRelease{Tag: tag, CommitSHA: commit.ID.String(), CreateTime: commit.Committer.When})
+		out = append(out, *release)
 	}
+	sort.SliceStable(out, func(i, j int) bool { return compareReleaseTags(out[i].Tag, out[j].Tag) > 0 })
 	return out, nil
 }
 

@@ -23,6 +23,9 @@ Release tags:
 - cannot be overwritten;
 - are validated against the caller supplied expected commit SHA;
 - require the Skill `publish` permission.
+- retain release notes, source ref and publisher identity in the annotated tag;
+- expose the tag publication time, Commit SHA, Tree SHA and exact `SKILL.md`
+  SHA-256 without introducing a release metadata database.
 
 This increment keeps Git as the source of truth and exposes release creation and exact resolution through generated HTTP and gRPC transports. Durable release metadata, channels, bundle building, yanking, and Git ref outbox events are follow-up increments.
 
@@ -32,6 +35,10 @@ This increment keeps Git as the source of truth and exposes release creation and
 - `GET /v1/skills/{name}/releases`
 - `GET /v1/skills/{name}/releases/{version}`
 - `GET /v1/skills/{name}/releases/{version}:resolve`
+- `GET /v1/skills/{name}/refs`
+- `GET /v1/skills/{name}/commits?ref=refs/heads/main`
+- `GET /v1/skills/{name}/compare?baseRef=v1.3.0&targetRef=v1.4.0`
+- `POST /v1/skills/{name}:restore`
 
 Create release request:
 
@@ -52,4 +59,11 @@ Exact resolution is encoded in the URL:
 GET /v1/skills/search/releases/v1.4.0:resolve
 ```
 
-Only exact release versions are accepted in this increment. Floating selectors such as `latest`, `main`, and SemVer ranges remain intentionally unsupported until channel and SkillSet revision resolution are implemented.
+Only exact release versions are accepted by release resolution and SkillSet
+membership. Floating selectors such as `latest`, `main`, and SemVer ranges
+remain intentionally unsupported.
+
+Restore never overwrites an old tag or force-pushes history. It creates a new
+commit whose tree equals the selected source ref and advances the target branch
+only when `expectedHeadSha` still matches. The user reviews and publishes a new
+SemVer release from that commit.
