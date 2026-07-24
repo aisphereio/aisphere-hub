@@ -33,6 +33,14 @@ func (s *SkillReleaseService) RegisterHTTPServer(server *khttp.Server) {
 	skillv1.RegisterSkillReleaseServiceHTTPServer(server, s)
 }
 
+func (s *SkillReleaseService) ResolveSkillRef(ctx context.Context, req *skillv1.ResolveSkillRefRequest) (*skillv1.ResolveSkillRefResponse, error) {
+	ref, err := s.uc.ResolveRef(ctx, req.GetName(), req.GetRef())
+	if err != nil {
+		return nil, err
+	}
+	return &skillv1.ResolveSkillRefResponse{Ref: skillRefToProto(ref)}, nil
+}
+
 func (s *SkillReleaseService) CreateSkillRelease(ctx context.Context, req *skillv1.CreateSkillReleaseRequest) (*skillv1.CreateSkillReleaseResponse, error) {
 	release, err := s.uc.CreateRelease(ctx, principalFromContext(ctx), biz.CreateSkillRelease{
 		SkillName:         req.GetName(),
@@ -61,6 +69,16 @@ func (s *SkillReleaseService) ResolveSkillRelease(ctx context.Context, req *skil
 		return nil, err
 	}
 	return &skillv1.ResolveSkillReleaseResponse{Release: skillReleaseToProto(release)}, nil
+}
+
+func skillRefToProto(item *biz.SkillRef) *skillv1.SkillRef {
+	if item == nil {
+		return nil
+	}
+	return &skillv1.SkillRef{
+		Ref:       item.Ref,
+		CommitSha: item.CommitSHA,
+	}
 }
 
 func skillReleaseToProto(item *biz.SkillRelease) *skillv1.SkillRelease {

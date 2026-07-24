@@ -63,6 +63,20 @@ func TestNormalizeReleaseVersion(t *testing.T) {
 	}
 }
 
+func TestResolveRefNormalizesBranchAndReturnsHead(t *testing.T) {
+	git := newReleaseCapableFake()
+	git.refs["search:refs/heads/main"] = "commit-1"
+	uc := NewSkillUsecase(newMemoryGitSkillRepo(), newMemoryPullRequestRepo(), git, &fakeSkillRelationships{})
+
+	ref, err := uc.ResolveRef(context.Background(), "search", "main")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ref.Ref != "refs/heads/main" || ref.CommitSHA != "commit-1" {
+		t.Fatalf("ResolveRef = %+v", ref)
+	}
+}
+
 func TestCreateReleasePinsExpectedCommitAndNormalizesTag(t *testing.T) {
 	git := newReleaseCapableFake()
 	git.refs["search:refs/heads/main"] = "commit-1"

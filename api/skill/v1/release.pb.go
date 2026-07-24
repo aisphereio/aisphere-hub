@@ -23,6 +23,156 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type SkillRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ref           string                 `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
+	CommitSha     string                 `protobuf:"bytes,2,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillRef) Reset() {
+	*x = SkillRef{}
+	mi := &file_skill_v1_release_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillRef) ProtoMessage() {}
+
+func (x *SkillRef) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillRef.ProtoReflect.Descriptor instead.
+func (*SkillRef) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *SkillRef) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *SkillRef) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+type ResolveSkillRefRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Defaults to refs/heads/main when omitted. Accepts "main" or a fully
+	// qualified ref such as "refs/heads/main".
+	Ref           string `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveSkillRefRequest) Reset() {
+	*x = ResolveSkillRefRequest{}
+	mi := &file_skill_v1_release_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveSkillRefRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveSkillRefRequest) ProtoMessage() {}
+
+func (x *ResolveSkillRefRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveSkillRefRequest.ProtoReflect.Descriptor instead.
+func (*ResolveSkillRefRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ResolveSkillRefRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ResolveSkillRefRequest) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+type ResolveSkillRefResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ref           *SkillRef              `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveSkillRefResponse) Reset() {
+	*x = ResolveSkillRefResponse{}
+	mi := &file_skill_v1_release_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveSkillRefResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveSkillRefResponse) ProtoMessage() {}
+
+func (x *ResolveSkillRefResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveSkillRefResponse.ProtoReflect.Descriptor instead.
+func (*ResolveSkillRefResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ResolveSkillRefResponse) GetRef() *SkillRef {
+	if x != nil {
+		return x.Ref
+	}
+	return nil
+}
+
 type CreateSkillReleaseRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -39,7 +189,7 @@ type CreateSkillReleaseRequest struct {
 
 func (x *CreateSkillReleaseRequest) Reset() {
 	*x = CreateSkillReleaseRequest{}
-	mi := &file_skill_v1_release_proto_msgTypes[0]
+	mi := &file_skill_v1_release_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -51,7 +201,7 @@ func (x *CreateSkillReleaseRequest) String() string {
 func (*CreateSkillReleaseRequest) ProtoMessage() {}
 
 func (x *CreateSkillReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_release_proto_msgTypes[0]
+	mi := &file_skill_v1_release_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -64,7 +214,7 @@ func (x *CreateSkillReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSkillReleaseRequest.ProtoReflect.Descriptor instead.
 func (*CreateSkillReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_release_proto_rawDescGZIP(), []int{0}
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CreateSkillReleaseRequest) GetName() string {
@@ -111,7 +261,7 @@ type CreateSkillReleaseResponse struct {
 
 func (x *CreateSkillReleaseResponse) Reset() {
 	*x = CreateSkillReleaseResponse{}
-	mi := &file_skill_v1_release_proto_msgTypes[1]
+	mi := &file_skill_v1_release_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -123,7 +273,7 @@ func (x *CreateSkillReleaseResponse) String() string {
 func (*CreateSkillReleaseResponse) ProtoMessage() {}
 
 func (x *CreateSkillReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_release_proto_msgTypes[1]
+	mi := &file_skill_v1_release_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -136,7 +286,7 @@ func (x *CreateSkillReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSkillReleaseResponse.ProtoReflect.Descriptor instead.
 func (*CreateSkillReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_release_proto_rawDescGZIP(), []int{1}
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateSkillReleaseResponse) GetRelease() *SkillRelease {
@@ -156,7 +306,7 @@ type GetSkillReleaseRequest struct {
 
 func (x *GetSkillReleaseRequest) Reset() {
 	*x = GetSkillReleaseRequest{}
-	mi := &file_skill_v1_release_proto_msgTypes[2]
+	mi := &file_skill_v1_release_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -168,7 +318,7 @@ func (x *GetSkillReleaseRequest) String() string {
 func (*GetSkillReleaseRequest) ProtoMessage() {}
 
 func (x *GetSkillReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_release_proto_msgTypes[2]
+	mi := &file_skill_v1_release_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -181,7 +331,7 @@ func (x *GetSkillReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillReleaseRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_release_proto_rawDescGZIP(), []int{2}
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetSkillReleaseRequest) GetName() string {
@@ -207,7 +357,7 @@ type GetSkillReleaseResponse struct {
 
 func (x *GetSkillReleaseResponse) Reset() {
 	*x = GetSkillReleaseResponse{}
-	mi := &file_skill_v1_release_proto_msgTypes[3]
+	mi := &file_skill_v1_release_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -219,7 +369,7 @@ func (x *GetSkillReleaseResponse) String() string {
 func (*GetSkillReleaseResponse) ProtoMessage() {}
 
 func (x *GetSkillReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_release_proto_msgTypes[3]
+	mi := &file_skill_v1_release_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -232,7 +382,7 @@ func (x *GetSkillReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillReleaseResponse.ProtoReflect.Descriptor instead.
 func (*GetSkillReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_release_proto_rawDescGZIP(), []int{3}
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetSkillReleaseResponse) GetRelease() *SkillRelease {
@@ -253,7 +403,7 @@ type ResolveSkillReleaseRequest struct {
 
 func (x *ResolveSkillReleaseRequest) Reset() {
 	*x = ResolveSkillReleaseRequest{}
-	mi := &file_skill_v1_release_proto_msgTypes[4]
+	mi := &file_skill_v1_release_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -265,7 +415,7 @@ func (x *ResolveSkillReleaseRequest) String() string {
 func (*ResolveSkillReleaseRequest) ProtoMessage() {}
 
 func (x *ResolveSkillReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_release_proto_msgTypes[4]
+	mi := &file_skill_v1_release_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -278,7 +428,7 @@ func (x *ResolveSkillReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveSkillReleaseRequest.ProtoReflect.Descriptor instead.
 func (*ResolveSkillReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_skill_v1_release_proto_rawDescGZIP(), []int{4}
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ResolveSkillReleaseRequest) GetName() string {
@@ -304,7 +454,7 @@ type ResolveSkillReleaseResponse struct {
 
 func (x *ResolveSkillReleaseResponse) Reset() {
 	*x = ResolveSkillReleaseResponse{}
-	mi := &file_skill_v1_release_proto_msgTypes[5]
+	mi := &file_skill_v1_release_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -316,7 +466,7 @@ func (x *ResolveSkillReleaseResponse) String() string {
 func (*ResolveSkillReleaseResponse) ProtoMessage() {}
 
 func (x *ResolveSkillReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_skill_v1_release_proto_msgTypes[5]
+	mi := &file_skill_v1_release_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -329,7 +479,7 @@ func (x *ResolveSkillReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveSkillReleaseResponse.ProtoReflect.Descriptor instead.
 func (*ResolveSkillReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_skill_v1_release_proto_rawDescGZIP(), []int{5}
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ResolveSkillReleaseResponse) GetRelease() *SkillRelease {
@@ -343,7 +493,16 @@ var File_skill_v1_release_proto protoreflect.FileDescriptor
 
 const file_skill_v1_release_proto_rawDesc = "" +
 	"\n" +
-	"\x16skill/v1/release.proto\x12\bskill.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x14skill/v1/skill.proto\"\xcc\x01\n" +
+	"\x16skill/v1/release.proto\x12\bskill.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x14skill/v1/skill.proto\";\n" +
+	"\bSkillRef\x12\x10\n" +
+	"\x03ref\x18\x01 \x01(\tR\x03ref\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\x02 \x01(\tR\tcommitSha\"C\n" +
+	"\x16ResolveSkillRefRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x10\n" +
+	"\x03ref\x18\x02 \x01(\tR\x03ref\"?\n" +
+	"\x17ResolveSkillRefResponse\x12$\n" +
+	"\x03ref\x18\x01 \x01(\v2\x12.skill.v1.SkillRefR\x03ref\"\xcc\x01\n" +
 	"\x19CreateSkillReleaseRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
 	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\x12\x1d\n" +
@@ -362,8 +521,10 @@ const file_skill_v1_release_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
 	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"O\n" +
 	"\x1bResolveSkillReleaseResponse\x120\n" +
-	"\arelease\x18\x01 \x01(\v2\x16.skill.v1.SkillReleaseR\arelease2\xca\x05\n" +
-	"\x13SkillReleaseService\x12\xe2\x01\n" +
+	"\arelease\x18\x01 \x01(\v2\x16.skill.v1.SkillReleaseR\arelease2\x9b\a\n" +
+	"\x13SkillReleaseService\x12\xce\x01\n" +
+	"\x0fResolveSkillRef\x12 .skill.v1.ResolveSkillRefRequest\x1a!.skill.v1.ResolveSkillRefResponse\"v\x92\xf4\x18G\b\x03\x12#\n" +
+	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x15hub.skill.ref.resolve\x1a\x03low\x82\xd3\xe4\x93\x02%b\x03ref\x12\x1e/v1/skills/{name}/refs:resolve\x12\xe2\x01\n" +
 	"\x12CreateSkillRelease\x12#.skill.v1.CreateSkillReleaseRequest\x1a$.skill.v1.CreateSkillReleaseResponse\"\x80\x01\x92\xf4\x18N\b\x03\x12&\n" +
 	"\apublish\x12\fskill:{name}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x18hub.skill.release.create\x1a\x04high\x82\xd3\xe4\x93\x02(:\x01*b\arelease\"\x1a/v1/skills/{name}/releases\x12\xd9\x01\n" +
 	"\x0fGetSkillRelease\x12 .skill.v1.GetSkillReleaseRequest\x1a!.skill.v1.GetSkillReleaseResponse\"\x80\x01\x92\xf4\x18G\b\x03\x12#\n" +
@@ -383,31 +544,37 @@ func file_skill_v1_release_proto_rawDescGZIP() []byte {
 	return file_skill_v1_release_proto_rawDescData
 }
 
-var file_skill_v1_release_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_skill_v1_release_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_skill_v1_release_proto_goTypes = []any{
-	(*CreateSkillReleaseRequest)(nil),   // 0: skill.v1.CreateSkillReleaseRequest
-	(*CreateSkillReleaseResponse)(nil),  // 1: skill.v1.CreateSkillReleaseResponse
-	(*GetSkillReleaseRequest)(nil),      // 2: skill.v1.GetSkillReleaseRequest
-	(*GetSkillReleaseResponse)(nil),     // 3: skill.v1.GetSkillReleaseResponse
-	(*ResolveSkillReleaseRequest)(nil),  // 4: skill.v1.ResolveSkillReleaseRequest
-	(*ResolveSkillReleaseResponse)(nil), // 5: skill.v1.ResolveSkillReleaseResponse
-	(*SkillRelease)(nil),                // 6: skill.v1.SkillRelease
+	(*SkillRef)(nil),                    // 0: skill.v1.SkillRef
+	(*ResolveSkillRefRequest)(nil),      // 1: skill.v1.ResolveSkillRefRequest
+	(*ResolveSkillRefResponse)(nil),     // 2: skill.v1.ResolveSkillRefResponse
+	(*CreateSkillReleaseRequest)(nil),   // 3: skill.v1.CreateSkillReleaseRequest
+	(*CreateSkillReleaseResponse)(nil),  // 4: skill.v1.CreateSkillReleaseResponse
+	(*GetSkillReleaseRequest)(nil),      // 5: skill.v1.GetSkillReleaseRequest
+	(*GetSkillReleaseResponse)(nil),     // 6: skill.v1.GetSkillReleaseResponse
+	(*ResolveSkillReleaseRequest)(nil),  // 7: skill.v1.ResolveSkillReleaseRequest
+	(*ResolveSkillReleaseResponse)(nil), // 8: skill.v1.ResolveSkillReleaseResponse
+	(*SkillRelease)(nil),                // 9: skill.v1.SkillRelease
 }
 var file_skill_v1_release_proto_depIdxs = []int32{
-	6, // 0: skill.v1.CreateSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
-	6, // 1: skill.v1.GetSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
-	6, // 2: skill.v1.ResolveSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
-	0, // 3: skill.v1.SkillReleaseService.CreateSkillRelease:input_type -> skill.v1.CreateSkillReleaseRequest
-	2, // 4: skill.v1.SkillReleaseService.GetSkillRelease:input_type -> skill.v1.GetSkillReleaseRequest
-	4, // 5: skill.v1.SkillReleaseService.ResolveSkillRelease:input_type -> skill.v1.ResolveSkillReleaseRequest
-	1, // 6: skill.v1.SkillReleaseService.CreateSkillRelease:output_type -> skill.v1.CreateSkillReleaseResponse
-	3, // 7: skill.v1.SkillReleaseService.GetSkillRelease:output_type -> skill.v1.GetSkillReleaseResponse
-	5, // 8: skill.v1.SkillReleaseService.ResolveSkillRelease:output_type -> skill.v1.ResolveSkillReleaseResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 0: skill.v1.ResolveSkillRefResponse.ref:type_name -> skill.v1.SkillRef
+	9, // 1: skill.v1.CreateSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
+	9, // 2: skill.v1.GetSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
+	9, // 3: skill.v1.ResolveSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
+	1, // 4: skill.v1.SkillReleaseService.ResolveSkillRef:input_type -> skill.v1.ResolveSkillRefRequest
+	3, // 5: skill.v1.SkillReleaseService.CreateSkillRelease:input_type -> skill.v1.CreateSkillReleaseRequest
+	5, // 6: skill.v1.SkillReleaseService.GetSkillRelease:input_type -> skill.v1.GetSkillReleaseRequest
+	7, // 7: skill.v1.SkillReleaseService.ResolveSkillRelease:input_type -> skill.v1.ResolveSkillReleaseRequest
+	2, // 8: skill.v1.SkillReleaseService.ResolveSkillRef:output_type -> skill.v1.ResolveSkillRefResponse
+	4, // 9: skill.v1.SkillReleaseService.CreateSkillRelease:output_type -> skill.v1.CreateSkillReleaseResponse
+	6, // 10: skill.v1.SkillReleaseService.GetSkillRelease:output_type -> skill.v1.GetSkillReleaseResponse
+	8, // 11: skill.v1.SkillReleaseService.ResolveSkillRelease:output_type -> skill.v1.ResolveSkillReleaseResponse
+	8, // [8:12] is the sub-list for method output_type
+	4, // [4:8] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_skill_v1_release_proto_init() }
@@ -422,7 +589,7 @@ func file_skill_v1_release_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_skill_v1_release_proto_rawDesc), len(file_skill_v1_release_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

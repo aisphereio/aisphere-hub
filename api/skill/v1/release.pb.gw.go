@@ -35,6 +35,59 @@ var (
 	_ = metadata.Join
 )
 
+var filter_SkillReleaseService_ResolveSkillRef_0 = &utilities.DoubleArray{Encoding: map[string]int{"name": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+
+func request_SkillReleaseService_ResolveSkillRef_0(ctx context.Context, marshaler runtime.Marshaler, client SkillReleaseServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ResolveSkillRefRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+	protoReq.Name, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_SkillReleaseService_ResolveSkillRef_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ResolveSkillRef(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_SkillReleaseService_ResolveSkillRef_0(ctx context.Context, marshaler runtime.Marshaler, server SkillReleaseServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ResolveSkillRefRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+	protoReq.Name, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_SkillReleaseService_ResolveSkillRef_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ResolveSkillRef(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_SkillReleaseService_CreateSkillRelease_0(ctx context.Context, marshaler runtime.Marshaler, client SkillReleaseServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq CreateSkillReleaseRequest
@@ -196,6 +249,26 @@ func local_request_SkillReleaseService_ResolveSkillRelease_0(ctx context.Context
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterSkillReleaseServiceHandlerFromEndpoint instead.
 // GRPC interceptors will not work for this type of registration. To use interceptors, you must use the "runtime.WithMiddlewares" option in the "runtime.NewServeMux" call.
 func RegisterSkillReleaseServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server SkillReleaseServiceServer) error {
+	mux.Handle(http.MethodGet, pattern_SkillReleaseService_ResolveSkillRef_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/skill.v1.SkillReleaseService/ResolveSkillRef", runtime.WithHTTPPathPattern("/v1/skills/{name}/refs:resolve"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SkillReleaseService_ResolveSkillRef_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SkillReleaseService_ResolveSkillRef_0(annotatedContext, mux, outboundMarshaler, w, req, response_SkillReleaseService_ResolveSkillRef_0{resp.(*ResolveSkillRefResponse)}, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_SkillReleaseService_CreateSkillRelease_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -296,6 +369,23 @@ func RegisterSkillReleaseServiceHandler(ctx context.Context, mux *runtime.ServeM
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "SkillReleaseServiceClient" to call the correct interceptors. This client ignores the HTTP middlewares.
 func RegisterSkillReleaseServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client SkillReleaseServiceClient) error {
+	mux.Handle(http.MethodGet, pattern_SkillReleaseService_ResolveSkillRef_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/skill.v1.SkillReleaseService/ResolveSkillRef", runtime.WithHTTPPathPattern("/v1/skills/{name}/refs:resolve"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SkillReleaseService_ResolveSkillRef_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SkillReleaseService_ResolveSkillRef_0(annotatedContext, mux, outboundMarshaler, w, req, response_SkillReleaseService_ResolveSkillRef_0{resp.(*ResolveSkillRefResponse)}, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_SkillReleaseService_CreateSkillRelease_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -350,6 +440,15 @@ func RegisterSkillReleaseServiceHandlerClient(ctx context.Context, mux *runtime.
 	return nil
 }
 
+type response_SkillReleaseService_ResolveSkillRef_0 struct {
+	*ResolveSkillRefResponse
+}
+
+func (m response_SkillReleaseService_ResolveSkillRef_0) XXX_ResponseBody() interface{} {
+	response := m.ResolveSkillRefResponse
+	return response.Ref
+}
+
 type response_SkillReleaseService_CreateSkillRelease_0 struct {
 	*CreateSkillReleaseResponse
 }
@@ -378,12 +477,14 @@ func (m response_SkillReleaseService_ResolveSkillRelease_0) XXX_ResponseBody() i
 }
 
 var (
+	pattern_SkillReleaseService_ResolveSkillRef_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "skills", "name", "refs"}, "resolve"))
 	pattern_SkillReleaseService_CreateSkillRelease_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "skills", "name", "releases"}, ""))
 	pattern_SkillReleaseService_GetSkillRelease_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "skills", "name", "releases", "version"}, ""))
 	pattern_SkillReleaseService_ResolveSkillRelease_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "skills", "name", "releases", "version"}, "resolve"))
 )
 
 var (
+	forward_SkillReleaseService_ResolveSkillRef_0     = runtime.ForwardResponseMessage
 	forward_SkillReleaseService_CreateSkillRelease_0  = runtime.ForwardResponseMessage
 	forward_SkillReleaseService_GetSkillRelease_0     = runtime.ForwardResponseMessage
 	forward_SkillReleaseService_ResolveSkillRelease_0 = runtime.ForwardResponseMessage

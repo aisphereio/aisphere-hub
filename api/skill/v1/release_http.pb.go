@@ -19,19 +19,47 @@ const _ = http.SupportPackageIsVersion3
 
 const OperationSkillReleaseServiceCreateSkillRelease = "/skill.v1.SkillReleaseService/CreateSkillRelease"
 const OperationSkillReleaseServiceGetSkillRelease = "/skill.v1.SkillReleaseService/GetSkillRelease"
+const OperationSkillReleaseServiceResolveSkillRef = "/skill.v1.SkillReleaseService/ResolveSkillRef"
 const OperationSkillReleaseServiceResolveSkillRelease = "/skill.v1.SkillReleaseService/ResolveSkillRelease"
 
 type SkillReleaseServiceHTTPServer interface {
 	CreateSkillRelease(context.Context, *CreateSkillReleaseRequest) (*CreateSkillReleaseResponse, error)
 	GetSkillRelease(context.Context, *GetSkillReleaseRequest) (*GetSkillReleaseResponse, error)
+	ResolveSkillRef(context.Context, *ResolveSkillRefRequest) (*ResolveSkillRefResponse, error)
 	ResolveSkillRelease(context.Context, *ResolveSkillReleaseRequest) (*ResolveSkillReleaseResponse, error)
 }
 
 func RegisterSkillReleaseServiceHTTPServer(s *http.Server, srv SkillReleaseServiceHTTPServer) {
 	r := s.Route("/")
+	r.Handle("GET", "/v1/skills/{name}/refs:resolve", _SkillReleaseService_ResolveSkillRef0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/releases/{version}", _SkillReleaseService_GetSkillRelease0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/releases/{version}:resolve", _SkillReleaseService_ResolveSkillRelease0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/releases", _SkillReleaseService_CreateSkillRelease0_HTTP_Handler(srv))
+}
+
+func _SkillReleaseService_ResolveSkillRef0_HTTP_Handler(srv SkillReleaseServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ResolveSkillRefRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillReleaseServiceResolveSkillRef)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ResolveSkillRef(ctx, req.(*ResolveSkillRefRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ResolveSkillRefResponse)
+		return ctx.Result(200, reply.Ref)
+	}
 }
 
 func _SkillReleaseService_GetSkillRelease0_HTTP_Handler(srv SkillReleaseServiceHTTPServer) func(ctx http.Context) error {
@@ -112,6 +140,7 @@ func _SkillReleaseService_CreateSkillRelease0_HTTP_Handler(srv SkillReleaseServi
 type SkillReleaseServiceHTTPClient interface {
 	CreateSkillRelease(ctx context.Context, req *CreateSkillReleaseRequest, opts ...http.CallOption) (rsp *CreateSkillReleaseResponse, err error)
 	GetSkillRelease(ctx context.Context, req *GetSkillReleaseRequest, opts ...http.CallOption) (rsp *GetSkillReleaseResponse, err error)
+	ResolveSkillRef(ctx context.Context, req *ResolveSkillRefRequest, opts ...http.CallOption) (rsp *ResolveSkillRefResponse, err error)
 	ResolveSkillRelease(ctx context.Context, req *ResolveSkillReleaseRequest, opts ...http.CallOption) (rsp *ResolveSkillReleaseResponse, err error)
 }
 
@@ -150,6 +179,22 @@ func (c *SkillReleaseServiceHTTPClientImpl) GetSkillRelease(ctx context.Context,
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Release, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *SkillReleaseServiceHTTPClientImpl) ResolveSkillRef(ctx context.Context, in *ResolveSkillRefRequest, opts ...http.CallOption) (*ResolveSkillRefResponse, error) {
+	var out ResolveSkillRefResponse
+	pattern := "/v1/skills/{name}/refs:resolve"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSkillReleaseServiceResolveSkillRef),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Ref, opts...)
 	if err != nil {
 		return nil, err
 	}
