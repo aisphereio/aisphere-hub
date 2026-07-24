@@ -362,6 +362,18 @@ func (e *fakeSkillGitEngine) DeleteRepository(_ context.Context, name string) er
 func (e *fakeSkillGitEngine) ResolveRef(_ context.Context, skill, ref string) (string, error) {
 	return e.refs[skill+":"+ref], nil
 }
+func (e *fakeSkillGitEngine) ListRefs(context.Context, string) ([]SkillGitRef, error) {
+	return nil, nil
+}
+func (e *fakeSkillGitEngine) ListCommits(context.Context, string, string, int, int) ([]SkillCommit, error) {
+	return nil, nil
+}
+func (e *fakeSkillGitEngine) CompareRefs(context.Context, string, string, string) (*SkillComparison, error) {
+	return nil, nil
+}
+func (e *fakeSkillGitEngine) RestoreRef(context.Context, RestoreSkillRef) (*SkillCommit, error) {
+	return nil, nil
+}
 func (e *fakeSkillGitEngine) Merge(_ context.Context, skill, source, target, expected string) (string, error) {
 	return "merge-1", nil
 }

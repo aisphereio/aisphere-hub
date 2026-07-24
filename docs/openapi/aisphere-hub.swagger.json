@@ -366,6 +366,27 @@
       ],
       "type": "object"
     },
+    "SkillReleaseServiceRestoreSkillRefBody": {
+      "properties": {
+        "commitMessage": {
+          "type": "string"
+        },
+        "expectedHeadSha": {
+          "type": "string"
+        },
+        "sourceRef": {
+          "type": "string"
+        },
+        "targetBranch": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourceRef",
+        "expectedHeadSha"
+      ],
+      "type": "object"
+    },
     "SkillServiceClosePullRequestBody": {
       "type": "object"
     },
@@ -837,6 +858,14 @@
         "CLUSTER_STATUS_FAILED"
       ],
       "type": "string"
+    },
+    "v1CompareSkillRefsResponse": {
+      "properties": {
+        "comparison": {
+          "$ref": "#/definitions/v1SkillComparison"
+        }
+      },
+      "type": "object"
     },
     "v1CreateClusterRequest": {
       "properties": {
@@ -1581,6 +1610,30 @@
       },
       "type": "object"
     },
+    "v1ListSkillCommitsResponse": {
+      "properties": {
+        "commits": {
+          "items": {
+            "$ref": "#/definitions/v1SkillCommit",
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "v1ListSkillRefsResponse": {
+      "properties": {
+        "refs": {
+          "items": {
+            "$ref": "#/definitions/v1SkillGitRef",
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "v1ListSkillReleasesResponse": {
       "properties": {
         "releases": {
@@ -2207,6 +2260,17 @@
       },
       "type": "object"
     },
+    "v1RestoreSkillRefResponse": {
+      "properties": {
+        "commit": {
+          "$ref": "#/definitions/v1SkillCommit"
+        },
+        "targetRef": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "v1ReviewPullRequestResponse": {
       "properties": {
         "review": {
@@ -2648,6 +2712,114 @@
       },
       "type": "object"
     },
+    "v1SkillCommit": {
+      "properties": {
+        "authorEmail": {
+          "type": "string"
+        },
+        "authorName": {
+          "type": "string"
+        },
+        "commitSha": {
+          "type": "string"
+        },
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "parentShas": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "treeSha": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1SkillComparison": {
+      "properties": {
+        "baseCommitSha": {
+          "type": "string"
+        },
+        "baseRef": {
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/definitions/v1SkillDiffFile",
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "mergeBaseSha": {
+          "type": "string"
+        },
+        "patch": {
+          "type": "string"
+        },
+        "patchTruncated": {
+          "type": "boolean"
+        },
+        "targetCommitSha": {
+          "type": "string"
+        },
+        "targetRef": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1SkillDiffFile": {
+      "properties": {
+        "additions": {
+          "format": "int64",
+          "type": "string"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "deletions": {
+          "format": "int64",
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "previousPath": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1SkillGitRef": {
+      "properties": {
+        "commitSha": {
+          "type": "string"
+        },
+        "fullRef": {
+          "type": "string"
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "v1SkillRef": {
       "properties": {
         "commitSha": {
@@ -2671,7 +2843,25 @@
         "manifestSha256": {
           "type": "string"
         },
+        "publisherEmail": {
+          "type": "string"
+        },
+        "publisherId": {
+          "type": "string"
+        },
+        "publisherName": {
+          "type": "string"
+        },
+        "releaseNotes": {
+          "type": "string"
+        },
+        "sourceRef": {
+          "type": "string"
+        },
         "tag": {
+          "type": "string"
+        },
+        "treeSha": {
           "type": "string"
         }
       },
@@ -5278,6 +5468,98 @@
         ]
       }
     },
+    "/v1/skills/{name}/commits": {
+      "get": {
+        "operationId": "SkillReleaseService_ListSkillCommits",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "ref",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "format": "int32",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "format": "int32",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillCommitsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SkillReleaseService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/compare": {
+      "get": {
+        "operationId": "SkillReleaseService_CompareSkillRefs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "baseRef",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "targetRef",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CompareSkillRefsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SkillReleaseService"
+        ]
+      }
+    },
     "/v1/skills/{name}/pull-requests": {
       "get": {
         "operationId": "SkillService_ListPullRequests",
@@ -5528,6 +5810,36 @@
         },
         "tags": [
           "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/refs": {
+      "get": {
+        "operationId": "SkillReleaseService_ListSkillRefs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillRefsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SkillReleaseService"
         ]
       }
     },
@@ -5818,6 +6130,45 @@
         },
         "tags": [
           "SkillService"
+        ]
+      }
+    },
+    "/v1/skills/{name}:restore": {
+      "post": {
+        "operationId": "SkillReleaseService_RestoreSkillRef",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SkillReleaseServiceRestoreSkillRefBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RestoreSkillRefResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "RestoreSkillRef creates a new commit whose tree exactly matches source_ref\nand advances target_branch with compare-and-swap. Existing release tags\nremain immutable; rollback is therefore auditable and non-destructive.",
+        "tags": [
+          "SkillReleaseService"
         ]
       }
     },

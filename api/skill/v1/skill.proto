@@ -353,6 +353,12 @@ message SkillRelease {
   string commit_sha = 2;
   string manifest_sha256 = 3;
   google.protobuf.Timestamp create_time = 4;
+  string tree_sha = 5;
+  string release_notes = 6;
+  string source_ref = 7;
+  string publisher_id = 8;
+  string publisher_name = 9;
+  string publisher_email = 10;
 }
 
 message ListSkillReleasesRequest { string name = 1 [(google.api.field_behavior) = REQUIRED]; }

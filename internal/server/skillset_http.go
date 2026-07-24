@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/aisphere-hub/internal/data"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authz"
@@ -21,6 +22,11 @@ var skillSetNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 
 type skillSetHTTPHandler struct {
 	resources *data.Resources
+	releases  skillSetReleaseResolver
+}
+
+type skillSetReleaseResolver interface {
+	GetRelease(context.Context, string, string) (*biz.SkillRelease, error)
 }
 
 type skillSetRow struct {
@@ -33,6 +39,7 @@ type skillSetRow struct {
 	OrgID       string           `gorm:"column:org_id" json:"orgId,omitempty"`
 	CreatedAt   time.Time        `gorm:"column:created_at" json:"createdAt"`
 	UpdatedAt   time.Time        `gorm:"column:updated_at" json:"updatedAt"`
+	Revision    int64            `gorm:"column:revision" json:"revision"`
 	DeletedAt   *time.Time       `gorm:"column:deleted_at" json:"-"`
 	Members     []skillSetMember `gorm:"-" json:"members,omitempty"`
 }
@@ -40,10 +47,14 @@ type skillSetRow struct {
 func (skillSetRow) TableName() string { return "aihub_skillsets" }
 
 type skillSetMember struct {
-	SkillName   string `gorm:"column:skill_name" json:"skillName"`
-	Order       int    `gorm:"column:sort_order" json:"order"`
-	Version     string `gorm:"column:version" json:"version,omitempty"`
-	DisplayName string `gorm:"column:display_name" json:"displayName,omitempty"`
+	SkillName   string     `gorm:"column:skill_name" json:"skillName"`
+	Order       int        `gorm:"column:sort_order" json:"order"`
+	Version     string     `gorm:"column:version" json:"version,omitempty"`
+	CommitSHA   string     `gorm:"column:commit_sha" json:"commitSha,omitempty"`
+	TreeSHA     string     `gorm:"column:tree_sha" json:"treeSha,omitempty"`
+	ManifestSHA string     `gorm:"column:manifest_sha256" json:"manifestSha256,omitempty"`
+	ResolvedAt  *time.Time `gorm:"column:resolved_at" json:"resolvedAt,omitempty"`
+	DisplayName string     `gorm:"column:display_name" json:"displayName,omitempty"`
 }
 
 type skillSetWriteRequest struct {
@@ -65,14 +76,15 @@ type skillSetWriteRequest struct {
 // previous srv.HandleFunc() registration bypassed the middleware matcher
 // entirely, so PrincipalFromContext always returned anonymous and every
 // authenticated skillset write failed with UNAUTHENTICATED.
-func registerSecuredSkillSetHTTP(srv *khttp.Server, resources *data.Resources) {
+func registerSecuredSkillSetHTTP(srv *khttp.Server, resources *data.Resources, releases skillSetReleaseResolver) {
 	if srv == nil || resources == nil || resources.DB == nil {
 		return
 	}
-	h := &skillSetHTTPHandler{resources: resources}
+	h := &skillSetHTTPHandler{resources: resources, releases: releases}
 	r := srv.Route("/")
 	r.Handle(http.MethodGet, "/v1/skillsets", h.listEndpoint)
 	r.Handle(http.MethodPost, "/v1/skillsets", h.createEndpoint)
+	r.Handle(http.MethodGet, "/v1/skillsets/{name}:resolve", h.resolveEndpoint)
 	r.Handle(http.MethodGet, "/v1/skillsets/{name}", h.getEndpoint)
 	r.Handle(http.MethodPut, "/v1/skillsets/{name}", h.updateEndpoint)
 	r.Handle(http.MethodDelete, "/v1/skillsets/{name}", h.removeEndpoint)
@@ -149,7 +161,8 @@ func (h *skillSetHTTPHandler) allowCreate(ctx context.Context, principal authn.P
 func (h *skillSetHTTPHandler) members(ctx context.Context, name string) ([]skillSetMember, error) {
 	var members []skillSetMember
 	err := h.db(ctx).Raw(`
-		SELECT i.skill_name, i.sort_order, '' AS version,
+		SELECT i.skill_name, i.sort_order, i.version, i.commit_sha, i.tree_sha,
+		       i.manifest_sha256, i.resolved_at,
 		       COALESCE(p.display_name, '') AS display_name
 		FROM aihub_skillset_items i
 		JOIN repos r ON r.name = i.skill_name
@@ -168,30 +181,102 @@ func (h *skillSetHTTPHandler) visibleSet(ctx context.Context, name string) (*ski
 	return &row, err
 }
 
+func (h *skillSetHTTPHandler) resolveMember(ctx context.Context, member skillSetMember) (skillSetMember, error) {
+	member.SkillName = strings.TrimSpace(member.SkillName)
+	member.Version = strings.TrimSpace(member.Version)
+	if !skillSetNameRE.MatchString(member.SkillName) || member.Version == "" {
+		return skillSetMember{}, errSkillSetMemberVersionRequired
+	}
+	if err := h.requireSkillView(ctx, member.SkillName); err != nil {
+		return skillSetMember{}, err
+	}
+	if h.releases == nil {
+		return skillSetMember{}, errSkillSetReleaseUnavailable
+	}
+	release, err := h.releases.GetRelease(ctx, member.SkillName, member.Version)
+	if err != nil {
+		return skillSetMember{}, err
+	}
+	member.Version = release.Tag
+	member.CommitSHA = release.CommitSHA
+	member.TreeSHA = release.TreeSHA
+	member.ManifestSHA = release.ManifestSHA256
+	now := time.Now().UTC()
+	member.ResolvedAt = &now
+	return member, nil
+}
+
+func (h *skillSetHTTPHandler) requireSkillView(ctx context.Context, skillName string) error {
+	principal, ok := principalFromCtx(ctx)
+	if !ok {
+		return errSkillSetUnauthenticated
+	}
+	if h.resources.Authz == nil {
+		return errSkillSetAuthzUnavailable
+	}
+	subjectType := principal.SubjectType
+	if strings.TrimSpace(subjectType) == "" {
+		subjectType = authz.SubjectTypeUser
+	}
+	decision, err := h.resources.Authz.Check(ctx, authz.CheckRequest{
+		Subject: authz.SubjectRef{
+			Type: subjectType,
+			ID:   principal.SubjectID,
+		},
+		Resource: authz.ObjectRef{
+			Type: "skill",
+			ID:   skillName,
+		},
+		Permission: "view",
+		OrgID:      principal.OrgID,
+	})
+	if err != nil {
+		return errSkillSetAuthzUnavailable
+	}
+	if !decision.IsAllowed() {
+		return errSkillSetMemberForbidden
+	}
+	return nil
+}
+
+func (h *skillSetHTTPHandler) resolveMembers(ctx context.Context, members []skillSetMember) ([]skillSetMember, error) {
+	resolved := make([]skillSetMember, 0, len(members))
+	seen := make(map[string]struct{}, len(members))
+	for _, member := range members {
+		member.SkillName = strings.TrimSpace(member.SkillName)
+		if _, ok := seen[member.SkillName]; ok {
+			continue
+		}
+		item, err := h.resolveMember(ctx, member)
+		if err != nil {
+			return nil, err
+		}
+		seen[item.SkillName] = struct{}{}
+		resolved = append(resolved, item)
+	}
+	return resolved, nil
+}
+
 func replaceSkillSetMembers(tx *gorm.DB, name string, members []skillSetMember) error {
 	if err := tx.Exec("DELETE FROM aihub_skillset_items WHERE skillset_name = ?", name).Error; err != nil {
 		return err
 	}
-	seen := make(map[string]struct{}, len(members))
 	for index, member := range members {
-		member.SkillName = strings.TrimSpace(member.SkillName)
-		if !skillSetNameRE.MatchString(member.SkillName) {
-			return errors.New("invalid skillName in members")
-		}
-		if _, ok := seen[member.SkillName]; ok {
-			continue
-		}
-		seen[member.SkillName] = struct{}{}
 		order := member.Order
 		if order == 0 && index > 0 {
 			order = index
 		}
 		result := tx.Exec(`
-			INSERT INTO aihub_skillset_items(skillset_name, skill_name, sort_order)
-			SELECT ?, r.name, ?
+			INSERT INTO aihub_skillset_items(
+				skillset_name, skill_name, sort_order, version, commit_sha,
+				tree_sha, manifest_sha256, resolved_at
+			)
+			SELECT ?, r.name, ?, ?, ?, ?, ?, ?
 			FROM repos r
 			JOIN hub_skill_profiles p ON p.repository_id = r.id
-			WHERE r.name = ? AND p.lifecycle_status = 'active'`, name, order, member.SkillName)
+			WHERE r.name = ? AND p.lifecycle_status = 'active'`,
+			name, order, member.Version, member.CommitSHA, member.TreeSHA,
+			member.ManifestSHA, member.ResolvedAt, member.SkillName)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -232,12 +317,16 @@ func positiveInt(value string, fallback int) int {
 // ─── Error sentinels (mapped to errorx for transport encoding) ────────────
 
 var (
-	errSkillSetUnauthenticated = errorx.Unauthorized("UNAUTHENTICATED", "authentication required")
-	errSkillSetForbidden       = errorx.Forbidden("SKILLSET_PERMISSION_DENIED", "zone membership is required to create a skillset")
-	errSkillSetZoneRequired    = errorx.BadRequest("SKILLSET_ZONE_REQUIRED", "authenticated principal has no zone")
-	errSkillSetAuthzUnavailable = errorx.New("SKILLSET_AUTHZ_UNAVAILABLE", errorx.WithHTTPStatus(http.StatusServiceUnavailable), errorx.WithMessage("authorization service is unavailable"))
-	errSkillSetInvalidName     = errorx.BadRequest("SKILLSET_INVALID_NAME", "invalid skillset name")
-	errSkillSetMemberInvalid   = errorx.BadRequest("SKILLSET_MEMBER_INVALID", "valid skillName is required")
+	errSkillSetUnauthenticated      = errorx.Unauthorized("UNAUTHENTICATED", "authentication required")
+	errSkillSetForbidden            = errorx.Forbidden("SKILLSET_PERMISSION_DENIED", "zone membership is required to create a skillset")
+	errSkillSetZoneRequired         = errorx.BadRequest("SKILLSET_ZONE_REQUIRED", "authenticated principal has no zone")
+	errSkillSetAuthzUnavailable     = errorx.New("SKILLSET_AUTHZ_UNAVAILABLE", errorx.WithHTTPStatus(http.StatusServiceUnavailable), errorx.WithMessage("authorization service is unavailable"))
+	errSkillSetInvalidName          = errorx.BadRequest("SKILLSET_INVALID_NAME", "invalid skillset name")
+	errSkillSetMemberInvalid        = errorx.BadRequest("SKILLSET_MEMBER_INVALID", "valid skillName is required")
+	errSkillSetMemberVersionRequired = errorx.BadRequest("SKILLSET_MEMBER_VERSION_REQUIRED", "an exact Skill release version is required")
+	errSkillSetMemberUnresolved      = errorx.Conflict("SKILLSET_MEMBER_UNRESOLVED", "all SkillSet members must be pinned to immutable releases")
+	errSkillSetMemberForbidden       = errorx.Forbidden("SKILLSET_MEMBER_FORBIDDEN", "the referenced Skill is not visible to the caller")
+	errSkillSetReleaseUnavailable    = errorx.New("SKILLSET_RELEASE_UNAVAILABLE", errorx.WithHTTPStatus(http.StatusServiceUnavailable), errorx.WithMessage("Skill release resolver is unavailable"))
 )
 
 // skillSetDecodeErr wraps a JSON decode failure as a SKILLSET_INVALID_ARGUMENT
@@ -258,6 +347,14 @@ func skillSetDBErr(err error) error {
 	case errors.Is(err, errSkillSetUnauthenticated):
 		return err
 	case errors.Is(err, errSkillSetForbidden):
+		return err
+	case errors.Is(err, errSkillSetMemberVersionRequired):
+		return err
+	case errors.Is(err, errSkillSetMemberUnresolved):
+		return err
+	case errors.Is(err, errSkillSetMemberForbidden):
+		return err
+	case errors.Is(err, errSkillSetReleaseUnavailable):
 		return err
 	case strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(err.Error(), "23505"):
 		return errorx.Conflict("SKILLSET_ALREADY_EXISTS", "skillset already exists")
@@ -342,12 +439,16 @@ func (h *skillSetHTTPHandler) createEndpoint(ctx khttp.Context) error {
 			return nil, errSkillSetForbidden
 		}
 		visibility := normalizeVisibility(req.Scope)
-		row := skillSetRow{Name: req.Name, DisplayName: strings.TrimSpace(req.DisplayName), Description: strings.TrimSpace(req.Description), Visibility: visibility, OwnerID: principal.SubjectID, OrgID: principal.OrgID}
-		err := h.db(c).Transaction(func(tx *gorm.DB) error {
+		row := skillSetRow{Name: req.Name, DisplayName: strings.TrimSpace(req.DisplayName), Description: strings.TrimSpace(req.Description), Visibility: visibility, OwnerID: principal.SubjectID, OrgID: principal.OrgID, Revision: 1}
+		members, err := h.resolveMembers(c, req.Members)
+		if err != nil {
+			return nil, err
+		}
+		err = h.db(c).Transaction(func(tx *gorm.DB) error {
 			if err := tx.Create(&row).Error; err != nil {
 				return err
 			}
-			return replaceSkillSetMembers(tx, row.Name, req.Members)
+			return replaceSkillSetMembers(tx, row.Name, members)
 		})
 		if err != nil {
 			return nil, skillSetDBErr(err)
@@ -398,6 +499,14 @@ func (h *skillSetHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 		if strings.TrimSpace(req.Scope) != "" {
 			updates["visibility"] = normalizeVisibility(req.Scope)
 		}
+		var members []skillSetMember
+		if req.Members != nil {
+			var err error
+			members, err = h.resolveMembers(c, req.Members)
+			if err != nil {
+				return nil, err
+			}
+		}
 		err := h.db(c).Transaction(func(tx *gorm.DB) error {
 			res := tx.Model(&skillSetRow{}).Where("name = ? AND deleted_at IS NULL", name).Updates(updates)
 			if res.Error != nil {
@@ -407,9 +516,12 @@ func (h *skillSetHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 				return gorm.ErrRecordNotFound
 			}
 			if req.Members != nil {
-				return replaceSkillSetMembers(tx, name, req.Members)
+				if err := replaceSkillSetMembers(tx, name, members); err != nil {
+					return err
+				}
 			}
-			return nil
+			return tx.Model(&skillSetRow{}).Where("name = ?", name).
+				Updates(map[string]any{"revision": gorm.Expr("revision + 1"), "updated_at": time.Now()}).Error
 		})
 		if err != nil {
 			return nil, skillSetDBErr(err)
@@ -455,19 +567,38 @@ func (h *skillSetHTTPHandler) bindEndpoint(ctx khttp.Context) error {
 		if err := h.requireOwnerPrincipal(c, name); err != nil {
 			return nil, err
 		}
-		result := h.db(c).Exec(`
-			INSERT INTO aihub_skillset_items(skillset_name, skill_name, sort_order)
-			SELECT ?, r.name, ?
-			FROM repos r
-			JOIN hub_skill_profiles p ON p.repository_id = r.id
-			WHERE r.name = ? AND p.lifecycle_status = 'active'
-			ON CONFLICT (skillset_name, skill_name)
-			DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = NOW()`, name, member.Order, member.SkillName)
-		if result.Error != nil {
-			return nil, skillSetDBErr(result.Error)
+		member, err := h.resolveMember(c, member)
+		if err != nil {
+			return nil, err
 		}
-		if result.RowsAffected == 0 {
-			return nil, skillSetDBErr(gorm.ErrRecordNotFound)
+		err = h.db(c).Transaction(func(tx *gorm.DB) error {
+			result := tx.Exec(`
+				INSERT INTO aihub_skillset_items(
+					skillset_name, skill_name, sort_order, version, commit_sha,
+					tree_sha, manifest_sha256, resolved_at
+				)
+				SELECT ?, r.name, ?, ?, ?, ?, ?, ?
+				FROM repos r
+				JOIN hub_skill_profiles p ON p.repository_id = r.id
+				WHERE r.name = ? AND p.lifecycle_status = 'active'
+				ON CONFLICT (skillset_name, skill_name)
+				DO UPDATE SET sort_order = EXCLUDED.sort_order, version = EXCLUDED.version,
+					commit_sha = EXCLUDED.commit_sha, tree_sha = EXCLUDED.tree_sha,
+					manifest_sha256 = EXCLUDED.manifest_sha256,
+					resolved_at = EXCLUDED.resolved_at, updated_at = NOW()`,
+				name, member.Order, member.Version, member.CommitSHA, member.TreeSHA,
+				member.ManifestSHA, member.ResolvedAt, member.SkillName)
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return gorm.ErrRecordNotFound
+			}
+			return tx.Model(&skillSetRow{}).Where("name = ?", name).
+				Updates(map[string]any{"revision": gorm.Expr("revision + 1"), "updated_at": time.Now()}).Error
+		})
+		if err != nil {
+			return nil, skillSetDBErr(err)
 		}
 		return member, nil
 	})
@@ -488,12 +619,35 @@ func (h *skillSetHTTPHandler) updateMemberEndpoint(ctx khttp.Context) error {
 		if err := h.requireOwnerPrincipal(c, name); err != nil {
 			return nil, err
 		}
-		res := h.db(c).Exec(`UPDATE aihub_skillset_items SET sort_order = ?, updated_at = NOW() WHERE skillset_name = ? AND skill_name = ?`, member.Order, name, skillName)
-		if res.Error != nil {
-			return nil, skillSetDBErr(res.Error)
+		updates := map[string]any{"sort_order": member.Order, "updated_at": time.Now()}
+		if strings.TrimSpace(member.Version) != "" {
+			member.SkillName = skillName
+			resolved, err := h.resolveMember(c, member)
+			if err != nil {
+				return nil, err
+			}
+			member = resolved
+			updates["version"] = member.Version
+			updates["commit_sha"] = member.CommitSHA
+			updates["tree_sha"] = member.TreeSHA
+			updates["manifest_sha256"] = member.ManifestSHA
+			updates["resolved_at"] = member.ResolvedAt
 		}
-		if res.RowsAffected == 0 {
-			return nil, skillSetDBErr(gorm.ErrRecordNotFound)
+		err := h.db(c).Transaction(func(tx *gorm.DB) error {
+			res := tx.Table("aihub_skillset_items").
+				Where("skillset_name = ? AND skill_name = ?", name, skillName).
+				Updates(updates)
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected == 0 {
+				return gorm.ErrRecordNotFound
+			}
+			return tx.Model(&skillSetRow{}).Where("name = ?", name).
+				Updates(map[string]any{"revision": gorm.Expr("revision + 1"), "updated_at": time.Now()}).Error
+		})
+		if err != nil {
+			return nil, skillSetDBErr(err)
 		}
 		member.SkillName = skillName
 		return member, nil
@@ -511,9 +665,19 @@ func (h *skillSetHTTPHandler) unbindEndpoint(ctx khttp.Context) error {
 		if err := h.requireOwnerPrincipal(c, name); err != nil {
 			return nil, err
 		}
-		res := h.db(c).Exec(`DELETE FROM aihub_skillset_items WHERE skillset_name = ? AND skill_name = ?`, name, skillName)
-		if res.Error != nil {
-			return nil, skillSetDBErr(res.Error)
+		err := h.db(c).Transaction(func(tx *gorm.DB) error {
+			res := tx.Exec(`DELETE FROM aihub_skillset_items WHERE skillset_name = ? AND skill_name = ?`, name, skillName)
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected == 0 {
+				return gorm.ErrRecordNotFound
+			}
+			return tx.Model(&skillSetRow{}).Where("name = ?", name).
+				Updates(map[string]any{"revision": gorm.Expr("revision + 1"), "updated_at": time.Now()}).Error
+		})
+		if err != nil {
+			return nil, skillSetDBErr(err)
 		}
 		return nil, nil
 	})
@@ -521,6 +685,35 @@ func (h *skillSetHTTPHandler) unbindEndpoint(ctx khttp.Context) error {
 		return err
 	}
 	return ctx.JSON(http.StatusNoContent, nil)
+}
+
+func (h *skillSetHTTPHandler) resolveEndpoint(ctx khttp.Context) error {
+	name := ctx.Vars().Get("name")
+	out, err := h.withSkillSetAuthn(ctx, "aisphere.hub.skillset.v1.ResolveSkillSet", nil, func(c context.Context, _ any) (any, error) {
+		row, err := h.visibleSet(c, name)
+		if err != nil {
+			return nil, skillSetDBErr(err)
+		}
+		members, err := h.members(c, name)
+		if err != nil {
+			return nil, skillSetDBErr(err)
+		}
+		for _, member := range members {
+			if member.Version == "" || member.CommitSHA == "" || member.TreeSHA == "" || member.ManifestSHA == "" {
+				return nil, errSkillSetMemberUnresolved
+			}
+		}
+		return map[string]any{
+			"schemaVersion": 1,
+			"skillSet": map[string]any{"name": row.Name, "revision": row.Revision, "updatedAt": row.UpdatedAt},
+			"skills": members,
+			"resolvedAt": time.Now().UTC(),
+		}, nil
+	})
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(http.StatusOK, out)
 }
 
 func (h *skillSetHTTPHandler) reverseLookupEndpoint(ctx khttp.Context) error {

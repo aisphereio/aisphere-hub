@@ -54,6 +54,7 @@ func TestNormalizeReleaseVersion(t *testing.T) {
 		{input: "latest", ok: false},
 		{input: "main", ok: false},
 		{input: "01.2.3", ok: false},
+		{input: "1.2.3-01", ok: false},
 	}
 	for _, tt := range tests {
 		got, ok := NormalizeReleaseVersion(tt.input)

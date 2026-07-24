@@ -192,7 +192,7 @@ func (s *SkillService) ListSkillReleases(ctx context.Context, req *skillv1.ListS
 	}
 	out := &skillv1.ListSkillReleasesResponse{Releases: make([]*skillv1.SkillRelease, 0, len(items))}
 	for _, item := range items {
-		out.Releases = append(out.Releases, &skillv1.SkillRelease{Tag: item.Tag, CommitSha: item.CommitSHA, ManifestSha256: item.ManifestSHA256, CreateTime: timestamp(item.CreateTime)})
+		out.Releases = append(out.Releases, skillReleaseToProto(&item))
 	}
 	return out, nil
 }

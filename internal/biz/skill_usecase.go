@@ -15,6 +15,10 @@ type SkillGitEngine interface {
 	CreateSkill(context.Context, *GitSkill) (*GitSkill, error)
 	DeleteRepository(context.Context, string) error
 	ResolveRef(context.Context, string, string) (string, error)
+	ListRefs(context.Context, string) ([]SkillGitRef, error)
+	ListCommits(context.Context, string, string, int, int) ([]SkillCommit, error)
+	CompareRefs(context.Context, string, string, string) (*SkillComparison, error)
+	RestoreRef(context.Context, RestoreSkillRef) (*SkillCommit, error)
 	Merge(context.Context, string, string, string, string) (string, error)
 	ListReleases(context.Context, string) ([]SkillRelease, error)
 

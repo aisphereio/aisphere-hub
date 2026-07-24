@@ -133,8 +133,44 @@ type PullRequestRepository interface {
 }
 
 type SkillRelease struct {
-	Tag, CommitSHA, ManifestSHA256 string
-	CreateTime                     time.Time
+	Tag, CommitSHA, TreeSHA, ManifestSHA256 string
+	ReleaseNotes, SourceRef                 string
+	PublisherID, PublisherName              string
+	PublisherEmail                          string
+	CreateTime                              time.Time
+}
+
+type SkillGitRef struct {
+	Name, FullRef, Type, CommitSHA string
+	IsDefault                      bool
+}
+
+type SkillCommit struct {
+	CommitSHA, TreeSHA, Subject        string
+	ParentSHAs                        []string
+	AuthorName, AuthorEmail            string
+	CreateTime                        time.Time
+}
+
+type SkillDiffFile struct {
+	Path, PreviousPath, Status string
+	Additions, Deletions       int64
+	Binary                     bool
+}
+
+type SkillComparison struct {
+	BaseRef, TargetRef                   string
+	BaseCommitSHA, TargetCommitSHA       string
+	MergeBaseSHA, Patch                  string
+	PatchTruncated                       bool
+	Files                                []SkillDiffFile
+}
+
+type RestoreSkillRef struct {
+	SkillName, SourceRef, TargetBranch string
+	ExpectedHeadSHA, CommitMessage     string
+	ActorID, ActorName, ActorEmail     string
+	CreateTime                         time.Time
 }
 type SkillRef struct {
 	Ref, CommitSHA string

@@ -23,6 +23,10 @@ const (
 	SkillReleaseService_CreateSkillRelease_FullMethodName  = "/skill.v1.SkillReleaseService/CreateSkillRelease"
 	SkillReleaseService_GetSkillRelease_FullMethodName     = "/skill.v1.SkillReleaseService/GetSkillRelease"
 	SkillReleaseService_ResolveSkillRelease_FullMethodName = "/skill.v1.SkillReleaseService/ResolveSkillRelease"
+	SkillReleaseService_ListSkillRefs_FullMethodName       = "/skill.v1.SkillReleaseService/ListSkillRefs"
+	SkillReleaseService_ListSkillCommits_FullMethodName    = "/skill.v1.SkillReleaseService/ListSkillCommits"
+	SkillReleaseService_CompareSkillRefs_FullMethodName    = "/skill.v1.SkillReleaseService/CompareSkillRefs"
+	SkillReleaseService_RestoreSkillRef_FullMethodName     = "/skill.v1.SkillReleaseService/RestoreSkillRef"
 )
 
 // SkillReleaseServiceClient is the client API for SkillReleaseService service.
@@ -38,6 +42,13 @@ type SkillReleaseServiceClient interface {
 	CreateSkillRelease(ctx context.Context, in *CreateSkillReleaseRequest, opts ...grpc.CallOption) (*CreateSkillReleaseResponse, error)
 	GetSkillRelease(ctx context.Context, in *GetSkillReleaseRequest, opts ...grpc.CallOption) (*GetSkillReleaseResponse, error)
 	ResolveSkillRelease(ctx context.Context, in *ResolveSkillReleaseRequest, opts ...grpc.CallOption) (*ResolveSkillReleaseResponse, error)
+	ListSkillRefs(ctx context.Context, in *ListSkillRefsRequest, opts ...grpc.CallOption) (*ListSkillRefsResponse, error)
+	ListSkillCommits(ctx context.Context, in *ListSkillCommitsRequest, opts ...grpc.CallOption) (*ListSkillCommitsResponse, error)
+	CompareSkillRefs(ctx context.Context, in *CompareSkillRefsRequest, opts ...grpc.CallOption) (*CompareSkillRefsResponse, error)
+	// RestoreSkillRef creates a new commit whose tree exactly matches source_ref
+	// and advances target_branch with compare-and-swap. Existing release tags
+	// remain immutable; rollback is therefore auditable and non-destructive.
+	RestoreSkillRef(ctx context.Context, in *RestoreSkillRefRequest, opts ...grpc.CallOption) (*RestoreSkillRefResponse, error)
 }
 
 type skillReleaseServiceClient struct {
@@ -88,6 +99,46 @@ func (c *skillReleaseServiceClient) ResolveSkillRelease(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *skillReleaseServiceClient) ListSkillRefs(ctx context.Context, in *ListSkillRefsRequest, opts ...grpc.CallOption) (*ListSkillRefsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSkillRefsResponse)
+	err := c.cc.Invoke(ctx, SkillReleaseService_ListSkillRefs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillReleaseServiceClient) ListSkillCommits(ctx context.Context, in *ListSkillCommitsRequest, opts ...grpc.CallOption) (*ListSkillCommitsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSkillCommitsResponse)
+	err := c.cc.Invoke(ctx, SkillReleaseService_ListSkillCommits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillReleaseServiceClient) CompareSkillRefs(ctx context.Context, in *CompareSkillRefsRequest, opts ...grpc.CallOption) (*CompareSkillRefsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CompareSkillRefsResponse)
+	err := c.cc.Invoke(ctx, SkillReleaseService_CompareSkillRefs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillReleaseServiceClient) RestoreSkillRef(ctx context.Context, in *RestoreSkillRefRequest, opts ...grpc.CallOption) (*RestoreSkillRefResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RestoreSkillRefResponse)
+	err := c.cc.Invoke(ctx, SkillReleaseService_RestoreSkillRef_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SkillReleaseServiceServer is the server API for SkillReleaseService service.
 // All implementations must embed UnimplementedSkillReleaseServiceServer
 // for forward compatibility.
@@ -101,6 +152,13 @@ type SkillReleaseServiceServer interface {
 	CreateSkillRelease(context.Context, *CreateSkillReleaseRequest) (*CreateSkillReleaseResponse, error)
 	GetSkillRelease(context.Context, *GetSkillReleaseRequest) (*GetSkillReleaseResponse, error)
 	ResolveSkillRelease(context.Context, *ResolveSkillReleaseRequest) (*ResolveSkillReleaseResponse, error)
+	ListSkillRefs(context.Context, *ListSkillRefsRequest) (*ListSkillRefsResponse, error)
+	ListSkillCommits(context.Context, *ListSkillCommitsRequest) (*ListSkillCommitsResponse, error)
+	CompareSkillRefs(context.Context, *CompareSkillRefsRequest) (*CompareSkillRefsResponse, error)
+	// RestoreSkillRef creates a new commit whose tree exactly matches source_ref
+	// and advances target_branch with compare-and-swap. Existing release tags
+	// remain immutable; rollback is therefore auditable and non-destructive.
+	RestoreSkillRef(context.Context, *RestoreSkillRefRequest) (*RestoreSkillRefResponse, error)
 	mustEmbedUnimplementedSkillReleaseServiceServer()
 }
 
@@ -122,6 +180,18 @@ func (UnimplementedSkillReleaseServiceServer) GetSkillRelease(context.Context, *
 }
 func (UnimplementedSkillReleaseServiceServer) ResolveSkillRelease(context.Context, *ResolveSkillReleaseRequest) (*ResolveSkillReleaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveSkillRelease not implemented")
+}
+func (UnimplementedSkillReleaseServiceServer) ListSkillRefs(context.Context, *ListSkillRefsRequest) (*ListSkillRefsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSkillRefs not implemented")
+}
+func (UnimplementedSkillReleaseServiceServer) ListSkillCommits(context.Context, *ListSkillCommitsRequest) (*ListSkillCommitsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSkillCommits not implemented")
+}
+func (UnimplementedSkillReleaseServiceServer) CompareSkillRefs(context.Context, *CompareSkillRefsRequest) (*CompareSkillRefsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompareSkillRefs not implemented")
+}
+func (UnimplementedSkillReleaseServiceServer) RestoreSkillRef(context.Context, *RestoreSkillRefRequest) (*RestoreSkillRefResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestoreSkillRef not implemented")
 }
 func (UnimplementedSkillReleaseServiceServer) mustEmbedUnimplementedSkillReleaseServiceServer() {}
 func (UnimplementedSkillReleaseServiceServer) testEmbeddedByValue()                             {}
@@ -216,6 +286,78 @@ func _SkillReleaseService_ResolveSkillRelease_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SkillReleaseService_ListSkillRefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSkillRefsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillReleaseServiceServer).ListSkillRefs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillReleaseService_ListSkillRefs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillReleaseServiceServer).ListSkillRefs(ctx, req.(*ListSkillRefsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillReleaseService_ListSkillCommits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSkillCommitsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillReleaseServiceServer).ListSkillCommits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillReleaseService_ListSkillCommits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillReleaseServiceServer).ListSkillCommits(ctx, req.(*ListSkillCommitsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillReleaseService_CompareSkillRefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompareSkillRefsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillReleaseServiceServer).CompareSkillRefs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillReleaseService_CompareSkillRefs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillReleaseServiceServer).CompareSkillRefs(ctx, req.(*CompareSkillRefsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillReleaseService_RestoreSkillRef_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestoreSkillRefRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillReleaseServiceServer).RestoreSkillRef(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillReleaseService_RestoreSkillRef_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillReleaseServiceServer).RestoreSkillRef(ctx, req.(*RestoreSkillRefRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SkillReleaseService_ServiceDesc is the grpc.ServiceDesc for SkillReleaseService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -238,6 +380,22 @@ var SkillReleaseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveSkillRelease",
 			Handler:    _SkillReleaseService_ResolveSkillRelease_Handler,
+		},
+		{
+			MethodName: "ListSkillRefs",
+			Handler:    _SkillReleaseService_ListSkillRefs_Handler,
+		},
+		{
+			MethodName: "ListSkillCommits",
+			Handler:    _SkillReleaseService_ListSkillCommits_Handler,
+		},
+		{
+			MethodName: "CompareSkillRefs",
+			Handler:    _SkillReleaseService_CompareSkillRefs_Handler,
+		},
+		{
+			MethodName: "RestoreSkillRef",
+			Handler:    _SkillReleaseService_RestoreSkillRef_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -3,6 +3,7 @@ module github.com/aisphereio/aisphere-hub
 go 1.26.4
 
 require (
+	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/aisphereio/kernel v0.4.18
 	github.com/aisphereio/soft-serve v0.0.0-20260721011708-31d466419f2b
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0

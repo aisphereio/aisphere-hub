@@ -96,6 +96,50 @@ var SkillReleaseServiceKernelAuthzRules = authz.Rules{
 		AuditEvent: "hub.skill.release.resolve",
 		AuditRisk:  "low",
 	},
+	"/skill.v1.SkillReleaseService/ListSkillRefs": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "ListSkillRefs",
+		FullMethod: "/skill.v1.SkillReleaseService/ListSkillRefs",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.list",
+		AuditRisk:  "low",
+	},
+	"/skill.v1.SkillReleaseService/ListSkillCommits": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "ListSkillCommits",
+		FullMethod: "/skill.v1.SkillReleaseService/ListSkillCommits",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.commit.list",
+		AuditRisk:  "low",
+	},
+	"/skill.v1.SkillReleaseService/CompareSkillRefs": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "CompareSkillRefs",
+		FullMethod: "/skill.v1.SkillReleaseService/CompareSkillRefs",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.compare",
+		AuditRisk:  "low",
+	},
+	"/skill.v1.SkillReleaseService/RestoreSkillRef": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "RestoreSkillRef",
+		FullMethod: "/skill.v1.SkillReleaseService/RestoreSkillRef",
+		Action:     "manage",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.restore",
+		AuditRisk:  "high",
+	},
 }
 
 // SkillReleaseServiceKernelRequestInfoResolver maps proto access policy into requestx.Info for serverx modules.
@@ -163,6 +207,66 @@ func SkillReleaseServiceKernelRequestInfoResolver(ctx context.Context, operation
 		info.Labels["audit_event"] = "hub.skill.release.resolve"
 		info.Labels["audit_risk"] = "low"
 		return info.Normalize(), true, nil
+	case "/skill.v1.SkillReleaseService/ListSkillRefs":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillReleaseService",
+			Method:        "ListSkillRefs",
+			Operation:     "/skill.v1.SkillReleaseService/ListSkillRefs",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "view",
+			Resource:      "skill:{name}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.skill.ref.list"
+		info.Labels["audit_risk"] = "low"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillReleaseService/ListSkillCommits":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillReleaseService",
+			Method:        "ListSkillCommits",
+			Operation:     "/skill.v1.SkillReleaseService/ListSkillCommits",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "view",
+			Resource:      "skill:{name}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.skill.commit.list"
+		info.Labels["audit_risk"] = "low"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillReleaseService/CompareSkillRefs":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillReleaseService",
+			Method:        "CompareSkillRefs",
+			Operation:     "/skill.v1.SkillReleaseService/CompareSkillRefs",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "view",
+			Resource:      "skill:{name}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.skill.ref.compare"
+		info.Labels["audit_risk"] = "low"
+		return info.Normalize(), true, nil
+	case "/skill.v1.SkillReleaseService/RestoreSkillRef":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillReleaseService",
+			Method:        "RestoreSkillRef",
+			Operation:     "/skill.v1.SkillReleaseService/RestoreSkillRef",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "manage",
+			Resource:      "skill:{name}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.skill.ref.restore"
+		info.Labels["audit_risk"] = "high"
+		return info.Normalize(), true, nil
 	default:
 		return requestx.Info{}, false, nil
 	}
@@ -201,6 +305,14 @@ func _SkillReleaseServiceKernelNormalizeOperation(operation string) string {
 		return "/skill.v1.SkillReleaseService/GetSkillRelease"
 	case "ResolveSkillRelease", "skill.v1.SkillReleaseService/ResolveSkillRelease":
 		return "/skill.v1.SkillReleaseService/ResolveSkillRelease"
+	case "ListSkillRefs", "skill.v1.SkillReleaseService/ListSkillRefs":
+		return "/skill.v1.SkillReleaseService/ListSkillRefs"
+	case "ListSkillCommits", "skill.v1.SkillReleaseService/ListSkillCommits":
+		return "/skill.v1.SkillReleaseService/ListSkillCommits"
+	case "CompareSkillRefs", "skill.v1.SkillReleaseService/CompareSkillRefs":
+		return "/skill.v1.SkillReleaseService/CompareSkillRefs"
+	case "RestoreSkillRef", "skill.v1.SkillReleaseService/RestoreSkillRef":
+		return "/skill.v1.SkillReleaseService/RestoreSkillRef"
 	default:
 		return operation
 	}

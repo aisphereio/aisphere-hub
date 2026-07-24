@@ -11,6 +11,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -489,11 +490,795 @@ func (x *ResolveSkillReleaseResponse) GetRelease() *SkillRelease {
 	return nil
 }
 
+type ListSkillRefsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSkillRefsRequest) Reset() {
+	*x = ListSkillRefsRequest{}
+	mi := &file_skill_v1_release_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSkillRefsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSkillRefsRequest) ProtoMessage() {}
+
+func (x *ListSkillRefsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSkillRefsRequest.ProtoReflect.Descriptor instead.
+func (*ListSkillRefsRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListSkillRefsRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListSkillRefsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Refs          []*SkillGitRef         `protobuf:"bytes,1,rep,name=refs,proto3" json:"refs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSkillRefsResponse) Reset() {
+	*x = ListSkillRefsResponse{}
+	mi := &file_skill_v1_release_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSkillRefsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSkillRefsResponse) ProtoMessage() {}
+
+func (x *ListSkillRefsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSkillRefsResponse.ProtoReflect.Descriptor instead.
+func (*ListSkillRefsResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListSkillRefsResponse) GetRefs() []*SkillGitRef {
+	if x != nil {
+		return x.Refs
+	}
+	return nil
+}
+
+type SkillGitRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	FullRef       string                 `protobuf:"bytes,2,opt,name=full_ref,json=fullRef,proto3" json:"full_ref,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	CommitSha     string                 `protobuf:"bytes,4,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	IsDefault     bool                   `protobuf:"varint,5,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillGitRef) Reset() {
+	*x = SkillGitRef{}
+	mi := &file_skill_v1_release_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillGitRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillGitRef) ProtoMessage() {}
+
+func (x *SkillGitRef) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillGitRef.ProtoReflect.Descriptor instead.
+func (*SkillGitRef) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SkillGitRef) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SkillGitRef) GetFullRef() string {
+	if x != nil {
+		return x.FullRef
+	}
+	return ""
+}
+
+func (x *SkillGitRef) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *SkillGitRef) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+func (x *SkillGitRef) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+type ListSkillCommitsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Ref           string                 `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	PageSize      int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Offset        int32                  `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSkillCommitsRequest) Reset() {
+	*x = ListSkillCommitsRequest{}
+	mi := &file_skill_v1_release_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSkillCommitsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSkillCommitsRequest) ProtoMessage() {}
+
+func (x *ListSkillCommitsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSkillCommitsRequest.ProtoReflect.Descriptor instead.
+func (*ListSkillCommitsRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListSkillCommitsRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ListSkillCommitsRequest) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *ListSkillCommitsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListSkillCommitsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListSkillCommitsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Commits       []*SkillCommit         `protobuf:"bytes,1,rep,name=commits,proto3" json:"commits,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSkillCommitsResponse) Reset() {
+	*x = ListSkillCommitsResponse{}
+	mi := &file_skill_v1_release_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSkillCommitsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSkillCommitsResponse) ProtoMessage() {}
+
+func (x *ListSkillCommitsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSkillCommitsResponse.ProtoReflect.Descriptor instead.
+func (*ListSkillCommitsResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ListSkillCommitsResponse) GetCommits() []*SkillCommit {
+	if x != nil {
+		return x.Commits
+	}
+	return nil
+}
+
+type SkillCommit struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CommitSha     string                 `protobuf:"bytes,1,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	TreeSha       string                 `protobuf:"bytes,2,opt,name=tree_sha,json=treeSha,proto3" json:"tree_sha,omitempty"`
+	ParentShas    []string               `protobuf:"bytes,3,rep,name=parent_shas,json=parentShas,proto3" json:"parent_shas,omitempty"`
+	AuthorName    string                 `protobuf:"bytes,4,opt,name=author_name,json=authorName,proto3" json:"author_name,omitempty"`
+	AuthorEmail   string                 `protobuf:"bytes,5,opt,name=author_email,json=authorEmail,proto3" json:"author_email,omitempty"`
+	Subject       string                 `protobuf:"bytes,6,opt,name=subject,proto3" json:"subject,omitempty"`
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillCommit) Reset() {
+	*x = SkillCommit{}
+	mi := &file_skill_v1_release_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillCommit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillCommit) ProtoMessage() {}
+
+func (x *SkillCommit) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillCommit.ProtoReflect.Descriptor instead.
+func (*SkillCommit) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SkillCommit) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+func (x *SkillCommit) GetTreeSha() string {
+	if x != nil {
+		return x.TreeSha
+	}
+	return ""
+}
+
+func (x *SkillCommit) GetParentShas() []string {
+	if x != nil {
+		return x.ParentShas
+	}
+	return nil
+}
+
+func (x *SkillCommit) GetAuthorName() string {
+	if x != nil {
+		return x.AuthorName
+	}
+	return ""
+}
+
+func (x *SkillCommit) GetAuthorEmail() string {
+	if x != nil {
+		return x.AuthorEmail
+	}
+	return ""
+}
+
+func (x *SkillCommit) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *SkillCommit) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+type CompareSkillRefsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	BaseRef       string                 `protobuf:"bytes,2,opt,name=base_ref,json=baseRef,proto3" json:"base_ref,omitempty"`
+	TargetRef     string                 `protobuf:"bytes,3,opt,name=target_ref,json=targetRef,proto3" json:"target_ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompareSkillRefsRequest) Reset() {
+	*x = CompareSkillRefsRequest{}
+	mi := &file_skill_v1_release_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompareSkillRefsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompareSkillRefsRequest) ProtoMessage() {}
+
+func (x *CompareSkillRefsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompareSkillRefsRequest.ProtoReflect.Descriptor instead.
+func (*CompareSkillRefsRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CompareSkillRefsRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CompareSkillRefsRequest) GetBaseRef() string {
+	if x != nil {
+		return x.BaseRef
+	}
+	return ""
+}
+
+func (x *CompareSkillRefsRequest) GetTargetRef() string {
+	if x != nil {
+		return x.TargetRef
+	}
+	return ""
+}
+
+type CompareSkillRefsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Comparison    *SkillComparison       `protobuf:"bytes,1,opt,name=comparison,proto3" json:"comparison,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompareSkillRefsResponse) Reset() {
+	*x = CompareSkillRefsResponse{}
+	mi := &file_skill_v1_release_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompareSkillRefsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompareSkillRefsResponse) ProtoMessage() {}
+
+func (x *CompareSkillRefsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompareSkillRefsResponse.ProtoReflect.Descriptor instead.
+func (*CompareSkillRefsResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CompareSkillRefsResponse) GetComparison() *SkillComparison {
+	if x != nil {
+		return x.Comparison
+	}
+	return nil
+}
+
+type SkillComparison struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	BaseRef         string                 `protobuf:"bytes,1,opt,name=base_ref,json=baseRef,proto3" json:"base_ref,omitempty"`
+	TargetRef       string                 `protobuf:"bytes,2,opt,name=target_ref,json=targetRef,proto3" json:"target_ref,omitempty"`
+	BaseCommitSha   string                 `protobuf:"bytes,3,opt,name=base_commit_sha,json=baseCommitSha,proto3" json:"base_commit_sha,omitempty"`
+	TargetCommitSha string                 `protobuf:"bytes,4,opt,name=target_commit_sha,json=targetCommitSha,proto3" json:"target_commit_sha,omitempty"`
+	MergeBaseSha    string                 `protobuf:"bytes,5,opt,name=merge_base_sha,json=mergeBaseSha,proto3" json:"merge_base_sha,omitempty"`
+	Files           []*SkillDiffFile       `protobuf:"bytes,6,rep,name=files,proto3" json:"files,omitempty"`
+	Patch           string                 `protobuf:"bytes,7,opt,name=patch,proto3" json:"patch,omitempty"`
+	PatchTruncated  bool                   `protobuf:"varint,8,opt,name=patch_truncated,json=patchTruncated,proto3" json:"patch_truncated,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SkillComparison) Reset() {
+	*x = SkillComparison{}
+	mi := &file_skill_v1_release_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillComparison) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillComparison) ProtoMessage() {}
+
+func (x *SkillComparison) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillComparison.ProtoReflect.Descriptor instead.
+func (*SkillComparison) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SkillComparison) GetBaseRef() string {
+	if x != nil {
+		return x.BaseRef
+	}
+	return ""
+}
+
+func (x *SkillComparison) GetTargetRef() string {
+	if x != nil {
+		return x.TargetRef
+	}
+	return ""
+}
+
+func (x *SkillComparison) GetBaseCommitSha() string {
+	if x != nil {
+		return x.BaseCommitSha
+	}
+	return ""
+}
+
+func (x *SkillComparison) GetTargetCommitSha() string {
+	if x != nil {
+		return x.TargetCommitSha
+	}
+	return ""
+}
+
+func (x *SkillComparison) GetMergeBaseSha() string {
+	if x != nil {
+		return x.MergeBaseSha
+	}
+	return ""
+}
+
+func (x *SkillComparison) GetFiles() []*SkillDiffFile {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+func (x *SkillComparison) GetPatch() string {
+	if x != nil {
+		return x.Patch
+	}
+	return ""
+}
+
+func (x *SkillComparison) GetPatchTruncated() bool {
+	if x != nil {
+		return x.PatchTruncated
+	}
+	return false
+}
+
+type SkillDiffFile struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	PreviousPath  string                 `protobuf:"bytes,2,opt,name=previous_path,json=previousPath,proto3" json:"previous_path,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	Additions     int64                  `protobuf:"varint,4,opt,name=additions,proto3" json:"additions,omitempty"`
+	Deletions     int64                  `protobuf:"varint,5,opt,name=deletions,proto3" json:"deletions,omitempty"`
+	Binary        bool                   `protobuf:"varint,6,opt,name=binary,proto3" json:"binary,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillDiffFile) Reset() {
+	*x = SkillDiffFile{}
+	mi := &file_skill_v1_release_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillDiffFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillDiffFile) ProtoMessage() {}
+
+func (x *SkillDiffFile) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillDiffFile.ProtoReflect.Descriptor instead.
+func (*SkillDiffFile) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *SkillDiffFile) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *SkillDiffFile) GetPreviousPath() string {
+	if x != nil {
+		return x.PreviousPath
+	}
+	return ""
+}
+
+func (x *SkillDiffFile) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *SkillDiffFile) GetAdditions() int64 {
+	if x != nil {
+		return x.Additions
+	}
+	return 0
+}
+
+func (x *SkillDiffFile) GetDeletions() int64 {
+	if x != nil {
+		return x.Deletions
+	}
+	return 0
+}
+
+func (x *SkillDiffFile) GetBinary() bool {
+	if x != nil {
+		return x.Binary
+	}
+	return false
+}
+
+type RestoreSkillRefRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	SourceRef       string                 `protobuf:"bytes,2,opt,name=source_ref,json=sourceRef,proto3" json:"source_ref,omitempty"`
+	TargetBranch    string                 `protobuf:"bytes,3,opt,name=target_branch,json=targetBranch,proto3" json:"target_branch,omitempty"`
+	ExpectedHeadSha string                 `protobuf:"bytes,4,opt,name=expected_head_sha,json=expectedHeadSha,proto3" json:"expected_head_sha,omitempty"`
+	CommitMessage   string                 `protobuf:"bytes,5,opt,name=commit_message,json=commitMessage,proto3" json:"commit_message,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RestoreSkillRefRequest) Reset() {
+	*x = RestoreSkillRefRequest{}
+	mi := &file_skill_v1_release_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreSkillRefRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreSkillRefRequest) ProtoMessage() {}
+
+func (x *RestoreSkillRefRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreSkillRefRequest.ProtoReflect.Descriptor instead.
+func (*RestoreSkillRefRequest) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *RestoreSkillRefRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RestoreSkillRefRequest) GetSourceRef() string {
+	if x != nil {
+		return x.SourceRef
+	}
+	return ""
+}
+
+func (x *RestoreSkillRefRequest) GetTargetBranch() string {
+	if x != nil {
+		return x.TargetBranch
+	}
+	return ""
+}
+
+func (x *RestoreSkillRefRequest) GetExpectedHeadSha() string {
+	if x != nil {
+		return x.ExpectedHeadSha
+	}
+	return ""
+}
+
+func (x *RestoreSkillRefRequest) GetCommitMessage() string {
+	if x != nil {
+		return x.CommitMessage
+	}
+	return ""
+}
+
+type RestoreSkillRefResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Commit        *SkillCommit           `protobuf:"bytes,1,opt,name=commit,proto3" json:"commit,omitempty"`
+	TargetRef     string                 `protobuf:"bytes,2,opt,name=target_ref,json=targetRef,proto3" json:"target_ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestoreSkillRefResponse) Reset() {
+	*x = RestoreSkillRefResponse{}
+	mi := &file_skill_v1_release_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreSkillRefResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreSkillRefResponse) ProtoMessage() {}
+
+func (x *RestoreSkillRefResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skill_v1_release_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreSkillRefResponse.ProtoReflect.Descriptor instead.
+func (*RestoreSkillRefResponse) Descriptor() ([]byte, []int) {
+	return file_skill_v1_release_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *RestoreSkillRefResponse) GetCommit() *SkillCommit {
+	if x != nil {
+		return x.Commit
+	}
+	return nil
+}
+
+func (x *RestoreSkillRefResponse) GetTargetRef() string {
+	if x != nil {
+		return x.TargetRef
+	}
+	return ""
+}
+
 var File_skill_v1_release_proto protoreflect.FileDescriptor
 
 const file_skill_v1_release_proto_rawDesc = "" +
 	"\n" +
-	"\x16skill/v1/release.proto\x12\bskill.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x14skill/v1/skill.proto\";\n" +
+	"\x16skill/v1/release.proto\x12\bskill.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14skill/v1/skill.proto\";\n" +
 	"\bSkillRef\x12\x10\n" +
 	"\x03ref\x18\x01 \x01(\tR\x03ref\x12\x1d\n" +
 	"\n" +
@@ -521,7 +1306,75 @@ const file_skill_v1_release_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
 	"\aversion\x18\x02 \x01(\tB\x03\xe0A\x02R\aversion\"O\n" +
 	"\x1bResolveSkillReleaseResponse\x120\n" +
-	"\arelease\x18\x01 \x01(\v2\x16.skill.v1.SkillReleaseR\arelease2\x9b\a\n" +
+	"\arelease\x18\x01 \x01(\v2\x16.skill.v1.SkillReleaseR\arelease\"/\n" +
+	"\x14ListSkillRefsRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"B\n" +
+	"\x15ListSkillRefsResponse\x12)\n" +
+	"\x04refs\x18\x01 \x03(\v2\x15.skill.v1.SkillGitRefR\x04refs\"\x8e\x01\n" +
+	"\vSkillGitRef\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
+	"\bfull_ref\x18\x02 \x01(\tR\afullRef\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\x04 \x01(\tR\tcommitSha\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"y\n" +
+	"\x17ListSkillCommitsRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x10\n" +
+	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x16\n" +
+	"\x06offset\x18\x04 \x01(\x05R\x06offset\"K\n" +
+	"\x18ListSkillCommitsResponse\x12/\n" +
+	"\acommits\x18\x01 \x03(\v2\x15.skill.v1.SkillCommitR\acommits\"\x83\x02\n" +
+	"\vSkillCommit\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\x01 \x01(\tR\tcommitSha\x12\x19\n" +
+	"\btree_sha\x18\x02 \x01(\tR\atreeSha\x12\x1f\n" +
+	"\vparent_shas\x18\x03 \x03(\tR\n" +
+	"parentShas\x12\x1f\n" +
+	"\vauthor_name\x18\x04 \x01(\tR\n" +
+	"authorName\x12!\n" +
+	"\fauthor_email\x18\x05 \x01(\tR\vauthorEmail\x12\x18\n" +
+	"\asubject\x18\x06 \x01(\tR\asubject\x12;\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\"v\n" +
+	"\x17CompareSkillRefsRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1e\n" +
+	"\bbase_ref\x18\x02 \x01(\tB\x03\xe0A\x02R\abaseRef\x12\"\n" +
+	"\n" +
+	"target_ref\x18\x03 \x01(\tB\x03\xe0A\x02R\ttargetRef\"U\n" +
+	"\x18CompareSkillRefsResponse\x129\n" +
+	"\n" +
+	"comparison\x18\x01 \x01(\v2\x19.skill.v1.SkillComparisonR\n" +
+	"comparison\"\xb3\x02\n" +
+	"\x0fSkillComparison\x12\x19\n" +
+	"\bbase_ref\x18\x01 \x01(\tR\abaseRef\x12\x1d\n" +
+	"\n" +
+	"target_ref\x18\x02 \x01(\tR\ttargetRef\x12&\n" +
+	"\x0fbase_commit_sha\x18\x03 \x01(\tR\rbaseCommitSha\x12*\n" +
+	"\x11target_commit_sha\x18\x04 \x01(\tR\x0ftargetCommitSha\x12$\n" +
+	"\x0emerge_base_sha\x18\x05 \x01(\tR\fmergeBaseSha\x12-\n" +
+	"\x05files\x18\x06 \x03(\v2\x17.skill.v1.SkillDiffFileR\x05files\x12\x14\n" +
+	"\x05patch\x18\a \x01(\tR\x05patch\x12'\n" +
+	"\x0fpatch_truncated\x18\b \x01(\bR\x0epatchTruncated\"\xb4\x01\n" +
+	"\rSkillDiffFile\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12#\n" +
+	"\rprevious_path\x18\x02 \x01(\tR\fpreviousPath\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1c\n" +
+	"\tadditions\x18\x04 \x01(\x03R\tadditions\x12\x1c\n" +
+	"\tdeletions\x18\x05 \x01(\x03R\tdeletions\x12\x16\n" +
+	"\x06binary\x18\x06 \x01(\bR\x06binary\"\xd2\x01\n" +
+	"\x16RestoreSkillRefRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\"\n" +
+	"\n" +
+	"source_ref\x18\x02 \x01(\tB\x03\xe0A\x02R\tsourceRef\x12#\n" +
+	"\rtarget_branch\x18\x03 \x01(\tR\ftargetBranch\x12/\n" +
+	"\x11expected_head_sha\x18\x04 \x01(\tB\x03\xe0A\x02R\x0fexpectedHeadSha\x12%\n" +
+	"\x0ecommit_message\x18\x05 \x01(\tR\rcommitMessage\"g\n" +
+	"\x17RestoreSkillRefResponse\x12-\n" +
+	"\x06commit\x18\x01 \x01(\v2\x15.skill.v1.SkillCommitR\x06commit\x12\x1d\n" +
+	"\n" +
+	"target_ref\x18\x02 \x01(\tR\ttargetRef2\xb7\r\n" +
 	"\x13SkillReleaseService\x12\xce\x01\n" +
 	"\x0fResolveSkillRef\x12 .skill.v1.ResolveSkillRefRequest\x1a!.skill.v1.ResolveSkillRefResponse\"v\x92\xf4\x18G\b\x03\x12#\n" +
 	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x15hub.skill.ref.resolve\x1a\x03low\x82\xd3\xe4\x93\x02%b\x03ref\x12\x1e/v1/skills/{name}/refs:resolve\x12\xe2\x01\n" +
@@ -530,7 +1383,15 @@ const file_skill_v1_release_proto_rawDesc = "" +
 	"\x0fGetSkillRelease\x12 .skill.v1.GetSkillReleaseRequest\x1a!.skill.v1.GetSkillReleaseResponse\"\x80\x01\x92\xf4\x18G\b\x03\x12#\n" +
 	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x15hub.skill.release.get\x1a\x03low\x82\xd3\xe4\x93\x02/b\arelease\x12$/v1/skills/{name}/releases/{version}\x12\xf1\x01\n" +
 	"\x13ResolveSkillRelease\x12$.skill.v1.ResolveSkillReleaseRequest\x1a%.skill.v1.ResolveSkillReleaseResponse\"\x8c\x01\x92\xf4\x18K\b\x03\x12#\n" +
-	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x19hub.skill.release.resolve\x1a\x03low\x82\xd3\xe4\x93\x027b\arelease\x12,/v1/skills/{name}/releases/{version}:resolveB9Z7github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1b\x06proto3"
+	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x19hub.skill.release.resolve\x1a\x03low\x82\xd3\xe4\x93\x027b\arelease\x12,/v1/skills/{name}/releases/{version}:resolve\x12\xb8\x01\n" +
+	"\rListSkillRefs\x12\x1e.skill.v1.ListSkillRefsRequest\x1a\x1f.skill.v1.ListSkillRefsResponse\"f\x92\xf4\x18D\b\x03\x12#\n" +
+	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x1b\b\x01\x12\x12hub.skill.ref.list\x1a\x03low\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/skills/{name}/refs\x12\xc7\x01\n" +
+	"\x10ListSkillCommits\x12!.skill.v1.ListSkillCommitsRequest\x1a\".skill.v1.ListSkillCommitsResponse\"l\x92\xf4\x18G\b\x03\x12#\n" +
+	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x15hub.skill.commit.list\x1a\x03low\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/skills/{name}/commits\x12\xc7\x01\n" +
+	"\x10CompareSkillRefs\x12!.skill.v1.CompareSkillRefsRequest\x1a\".skill.v1.CompareSkillRefsResponse\"l\x92\xf4\x18G\b\x03\x12#\n" +
+	"\x04view\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x15hub.skill.ref.compare\x1a\x03low\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/skills/{name}/compare\x12\xca\x01\n" +
+	"\x0fRestoreSkillRef\x12 .skill.v1.RestoreSkillRefRequest\x1a!.skill.v1.RestoreSkillRefResponse\"r\x92\xf4\x18J\b\x03\x12%\n" +
+	"\x06manage\x12\fskill:{name}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x15hub.skill.ref.restore\x1a\x04high\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/skills/{name}:restoreB9Z7github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1b\x06proto3"
 
 var (
 	file_skill_v1_release_proto_rawDescOnce sync.Once
@@ -544,7 +1405,7 @@ func file_skill_v1_release_proto_rawDescGZIP() []byte {
 	return file_skill_v1_release_proto_rawDescData
 }
 
-var file_skill_v1_release_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_skill_v1_release_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_skill_v1_release_proto_goTypes = []any{
 	(*SkillRef)(nil),                    // 0: skill.v1.SkillRef
 	(*ResolveSkillRefRequest)(nil),      // 1: skill.v1.ResolveSkillRefRequest
@@ -555,26 +1416,53 @@ var file_skill_v1_release_proto_goTypes = []any{
 	(*GetSkillReleaseResponse)(nil),     // 6: skill.v1.GetSkillReleaseResponse
 	(*ResolveSkillReleaseRequest)(nil),  // 7: skill.v1.ResolveSkillReleaseRequest
 	(*ResolveSkillReleaseResponse)(nil), // 8: skill.v1.ResolveSkillReleaseResponse
-	(*SkillRelease)(nil),                // 9: skill.v1.SkillRelease
+	(*ListSkillRefsRequest)(nil),        // 9: skill.v1.ListSkillRefsRequest
+	(*ListSkillRefsResponse)(nil),       // 10: skill.v1.ListSkillRefsResponse
+	(*SkillGitRef)(nil),                 // 11: skill.v1.SkillGitRef
+	(*ListSkillCommitsRequest)(nil),     // 12: skill.v1.ListSkillCommitsRequest
+	(*ListSkillCommitsResponse)(nil),    // 13: skill.v1.ListSkillCommitsResponse
+	(*SkillCommit)(nil),                 // 14: skill.v1.SkillCommit
+	(*CompareSkillRefsRequest)(nil),     // 15: skill.v1.CompareSkillRefsRequest
+	(*CompareSkillRefsResponse)(nil),    // 16: skill.v1.CompareSkillRefsResponse
+	(*SkillComparison)(nil),             // 17: skill.v1.SkillComparison
+	(*SkillDiffFile)(nil),               // 18: skill.v1.SkillDiffFile
+	(*RestoreSkillRefRequest)(nil),      // 19: skill.v1.RestoreSkillRefRequest
+	(*RestoreSkillRefResponse)(nil),     // 20: skill.v1.RestoreSkillRefResponse
+	(*SkillRelease)(nil),                // 21: skill.v1.SkillRelease
+	(*timestamppb.Timestamp)(nil),       // 22: google.protobuf.Timestamp
 }
 var file_skill_v1_release_proto_depIdxs = []int32{
-	0, // 0: skill.v1.ResolveSkillRefResponse.ref:type_name -> skill.v1.SkillRef
-	9, // 1: skill.v1.CreateSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
-	9, // 2: skill.v1.GetSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
-	9, // 3: skill.v1.ResolveSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
-	1, // 4: skill.v1.SkillReleaseService.ResolveSkillRef:input_type -> skill.v1.ResolveSkillRefRequest
-	3, // 5: skill.v1.SkillReleaseService.CreateSkillRelease:input_type -> skill.v1.CreateSkillReleaseRequest
-	5, // 6: skill.v1.SkillReleaseService.GetSkillRelease:input_type -> skill.v1.GetSkillReleaseRequest
-	7, // 7: skill.v1.SkillReleaseService.ResolveSkillRelease:input_type -> skill.v1.ResolveSkillReleaseRequest
-	2, // 8: skill.v1.SkillReleaseService.ResolveSkillRef:output_type -> skill.v1.ResolveSkillRefResponse
-	4, // 9: skill.v1.SkillReleaseService.CreateSkillRelease:output_type -> skill.v1.CreateSkillReleaseResponse
-	6, // 10: skill.v1.SkillReleaseService.GetSkillRelease:output_type -> skill.v1.GetSkillReleaseResponse
-	8, // 11: skill.v1.SkillReleaseService.ResolveSkillRelease:output_type -> skill.v1.ResolveSkillReleaseResponse
-	8, // [8:12] is the sub-list for method output_type
-	4, // [4:8] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	0,  // 0: skill.v1.ResolveSkillRefResponse.ref:type_name -> skill.v1.SkillRef
+	21, // 1: skill.v1.CreateSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
+	21, // 2: skill.v1.GetSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
+	21, // 3: skill.v1.ResolveSkillReleaseResponse.release:type_name -> skill.v1.SkillRelease
+	11, // 4: skill.v1.ListSkillRefsResponse.refs:type_name -> skill.v1.SkillGitRef
+	14, // 5: skill.v1.ListSkillCommitsResponse.commits:type_name -> skill.v1.SkillCommit
+	22, // 6: skill.v1.SkillCommit.create_time:type_name -> google.protobuf.Timestamp
+	17, // 7: skill.v1.CompareSkillRefsResponse.comparison:type_name -> skill.v1.SkillComparison
+	18, // 8: skill.v1.SkillComparison.files:type_name -> skill.v1.SkillDiffFile
+	14, // 9: skill.v1.RestoreSkillRefResponse.commit:type_name -> skill.v1.SkillCommit
+	1,  // 10: skill.v1.SkillReleaseService.ResolveSkillRef:input_type -> skill.v1.ResolveSkillRefRequest
+	3,  // 11: skill.v1.SkillReleaseService.CreateSkillRelease:input_type -> skill.v1.CreateSkillReleaseRequest
+	5,  // 12: skill.v1.SkillReleaseService.GetSkillRelease:input_type -> skill.v1.GetSkillReleaseRequest
+	7,  // 13: skill.v1.SkillReleaseService.ResolveSkillRelease:input_type -> skill.v1.ResolveSkillReleaseRequest
+	9,  // 14: skill.v1.SkillReleaseService.ListSkillRefs:input_type -> skill.v1.ListSkillRefsRequest
+	12, // 15: skill.v1.SkillReleaseService.ListSkillCommits:input_type -> skill.v1.ListSkillCommitsRequest
+	15, // 16: skill.v1.SkillReleaseService.CompareSkillRefs:input_type -> skill.v1.CompareSkillRefsRequest
+	19, // 17: skill.v1.SkillReleaseService.RestoreSkillRef:input_type -> skill.v1.RestoreSkillRefRequest
+	2,  // 18: skill.v1.SkillReleaseService.ResolveSkillRef:output_type -> skill.v1.ResolveSkillRefResponse
+	4,  // 19: skill.v1.SkillReleaseService.CreateSkillRelease:output_type -> skill.v1.CreateSkillReleaseResponse
+	6,  // 20: skill.v1.SkillReleaseService.GetSkillRelease:output_type -> skill.v1.GetSkillReleaseResponse
+	8,  // 21: skill.v1.SkillReleaseService.ResolveSkillRelease:output_type -> skill.v1.ResolveSkillReleaseResponse
+	10, // 22: skill.v1.SkillReleaseService.ListSkillRefs:output_type -> skill.v1.ListSkillRefsResponse
+	13, // 23: skill.v1.SkillReleaseService.ListSkillCommits:output_type -> skill.v1.ListSkillCommitsResponse
+	16, // 24: skill.v1.SkillReleaseService.CompareSkillRefs:output_type -> skill.v1.CompareSkillRefsResponse
+	20, // 25: skill.v1.SkillReleaseService.RestoreSkillRef:output_type -> skill.v1.RestoreSkillRefResponse
+	18, // [18:26] is the sub-list for method output_type
+	10, // [10:18] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_skill_v1_release_proto_init() }
@@ -589,7 +1477,7 @@ func file_skill_v1_release_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_skill_v1_release_proto_rawDesc), len(file_skill_v1_release_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
