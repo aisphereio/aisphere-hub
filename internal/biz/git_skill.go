@@ -136,6 +136,9 @@ type SkillRelease struct {
 	Tag, CommitSHA, ManifestSHA256 string
 	CreateTime                     time.Time
 }
+type SkillRef struct {
+	Ref, CommitSHA string
+}
 type SkillShare struct{ SkillName, Relation, SubjectType, SubjectID, SubjectRelation string }
 
 // FileInfo describes a single entry (file or directory) inside a skill
