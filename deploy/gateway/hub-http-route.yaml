@@ -1,5 +1,5 @@
-# Hub API HTTPRoute — routes /v1/authn/*, /v1/authz/*, /v1/skills/*,
-# /v1/skillsets/*, /v1/audit/*, /v1/users/* to aisphere-hub:18001.
+# Hub API HTTPRoute — routes Hub APIs to aisphere-hub:18001 and IAM directory
+# APIs used by the share picker to aisphere-iam:18080.
 #
 # Public routes (login, exchange, refresh) are in hub-api-public-route and
 # do NOT have OIDC protection. Protected routes are in hub-api-protected-route
@@ -60,6 +60,14 @@ spec:
   hostnames:
     - "api.weagent.cc"
   rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1/iam
+      backendRefs:
+        - name: aisphere-iam
+          namespace: aisphere
+          port: 18080
     - matches:
         - path:
             type: PathPrefix
