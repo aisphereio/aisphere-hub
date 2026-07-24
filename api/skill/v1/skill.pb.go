@@ -2253,6 +2253,12 @@ type SkillRelease struct {
 	CommitSha      string                 `protobuf:"bytes,2,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
 	ManifestSha256 string                 `protobuf:"bytes,3,opt,name=manifest_sha256,json=manifestSha256,proto3" json:"manifest_sha256,omitempty"`
 	CreateTime     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	TreeSha        string                 `protobuf:"bytes,5,opt,name=tree_sha,json=treeSha,proto3" json:"tree_sha,omitempty"`
+	ReleaseNotes   string                 `protobuf:"bytes,6,opt,name=release_notes,json=releaseNotes,proto3" json:"release_notes,omitempty"`
+	SourceRef      string                 `protobuf:"bytes,7,opt,name=source_ref,json=sourceRef,proto3" json:"source_ref,omitempty"`
+	PublisherId    string                 `protobuf:"bytes,8,opt,name=publisher_id,json=publisherId,proto3" json:"publisher_id,omitempty"`
+	PublisherName  string                 `protobuf:"bytes,9,opt,name=publisher_name,json=publisherName,proto3" json:"publisher_name,omitempty"`
+	PublisherEmail string                 `protobuf:"bytes,10,opt,name=publisher_email,json=publisherEmail,proto3" json:"publisher_email,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -2313,6 +2319,48 @@ func (x *SkillRelease) GetCreateTime() *timestamppb.Timestamp {
 		return x.CreateTime
 	}
 	return nil
+}
+
+func (x *SkillRelease) GetTreeSha() string {
+	if x != nil {
+		return x.TreeSha
+	}
+	return ""
+}
+
+func (x *SkillRelease) GetReleaseNotes() string {
+	if x != nil {
+		return x.ReleaseNotes
+	}
+	return ""
+}
+
+func (x *SkillRelease) GetSourceRef() string {
+	if x != nil {
+		return x.SourceRef
+	}
+	return ""
+}
+
+func (x *SkillRelease) GetPublisherId() string {
+	if x != nil {
+		return x.PublisherId
+	}
+	return ""
+}
+
+func (x *SkillRelease) GetPublisherName() string {
+	if x != nil {
+		return x.PublisherName
+	}
+	return ""
+}
+
+func (x *SkillRelease) GetPublisherEmail() string {
+	if x != nil {
+		return x.PublisherEmail
+	}
+	return ""
 }
 
 type ListSkillReleasesRequest struct {
@@ -2595,14 +2643,22 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x123\n" +
 	"\x13expected_target_sha\x18\x03 \x01(\tB\x03\xe0A\x02R\x11expectedTargetSha\"T\n" +
 	"\x18MergePullRequestResponse\x128\n" +
-	"\fpull_request\x18\x01 \x01(\v2\x15.skill.v1.PullRequestR\vpullRequest\"\xa5\x01\n" +
+	"\fpull_request\x18\x01 \x01(\v2\x15.skill.v1.PullRequestR\vpullRequest\"\xf7\x02\n" +
 	"\fSkillRelease\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1d\n" +
 	"\n" +
 	"commit_sha\x18\x02 \x01(\tR\tcommitSha\x12'\n" +
 	"\x0fmanifest_sha256\x18\x03 \x01(\tR\x0emanifestSha256\x12;\n" +
 	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\"3\n" +
+	"createTime\x12\x19\n" +
+	"\btree_sha\x18\x05 \x01(\tR\atreeSha\x12#\n" +
+	"\rrelease_notes\x18\x06 \x01(\tR\freleaseNotes\x12\x1d\n" +
+	"\n" +
+	"source_ref\x18\a \x01(\tR\tsourceRef\x12!\n" +
+	"\fpublisher_id\x18\b \x01(\tR\vpublisherId\x12%\n" +
+	"\x0epublisher_name\x18\t \x01(\tR\rpublisherName\x12'\n" +
+	"\x0fpublisher_email\x18\n" +
+	" \x01(\tR\x0epublisherEmail\"3\n" +
 	"\x18ListSkillReleasesRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"O\n" +
 	"\x19ListSkillReleasesResponse\x122\n" +

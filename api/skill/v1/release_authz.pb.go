@@ -52,6 +52,50 @@ var SkillReleaseServiceAuthzRules = authz.Rules{
 		AuditEvent: "hub.skill.release.resolve",
 		AuditRisk:  "low",
 	},
+	"/skill.v1.SkillReleaseService/ListSkillRefs": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "ListSkillRefs",
+		FullMethod: "/skill.v1.SkillReleaseService/ListSkillRefs",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.list",
+		AuditRisk:  "low",
+	},
+	"/skill.v1.SkillReleaseService/ListSkillCommits": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "ListSkillCommits",
+		FullMethod: "/skill.v1.SkillReleaseService/ListSkillCommits",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.commit.list",
+		AuditRisk:  "low",
+	},
+	"/skill.v1.SkillReleaseService/CompareSkillRefs": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "CompareSkillRefs",
+		FullMethod: "/skill.v1.SkillReleaseService/CompareSkillRefs",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.compare",
+		AuditRisk:  "low",
+	},
+	"/skill.v1.SkillReleaseService/RestoreSkillRef": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "RestoreSkillRef",
+		FullMethod: "/skill.v1.SkillReleaseService/RestoreSkillRef",
+		Action:     "manage",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.restore",
+		AuditRisk:  "high",
+	},
 }
 
 const SkillReleaseServiceAuthzManifestJSON = `{
@@ -88,6 +132,50 @@ const SkillReleaseServiceAuthzManifestJSON = `{
       "mode": "CHECK_ONLY",
       "audit_event": "hub.skill.release.resolve",
       "audit_risk": "low"
+    },
+    {
+      "service": "skill.v1.SkillReleaseService",
+      "method": "ListSkillRefs",
+      "full_method": "/skill.v1.SkillReleaseService/ListSkillRefs",
+      "action": "view",
+      "resource": "skill:{name}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.skill.ref.list",
+      "audit_risk": "low"
+    },
+    {
+      "service": "skill.v1.SkillReleaseService",
+      "method": "ListSkillCommits",
+      "full_method": "/skill.v1.SkillReleaseService/ListSkillCommits",
+      "action": "view",
+      "resource": "skill:{name}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.skill.commit.list",
+      "audit_risk": "low"
+    },
+    {
+      "service": "skill.v1.SkillReleaseService",
+      "method": "CompareSkillRefs",
+      "full_method": "/skill.v1.SkillReleaseService/CompareSkillRefs",
+      "action": "view",
+      "resource": "skill:{name}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.skill.ref.compare",
+      "audit_risk": "low"
+    },
+    {
+      "service": "skill.v1.SkillReleaseService",
+      "method": "RestoreSkillRef",
+      "full_method": "/skill.v1.SkillReleaseService/RestoreSkillRef",
+      "action": "manage",
+      "resource": "skill:{name}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.skill.ref.restore",
+      "audit_risk": "high"
     }
   ],
   "service": "skill.v1.SkillReleaseService"
@@ -162,6 +250,14 @@ func _SkillReleaseServiceNormalizeOperation(operation string) string {
 		return "/skill.v1.SkillReleaseService/GetSkillRelease"
 	case "ResolveSkillRelease", "skill.v1.SkillReleaseService/ResolveSkillRelease":
 		return "/skill.v1.SkillReleaseService/ResolveSkillRelease"
+	case "ListSkillRefs", "skill.v1.SkillReleaseService/ListSkillRefs":
+		return "/skill.v1.SkillReleaseService/ListSkillRefs"
+	case "ListSkillCommits", "skill.v1.SkillReleaseService/ListSkillCommits":
+		return "/skill.v1.SkillReleaseService/ListSkillCommits"
+	case "CompareSkillRefs", "skill.v1.SkillReleaseService/CompareSkillRefs":
+		return "/skill.v1.SkillReleaseService/CompareSkillRefs"
+	case "RestoreSkillRef", "skill.v1.SkillReleaseService/RestoreSkillRef":
+		return "/skill.v1.SkillReleaseService/RestoreSkillRef"
 	default:
 		return operation
 	}
@@ -294,6 +390,162 @@ func (c *SkillReleaseServiceSecureClient) ResolveSkillRelease(ctx context.Contex
 		}
 	}
 	return c.raw.ResolveSkillRelease(ctx, in, opts...)
+}
+
+func (c *SkillReleaseServiceSecureClient) ListSkillRefs(ctx context.Context, in *ListSkillRefsRequest, opts ...grpc.CallOption) (*ListSkillRefsResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillReleaseServiceAuthzRules["/skill.v1.SkillReleaseService/ListSkillRefs"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillReleaseServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.ListSkillRefs(ctx, in, opts...)
+}
+
+func (c *SkillReleaseServiceSecureClient) ListSkillCommits(ctx context.Context, in *ListSkillCommitsRequest, opts ...grpc.CallOption) (*ListSkillCommitsResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillReleaseServiceAuthzRules["/skill.v1.SkillReleaseService/ListSkillCommits"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillReleaseServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.ListSkillCommits(ctx, in, opts...)
+}
+
+func (c *SkillReleaseServiceSecureClient) CompareSkillRefs(ctx context.Context, in *CompareSkillRefsRequest, opts ...grpc.CallOption) (*CompareSkillRefsResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillReleaseServiceAuthzRules["/skill.v1.SkillReleaseService/CompareSkillRefs"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillReleaseServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.CompareSkillRefs(ctx, in, opts...)
+}
+
+func (c *SkillReleaseServiceSecureClient) RestoreSkillRef(ctx context.Context, in *RestoreSkillRefRequest, opts ...grpc.CallOption) (*RestoreSkillRefResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillReleaseServiceAuthzRules["/skill.v1.SkillReleaseService/RestoreSkillRef"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillReleaseServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.RestoreSkillRef(ctx, in, opts...)
 }
 
 func _SkillReleaseServiceAuthzSubjectFromContext(ctx context.Context) authz.SubjectRef {

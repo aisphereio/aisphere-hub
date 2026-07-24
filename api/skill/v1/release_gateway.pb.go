@@ -36,6 +36,34 @@ func SkillReleaseServiceGatewayManifest() gatewayx.Manifest {
 				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillReleaseService/ResolveSkillRelease"},
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
+			{
+				ID:       "skill.release.list.skill.refs",
+				Method:   "GET",
+				Path:     "/v1/skills/{name}/refs",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillReleaseService/ListSkillRefs"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.release.list.skill.commits",
+				Method:   "GET",
+				Path:     "/v1/skills/{name}/commits",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillReleaseService/ListSkillCommits"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.release.compare.skill.refs",
+				Method:   "GET",
+				Path:     "/v1/skills/{name}/compare",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillReleaseService/CompareSkillRefs"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "skill.release.restore.skill.ref",
+				Method:   "POST",
+				Path:     "/v1/skills/{name}:restore",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillReleaseService/RestoreSkillRef"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
 		},
 	}
 }
@@ -88,6 +116,62 @@ func SkillReleaseServiceGatewayBindResolveSkillRelease(req gatewayx.DispatchRequ
 	return out, nil
 }
 
+func SkillReleaseServiceGatewayBindListSkillRefs(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ListSkillRefsRequest, error) {
+	out := &ListSkillRefsRequest{}
+	if v, ok := req.Body.(*ListSkillRefsRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(ListSkillRefsRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+func SkillReleaseServiceGatewayBindListSkillCommits(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ListSkillCommitsRequest, error) {
+	out := &ListSkillCommitsRequest{}
+	if v, ok := req.Body.(*ListSkillCommitsRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(ListSkillCommitsRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+func SkillReleaseServiceGatewayBindCompareSkillRefs(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*CompareSkillRefsRequest, error) {
+	out := &CompareSkillRefsRequest{}
+	if v, ok := req.Body.(*CompareSkillRefsRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(CompareSkillRefsRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+func SkillReleaseServiceGatewayBindRestoreSkillRef(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*RestoreSkillRefRequest, error) {
+	out := &RestoreSkillRefRequest{}
+	if v, ok := req.Body.(*RestoreSkillRefRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(RestoreSkillRefRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
 func RegisterSkillReleaseServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, client SkillReleaseServiceClient) error {
 	if err := registry.Register("/skill.v1.SkillReleaseService/CreateSkillRelease", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindCreateSkillRelease, client.CreateSkillRelease)); err != nil {
 		return err
@@ -96,6 +180,18 @@ func RegisterSkillReleaseServiceGatewayInvokers(registry *gatewayx.InvokerRegist
 		return err
 	}
 	if err := registry.Register("/skill.v1.SkillReleaseService/ResolveSkillRelease", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindResolveSkillRelease, client.ResolveSkillRelease)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillReleaseService/ListSkillRefs", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindListSkillRefs, client.ListSkillRefs)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillReleaseService/ListSkillCommits", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindListSkillCommits, client.ListSkillCommits)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillReleaseService/CompareSkillRefs", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindCompareSkillRefs, client.CompareSkillRefs)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillReleaseService/RestoreSkillRef", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindRestoreSkillRef, client.RestoreSkillRef)); err != nil {
 		return err
 	}
 	return nil
