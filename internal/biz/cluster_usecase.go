@@ -312,6 +312,16 @@ func (uc *ClusterUsecase) UpdateCluster(ctx context.Context, principal authn.Pri
 			return nil, fmt.Errorf("%w: field %q is immutable", ErrClusterInvalidArgument, k)
 		}
 	}
+	// Step 1: SSRF validate server_url when it is being updated.
+	if su, ok := updates["server_url"]; ok {
+		srvURL, ok := su.(string)
+		if !ok || srvURL == "" {
+			return nil, fmt.Errorf("%w: server_url must be a non-empty string", ErrClusterInvalidArgument)
+		}
+		if _, err := uc.endpoint.Validate(ctx, srvURL); err != nil {
+			return nil, err
+		}
+	}
 	return uc.clusters.UpdateClusterWithCAS(ctx, id, expectedRevision, updates)
 }
 

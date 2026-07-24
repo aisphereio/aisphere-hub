@@ -221,7 +221,7 @@ func (uc *SkillUsecase) UpdateSkill(ctx context.Context, in *GitSkill) (*GitSkil
 	if in == nil || !skillNamePattern.MatchString(strings.TrimSpace(in.Name)) {
 		return nil, ErrSkillInvalidArgument
 	}
-	return nil, ErrSkillMetadataManagedByGit
+	return uc.skills.UpdateSkill(ctx, in)
 }
 
 func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, name, visibility string) (*GitSkill, error) {
