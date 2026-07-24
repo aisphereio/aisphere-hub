@@ -7,13 +7,50 @@ import (
 	"testing"
 )
 
-func TestParseSkillArchiveRequiresRootSkillMD(t *testing.T) {
+func TestParseSkillArchiveRequiresSkillMD(t *testing.T) {
 	data := zipBytes(t, map[string]string{
-		"nested/SKILL.md": "---\nname: nested\ndescription: nested desc\n---\n",
+		"README.md": "# Missing metadata\n",
 	})
 	_, err := ParseSkillArchive(data, SkillArchiveLimits{})
 	if !errors.Is(err, ErrSkillArchiveMissingMeta) {
 		t.Fatalf("ParseSkillArchive() error = %v, want ErrSkillArchiveMissingMeta", err)
+	}
+}
+
+func TestParseSkillArchiveAcceptsSingleTopLevelDirectory(t *testing.T) {
+	data := zipBytes(t, map[string]string{
+		"search-skill/SKILL.md":    "---\nname: search\ndisplay_name: Search Skill\ndescription: Search tools\n---\n# Search\n",
+		"search-skill/src/main.py": "print('ok')\n",
+		"__MACOSX/._SKILL.md":      "ignored",
+	})
+	archive, err := ParseSkillArchive(data, SkillArchiveLimits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if archive.Name != "search" || archive.DisplayName != "Search Skill" || archive.Description != "Search tools" {
+		t.Fatalf("metadata = %+v", archive)
+	}
+	if archive.FileCount != 2 || len(archive.Files) != 2 {
+		t.Fatalf("file count = %d/%d, want 2", archive.FileCount, len(archive.Files))
+	}
+	if archive.Files[0].Path != "SKILL.md" && archive.Files[1].Path != "SKILL.md" {
+		t.Fatalf("normalized files = %+v, want root SKILL.md", archive.Files)
+	}
+	for _, file := range archive.Files {
+		if file.Path == "search-skill/src/main.py" {
+			t.Fatalf("wrapper directory was not stripped: %+v", archive.Files)
+		}
+	}
+}
+
+func TestParseSkillArchiveRejectsMixedWrapperLayout(t *testing.T) {
+	data := zipBytes(t, map[string]string{
+		"search-skill/SKILL.md": "---\nname: search\ndescription: Search tools\n---\n",
+		"README.md":             "outside wrapper",
+	})
+	_, err := ParseSkillArchive(data, SkillArchiveLimits{})
+	if !errors.Is(err, ErrSkillArchiveInvalid) {
+		t.Fatalf("ParseSkillArchive() error = %v, want ErrSkillArchiveInvalid", err)
 	}
 }
 
