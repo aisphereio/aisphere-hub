@@ -52,6 +52,17 @@ func SkillReleaseServiceKernelModule() serverx.ServiceModule {
 }
 
 var SkillReleaseServiceKernelAuthzRules = authz.Rules{
+	"/skill.v1.SkillReleaseService/ResolveSkillRef": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "ResolveSkillRef",
+		FullMethod: "/skill.v1.SkillReleaseService/ResolveSkillRef",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.resolve",
+		AuditRisk:  "low",
+	},
 	"/skill.v1.SkillReleaseService/CreateSkillRelease": {
 		Service:    "skill.v1.SkillReleaseService",
 		Method:     "CreateSkillRelease",
@@ -136,6 +147,21 @@ func SkillReleaseServiceKernelRequestInfoResolver(ctx context.Context, operation
 	_ = ctx
 	_ = req
 	switch _SkillReleaseServiceKernelNormalizeOperation(operation) {
+	case "/skill.v1.SkillReleaseService/ResolveSkillRef":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillReleaseService",
+			Method:        "ResolveSkillRef",
+			Operation:     "/skill.v1.SkillReleaseService/ResolveSkillRef",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "view",
+			Resource:      "skill:{name}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.skill.ref.resolve"
+		info.Labels["audit_risk"] = "low"
+		return info.Normalize(), true, nil
 	case "/skill.v1.SkillReleaseService/CreateSkillRelease":
 		info := requestx.Info{
 			Service:       "skill.v1.SkillReleaseService",
@@ -271,6 +297,8 @@ func SkillReleaseServiceKernelAccessResolver(ctx context.Context, operation stri
 
 func _SkillReleaseServiceKernelNormalizeOperation(operation string) string {
 	switch operation {
+	case "ResolveSkillRef", "skill.v1.SkillReleaseService/ResolveSkillRef":
+		return "/skill.v1.SkillReleaseService/ResolveSkillRef"
 	case "CreateSkillRelease", "skill.v1.SkillReleaseService/CreateSkillRelease":
 		return "/skill.v1.SkillReleaseService/CreateSkillRelease"
 	case "GetSkillRelease", "skill.v1.SkillReleaseService/GetSkillRelease":

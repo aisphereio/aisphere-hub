@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "cd9eedd02bab4818d15cf39d62a9bc641f6d5ab9",
+  "git_sha": "281ef34fc1601560e2ec0902344672fc1d91038f",
   "ref": "feat/skill-version-management-v2",
-  "sha256": "16b3d24e2a77f0e3affff9b4a56d9b87c960656362e06dbe4ffb4df6306c41e1",
+  "sha256": "68d96c4cdf98bcc82735828168fe48e9a5516049b10ea761c2b938a2b686640d",
   "kernel_version": "v0.4.18",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }

@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	SkillReleaseService_ResolveSkillRef_FullMethodName     = "/skill.v1.SkillReleaseService/ResolveSkillRef"
 	SkillReleaseService_CreateSkillRelease_FullMethodName  = "/skill.v1.SkillReleaseService/CreateSkillRelease"
 	SkillReleaseService_GetSkillRelease_FullMethodName     = "/skill.v1.SkillReleaseService/GetSkillRelease"
 	SkillReleaseService_ResolveSkillRelease_FullMethodName = "/skill.v1.SkillReleaseService/ResolveSkillRelease"
@@ -37,6 +38,7 @@ const (
 // floating branch selectors such as main/latest are intentionally unsupported.
 // All routes are generated from this service definition.
 type SkillReleaseServiceClient interface {
+	ResolveSkillRef(ctx context.Context, in *ResolveSkillRefRequest, opts ...grpc.CallOption) (*ResolveSkillRefResponse, error)
 	CreateSkillRelease(ctx context.Context, in *CreateSkillReleaseRequest, opts ...grpc.CallOption) (*CreateSkillReleaseResponse, error)
 	GetSkillRelease(ctx context.Context, in *GetSkillReleaseRequest, opts ...grpc.CallOption) (*GetSkillReleaseResponse, error)
 	ResolveSkillRelease(ctx context.Context, in *ResolveSkillReleaseRequest, opts ...grpc.CallOption) (*ResolveSkillReleaseResponse, error)
@@ -55,6 +57,16 @@ type skillReleaseServiceClient struct {
 
 func NewSkillReleaseServiceClient(cc grpc.ClientConnInterface) SkillReleaseServiceClient {
 	return &skillReleaseServiceClient{cc}
+}
+
+func (c *skillReleaseServiceClient) ResolveSkillRef(ctx context.Context, in *ResolveSkillRefRequest, opts ...grpc.CallOption) (*ResolveSkillRefResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveSkillRefResponse)
+	err := c.cc.Invoke(ctx, SkillReleaseService_ResolveSkillRef_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *skillReleaseServiceClient) CreateSkillRelease(ctx context.Context, in *CreateSkillReleaseRequest, opts ...grpc.CallOption) (*CreateSkillReleaseResponse, error) {
@@ -136,6 +148,7 @@ func (c *skillReleaseServiceClient) RestoreSkillRef(ctx context.Context, in *Res
 // floating branch selectors such as main/latest are intentionally unsupported.
 // All routes are generated from this service definition.
 type SkillReleaseServiceServer interface {
+	ResolveSkillRef(context.Context, *ResolveSkillRefRequest) (*ResolveSkillRefResponse, error)
 	CreateSkillRelease(context.Context, *CreateSkillReleaseRequest) (*CreateSkillReleaseResponse, error)
 	GetSkillRelease(context.Context, *GetSkillReleaseRequest) (*GetSkillReleaseResponse, error)
 	ResolveSkillRelease(context.Context, *ResolveSkillReleaseRequest) (*ResolveSkillReleaseResponse, error)
@@ -156,6 +169,9 @@ type SkillReleaseServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSkillReleaseServiceServer struct{}
 
+func (UnimplementedSkillReleaseServiceServer) ResolveSkillRef(context.Context, *ResolveSkillRefRequest) (*ResolveSkillRefResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveSkillRef not implemented")
+}
 func (UnimplementedSkillReleaseServiceServer) CreateSkillRelease(context.Context, *CreateSkillReleaseRequest) (*CreateSkillReleaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSkillRelease not implemented")
 }
@@ -196,6 +212,24 @@ func RegisterSkillReleaseServiceServer(s grpc.ServiceRegistrar, srv SkillRelease
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&SkillReleaseService_ServiceDesc, srv)
+}
+
+func _SkillReleaseService_ResolveSkillRef_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveSkillRefRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillReleaseServiceServer).ResolveSkillRef(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillReleaseService_ResolveSkillRef_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillReleaseServiceServer).ResolveSkillRef(ctx, req.(*ResolveSkillRefRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillReleaseService_CreateSkillRelease_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -331,6 +365,10 @@ var SkillReleaseService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "skill.v1.SkillReleaseService",
 	HandlerType: (*SkillReleaseServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ResolveSkillRef",
+			Handler:    _SkillReleaseService_ResolveSkillRef_Handler,
+		},
 		{
 			MethodName: "CreateSkillRelease",
 			Handler:    _SkillReleaseService_CreateSkillRelease_Handler,

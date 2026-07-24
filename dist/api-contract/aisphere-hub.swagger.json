@@ -2244,6 +2244,14 @@
       },
       "type": "object"
     },
+    "v1ResolveSkillRefResponse": {
+      "properties": {
+        "ref": {
+          "$ref": "#/definitions/v1SkillRef"
+        }
+      },
+      "type": "object"
+    },
     "v1ResolveSkillReleaseResponse": {
       "properties": {
         "release": {
@@ -2807,6 +2815,17 @@
           "type": "string"
         },
         "type": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1SkillRef": {
+      "properties": {
+        "commitSha": {
+          "type": "string"
+        },
+        "ref": {
           "type": "string"
         }
       },
@@ -5810,6 +5829,43 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/v1ListSkillRefsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SkillReleaseService"
+        ]
+      }
+    },
+    "/v1/skills/{name}/refs:resolve": {
+      "get": {
+        "operationId": "SkillReleaseService_ResolveSkillRef",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Defaults to refs/heads/main when omitted. Accepts \"main\" or a fully\nqualified ref such as \"refs/heads/main\".",
+            "in": "query",
+            "name": "ref",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1SkillRef"
             }
           },
           "default": {

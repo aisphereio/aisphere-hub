@@ -16,6 +16,13 @@ func SkillReleaseServiceGatewayManifest() gatewayx.Manifest {
 		Namespace: "aisphere",
 		Routes: []gatewayx.GatewayRoute{
 			{
+				ID:       "skill.release.resolve.skill.ref",
+				Method:   "GET",
+				Path:     "/v1/skills/{name}/refs:resolve",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillReleaseService/ResolveSkillRef"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
 				ID:       "skill.release.create.skill.release",
 				Method:   "POST",
 				Path:     "/v1/skills/{name}/releases",
@@ -66,6 +73,20 @@ func SkillReleaseServiceGatewayManifest() gatewayx.Manifest {
 			},
 		},
 	}
+}
+
+func SkillReleaseServiceGatewayBindResolveSkillRef(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ResolveSkillRefRequest, error) {
+	out := &ResolveSkillRefRequest{}
+	if v, ok := req.Body.(*ResolveSkillRefRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(ResolveSkillRefRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
 }
 
 func SkillReleaseServiceGatewayBindCreateSkillRelease(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*CreateSkillReleaseRequest, error) {
@@ -173,6 +194,9 @@ func SkillReleaseServiceGatewayBindRestoreSkillRef(req gatewayx.DispatchRequest,
 }
 
 func RegisterSkillReleaseServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, client SkillReleaseServiceClient) error {
+	if err := registry.Register("/skill.v1.SkillReleaseService/ResolveSkillRef", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindResolveSkillRef, client.ResolveSkillRef)); err != nil {
+		return err
+	}
 	if err := registry.Register("/skill.v1.SkillReleaseService/CreateSkillRelease", gatewayx.GRPCUnaryInvoker(SkillReleaseServiceGatewayBindCreateSkillRelease, client.CreateSkillRelease)); err != nil {
 		return err
 	}

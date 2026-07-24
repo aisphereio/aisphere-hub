@@ -19,6 +19,17 @@ import (
 var _ = grpc.EmptyCallOption{}
 
 var SkillReleaseServiceAuthzRules = authz.Rules{
+	"/skill.v1.SkillReleaseService/ResolveSkillRef": {
+		Service:    "skill.v1.SkillReleaseService",
+		Method:     "ResolveSkillRef",
+		FullMethod: "/skill.v1.SkillReleaseService/ResolveSkillRef",
+		Action:     "view",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.ref.resolve",
+		AuditRisk:  "low",
+	},
 	"/skill.v1.SkillReleaseService/CreateSkillRelease": {
 		Service:    "skill.v1.SkillReleaseService",
 		Method:     "CreateSkillRelease",
@@ -100,6 +111,17 @@ var SkillReleaseServiceAuthzRules = authz.Rules{
 
 const SkillReleaseServiceAuthzManifestJSON = `{
   "methods": [
+    {
+      "service": "skill.v1.SkillReleaseService",
+      "method": "ResolveSkillRef",
+      "full_method": "/skill.v1.SkillReleaseService/ResolveSkillRef",
+      "action": "view",
+      "resource": "skill:{name}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.skill.ref.resolve",
+      "audit_risk": "low"
+    },
     {
       "service": "skill.v1.SkillReleaseService",
       "method": "CreateSkillRelease",
@@ -244,6 +266,8 @@ func SkillReleaseServiceAccessResolver(ctx context.Context, operation string, re
 
 func _SkillReleaseServiceNormalizeOperation(operation string) string {
 	switch operation {
+	case "ResolveSkillRef", "skill.v1.SkillReleaseService/ResolveSkillRef":
+		return "/skill.v1.SkillReleaseService/ResolveSkillRef"
 	case "CreateSkillRelease", "skill.v1.SkillReleaseService/CreateSkillRelease":
 		return "/skill.v1.SkillReleaseService/CreateSkillRelease"
 	case "GetSkillRelease", "skill.v1.SkillReleaseService/GetSkillRelease":
@@ -274,6 +298,45 @@ func NewSkillReleaseServiceSecureClient(raw SkillReleaseServiceClient, guard aut
 }
 
 var _ SkillReleaseServiceClient = (*SkillReleaseServiceSecureClient)(nil)
+
+func (c *SkillReleaseServiceSecureClient) ResolveSkillRef(ctx context.Context, in *ResolveSkillRefRequest, opts ...grpc.CallOption) (*ResolveSkillRefResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillReleaseServiceAuthzRules["/skill.v1.SkillReleaseService/ResolveSkillRef"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillReleaseServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.ResolveSkillRef(ctx, in, opts...)
+}
 
 func (c *SkillReleaseServiceSecureClient) CreateSkillRelease(ctx context.Context, in *CreateSkillReleaseRequest, opts ...grpc.CallOption) (*CreateSkillReleaseResponse, error) {
 	if c != nil && c.guard != nil {

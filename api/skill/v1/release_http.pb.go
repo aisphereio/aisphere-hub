@@ -22,6 +22,7 @@ const OperationSkillReleaseServiceCreateSkillRelease = "/skill.v1.SkillReleaseSe
 const OperationSkillReleaseServiceGetSkillRelease = "/skill.v1.SkillReleaseService/GetSkillRelease"
 const OperationSkillReleaseServiceListSkillCommits = "/skill.v1.SkillReleaseService/ListSkillCommits"
 const OperationSkillReleaseServiceListSkillRefs = "/skill.v1.SkillReleaseService/ListSkillRefs"
+const OperationSkillReleaseServiceResolveSkillRef = "/skill.v1.SkillReleaseService/ResolveSkillRef"
 const OperationSkillReleaseServiceResolveSkillRelease = "/skill.v1.SkillReleaseService/ResolveSkillRelease"
 const OperationSkillReleaseServiceRestoreSkillRef = "/skill.v1.SkillReleaseService/RestoreSkillRef"
 
@@ -31,6 +32,7 @@ type SkillReleaseServiceHTTPServer interface {
 	GetSkillRelease(context.Context, *GetSkillReleaseRequest) (*GetSkillReleaseResponse, error)
 	ListSkillCommits(context.Context, *ListSkillCommitsRequest) (*ListSkillCommitsResponse, error)
 	ListSkillRefs(context.Context, *ListSkillRefsRequest) (*ListSkillRefsResponse, error)
+	ResolveSkillRef(context.Context, *ResolveSkillRefRequest) (*ResolveSkillRefResponse, error)
 	ResolveSkillRelease(context.Context, *ResolveSkillReleaseRequest) (*ResolveSkillReleaseResponse, error)
 	// RestoreSkillRef RestoreSkillRef creates a new commit whose tree exactly matches source_ref
 	// and advances target_branch with compare-and-swap. Existing release tags
@@ -43,6 +45,7 @@ func RegisterSkillReleaseServiceHTTPServer(s *http.Server, srv SkillReleaseServi
 	r.Handle("GET", "/v1/skills/{name}/commits", _SkillReleaseService_ListSkillCommits0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/compare", _SkillReleaseService_CompareSkillRefs0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/refs", _SkillReleaseService_ListSkillRefs0_HTTP_Handler(srv))
+	r.Handle("GET", "/v1/skills/{name}/refs:resolve", _SkillReleaseService_ResolveSkillRef0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/releases/{version}", _SkillReleaseService_GetSkillRelease0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{name}/releases/{version}:resolve", _SkillReleaseService_ResolveSkillRelease0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/releases", _SkillReleaseService_CreateSkillRelease0_HTTP_Handler(srv))
@@ -121,6 +124,31 @@ func _SkillReleaseService_ListSkillRefs0_HTTP_Handler(srv SkillReleaseServiceHTT
 		}
 		reply := out.(*ListSkillRefsResponse)
 		return ctx.Result(200, reply)
+	}
+}
+
+func _SkillReleaseService_ResolveSkillRef0_HTTP_Handler(srv SkillReleaseServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ResolveSkillRefRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillReleaseServiceResolveSkillRef)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ResolveSkillRef(ctx, req.(*ResolveSkillRefRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ResolveSkillRefResponse)
+		return ctx.Result(200, reply.Ref)
 	}
 }
 
@@ -230,6 +258,7 @@ type SkillReleaseServiceHTTPClient interface {
 	GetSkillRelease(ctx context.Context, req *GetSkillReleaseRequest, opts ...http.CallOption) (rsp *GetSkillReleaseResponse, err error)
 	ListSkillCommits(ctx context.Context, req *ListSkillCommitsRequest, opts ...http.CallOption) (rsp *ListSkillCommitsResponse, err error)
 	ListSkillRefs(ctx context.Context, req *ListSkillRefsRequest, opts ...http.CallOption) (rsp *ListSkillRefsResponse, err error)
+	ResolveSkillRef(ctx context.Context, req *ResolveSkillRefRequest, opts ...http.CallOption) (rsp *ResolveSkillRefResponse, err error)
 	ResolveSkillRelease(ctx context.Context, req *ResolveSkillReleaseRequest, opts ...http.CallOption) (rsp *ResolveSkillReleaseResponse, err error)
 	// RestoreSkillRef RestoreSkillRef creates a new commit whose tree exactly matches source_ref
 	// and advances target_branch with compare-and-swap. Existing release tags
@@ -320,6 +349,22 @@ func (c *SkillReleaseServiceHTTPClientImpl) ListSkillRefs(ctx context.Context, i
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *SkillReleaseServiceHTTPClientImpl) ResolveSkillRef(ctx context.Context, in *ResolveSkillRefRequest, opts ...http.CallOption) (*ResolveSkillRefResponse, error) {
+	var out ResolveSkillRefResponse
+	pattern := "/v1/skills/{name}/refs:resolve"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSkillReleaseServiceResolveSkillRef),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out.Ref, opts...)
 	if err != nil {
 		return nil, err
 	}
