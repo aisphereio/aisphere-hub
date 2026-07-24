@@ -172,6 +172,9 @@ type RestoreSkillRef struct {
 	ActorID, ActorName, ActorEmail     string
 	CreateTime                         time.Time
 }
+type SkillRef struct {
+	Ref, CommitSHA string
+}
 type SkillShare struct{ SkillName, Relation, SubjectType, SubjectID, SubjectRelation string }
 
 // FileInfo describes a single entry (file or directory) inside a skill

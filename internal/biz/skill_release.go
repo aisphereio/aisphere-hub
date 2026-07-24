@@ -47,6 +47,25 @@ func NormalizeReleaseVersion(version string) (string, bool) {
 	return "v" + parsed.String(), true
 }
 
+func (uc *SkillUsecase) ResolveRef(ctx context.Context, skill, ref string) (*SkillRef, error) {
+	skill = strings.TrimSpace(skill)
+	if skill == "" {
+		return nil, ErrSkillInvalidArgument
+	}
+	if uc.git == nil {
+		return nil, ErrSkillDependencyFailed
+	}
+	ref = normalizeBranchRef(ref)
+	commitSHA, err := uc.git.ResolveRef(ctx, skill, ref)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(commitSHA) == "" {
+		return nil, ErrSkillInvalidArgument
+	}
+	return &SkillRef{Ref: ref, CommitSHA: commitSHA}, nil
+}
+
 func (uc *SkillUsecase) CreateRelease(ctx context.Context, principal authn.Principal, in CreateSkillRelease) (*SkillRelease, error) {
 	if err := requirePrincipal(principal); err != nil {
 		return nil, err

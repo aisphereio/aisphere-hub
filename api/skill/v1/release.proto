@@ -15,6 +15,18 @@ option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 // floating branch selectors such as main/latest are intentionally unsupported.
 // All routes are generated from this service definition.
 service SkillReleaseService {
+  rpc ResolveSkillRef(ResolveSkillRefRequest) returns (ResolveSkillRefResponse) {
+    option (google.api.http) = {
+      get: "/v1/skills/{name}/refs:resolve"
+      response_body: "ref"
+    };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.ref.resolve" risk: "low" }
+    };
+  }
+
   rpc CreateSkillRelease(CreateSkillReleaseRequest) returns (CreateSkillReleaseResponse) {
     option (google.api.http) = {
       post: "/v1/skills/{name}/releases"
@@ -99,6 +111,22 @@ service SkillReleaseService {
       audit: { enabled: true event: "hub.skill.ref.restore" risk: "high" }
     };
   }
+}
+
+message SkillRef {
+  string ref = 1;
+  string commit_sha = 2;
+}
+
+message ResolveSkillRefRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  // Defaults to refs/heads/main when omitted. Accepts "main" or a fully
+  // qualified ref such as "refs/heads/main".
+  string ref = 2;
+}
+
+message ResolveSkillRefResponse {
+  SkillRef ref = 1;
 }
 
 message CreateSkillReleaseRequest {
