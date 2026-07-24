@@ -247,7 +247,7 @@ func (uc *SandboxUsecase) CreateSandboxTemplate(ctx context.Context, principal a
 		Labels:    created.Labels,
 	}
 	if cmd := strings.TrimSpace(created.ContainerCommand); cmd != "" {
-		spec.ContainerCommand = strings.Fields(cmd)
+		spec.ContainerCommand = parseContainerCommand(cmd)
 	}
 	if err := uc.provider.ApplySandboxTemplate(ctx, created.ClusterID, locator, spec); err != nil {
 		uc.log.WithContext(ctx).Warn("remote sandbox template apply failed; marking FAILED",
@@ -414,16 +414,25 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no use permission on namespace")
 	}
 
-	// Resolve template ref up front (validates the template exists and yields
-	// its K8s name for the apply spec). A missing template is a client error
+	// Resolve the referenced Hub SandboxTemplate up front (validates it exists
+	// and yields the image + command to inline into the Sandbox podTemplate).
+	// The agent-sandbox Sandbox CRD inlines spec.podTemplate rather than
+	// referencing a SandboxTemplate by name, so Hub carries the resolved image
+	// + command through the apply spec. A missing template is a client error
 	// surfaced before any DB write.
-	var templateRef string
+	var (
+		templateImage   string
+		templateCommand []string
+	)
 	if s.TemplateID != "" {
 		tmpl, terr := uc.sandboxes.GetSandboxTemplate(ctx, s.TemplateID)
 		if terr != nil {
 			return nil, fmt.Errorf("%w: referenced template not found: %v", ErrClusterInvalidArgument, terr)
 		}
-		templateRef = tmpl.KubernetesName
+		templateImage = tmpl.Image
+		if cmd := strings.TrimSpace(tmpl.ContainerCommand); cmd != "" {
+			templateCommand = parseContainerCommand(cmd)
+		}
 	}
 
 	// Step 4: stamp owner/created_by + defaults.
@@ -478,11 +487,12 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 	}
 	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
 	applySpec := SandboxApplySpec{
-		Name:          created.KubernetesName,
-		Namespace:     ns.KubeName,
-		TemplateRef:   templateRef,
-		OperatingMode: created.OperatingMode,
-		Labels:        created.Labels,
+		Name:            created.KubernetesName,
+		Namespace:       ns.KubeName,
+		Image:           templateImage,
+		ContainerCommand: templateCommand,
+		OperatingMode:   created.OperatingMode,
+		Labels:          created.Labels,
 	}
 	if err := uc.provider.ApplySandbox(ctx, created.ClusterID, locator, applySpec); err != nil {
 		// Remote apply failed → mark FAILED + compensate SpiceDB (design §11).
@@ -1185,4 +1195,23 @@ func (uc *SandboxUsecase) CallSandboxTool(ctx context.Context, principal authn.P
 		logx.String("tool", tool),
 		logx.String("trace_id", traceID))
 	return true, string(b), "", nil
+}
+
+// parseContainerCommand decodes a SandboxTemplate.ContainerCommand value into
+// the argv slice consumed by the agent-sandbox CRD podTemplate. The field is
+// stored as a JSON-encoded string array (see sandbox.proto CreateSandboxTemplate
+// comment), e.g. `["/bin/sh","-c","sleep infinity"]`. strings.Fields would
+// corrupt argv entries containing spaces (e.g. "sleep infinity"); JSON decode
+// is the correct parse. A non-JSON value falls back to Fields so a plain
+// shell string still works.
+func parseContainerCommand(raw string) []string {
+	cmd := strings.TrimSpace(raw)
+	if cmd == "" {
+		return nil
+	}
+	var argv []string
+	if err := json.Unmarshal([]byte(cmd), &argv); err == nil {
+		return argv
+	}
+	return strings.Fields(cmd)
 }

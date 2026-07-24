@@ -135,6 +135,29 @@ func (p *k8sClientPool) ApplySandbox(ctx context.Context, clusterID string, loca
 	if operatingMode == "" {
 		operatingMode = "Running"
 	}
+	// The agent-sandbox Sandbox CRD (agents.x-k8s.io/v1beta1) inlines
+	// spec.podTemplate.spec.containers — it does NOT reference a
+	// SandboxTemplate by name. Hub resolves the image + command from the Hub
+	// SandboxTemplate row (in the usecase) and inlines them here.
+	specFields := map[string]interface{}{
+		"operatingMode":  operatingMode,
+		"shutdownPolicy": "Retain",
+	}
+	if spec.Image != "" {
+		container := map[string]interface{}{
+			"name":  "runtime",
+			"image": spec.Image,
+		}
+		if len(spec.ContainerCommand) > 0 {
+			container["command"] = spec.ContainerCommand
+		}
+		specFields["podTemplate"] = map[string]interface{}{
+			"spec": map[string]interface{}{
+				"containers":    []interface{}{container},
+				"restartPolicy": "OnFailure",
+			},
+		}
+	}
 	obj := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "agents.x-k8s.io/v1beta1",
 		"kind":       "Sandbox",
@@ -143,15 +166,8 @@ func (p *k8sClientPool) ApplySandbox(ctx context.Context, clusterID string, loca
 			"namespace": spec.Namespace,
 			"labels":    spec.Labels,
 		},
-		"spec": map[string]interface{}{
-			"operatingMode": operatingMode,
-		},
+		"spec": specFields,
 	}}
-	if spec.TemplateRef != "" {
-		obj.Object["spec"].(map[string]interface{})["sandboxTemplateRef"] = map[string]interface{}{
-			"name": spec.TemplateRef,
-		}
-	}
 	obj.SetAPIVersion("agents.x-k8s.io/v1beta1")
 	obj.SetKind("Sandbox")
 	return client.ApplyUnstructured(ctx, obj, kubernetesx.ApplyOptions{FieldManager: "aisphere-hub-sandbox"})
