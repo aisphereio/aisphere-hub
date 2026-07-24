@@ -355,12 +355,18 @@ type SandboxTemplateSyncResult struct {
 
 // SandboxApplySpec is the biz-layer view of a Sandbox CRD to SSA-apply. The
 // data layer builds an agents.x-k8s.io/v1beta1 Sandbox from this.
+//
+// The agent-sandbox Sandbox CRD does NOT reference a SandboxTemplate by name;
+// instead it inlines a podTemplate (spec.podTemplate.spec.containers). Hub
+// therefore resolves the referenced Hub SandboxTemplate row up front (in the
+// usecase) and passes the image + command here so the provider can inline them.
 type SandboxApplySpec struct {
-	Name          string            // K8s Sandbox name (DNS-1123 label)
-	Namespace     string            // K8s namespace to place the Sandbox in
-	TemplateRef   string            // SandboxTemplate K8s name (required for non-warm-pool creation)
-	OperatingMode string            // "Running" or "Suspended" (default Running)
-	Labels        map[string]string // AISphere-managed labels
+	Name            string            // K8s Sandbox name (DNS-1123 label)
+	Namespace       string            // K8s namespace to place the Sandbox in
+	Image           string            // container image (required for non-warm-pool creation)
+	ContainerCommand []string         // container command argv (optional)
+	OperatingMode   string            // "Running" or "Suspended" (default Running)
+	Labels          map[string]string // AISphere-managed labels
 }
 
 // SandboxSyncResult is returned by ListSandboxes for each remote Sandbox CRD.

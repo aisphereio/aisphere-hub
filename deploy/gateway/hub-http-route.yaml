@@ -90,6 +90,21 @@ spec:
         - path:
             type: PathPrefix
             value: /v1/users/
+        - path:
+            type: PathPrefix
+            value: /v1/clusters/
+        - path:
+            type: PathPrefix
+            value: /v1/namespaces/
+        - path:
+            type: PathPrefix
+            value: /v1/sandboxes/
+        - path:
+            type: PathPrefix
+            value: /v1/warm-pools/
+        - path:
+            type: PathPrefix
+            value: /v1/sandbox-claims/
       backendRefs:
         - name: aisphere-hub
           namespace: aisphere
