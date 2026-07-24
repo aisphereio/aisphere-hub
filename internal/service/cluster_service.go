@@ -269,10 +269,14 @@ func clusterFieldMaskToUpdates(mask *fieldmaskpb.FieldMask, c *kubernetesv1.Clus
 	updates := make(map[string]any, len(paths))
 	for _, p := range paths {
 		switch p {
+		case "name":
+			updates["name"] = c.GetName()
 		case "display_name":
 			updates["display_name"] = c.GetDisplayName()
 		case "description":
 			updates["description"] = c.GetDescription()
+		case "server_url":
+			updates["server_url"] = c.GetServerUrl()
 		case "distribution":
 			updates["distribution"] = c.GetDistribution()
 		case "labels":
