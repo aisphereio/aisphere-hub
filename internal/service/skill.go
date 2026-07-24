@@ -20,12 +20,16 @@ type SkillService struct {
 }
 
 func NewSkillService(uc *biz.SkillUsecase) *SkillService { return &SkillService{uc: uc} }
+
 func (s *SkillService) RegisterHTTPServer(server *khttp.Server) {
 	skillv1.RegisterSkillServiceHTTPServer(server, s)
 }
 
 func (s *SkillService) CreateSkill(ctx context.Context, req *skillv1.CreateSkillRequest) (*skillv1.CreateSkillResponse, error) {
-	out, err := s.uc.CreateSkill(ctx, principalFromContext(ctx), &biz.GitSkill{Name: req.GetName(), DisplayName: req.GetDisplayName(), Description: req.GetDescription(), Visibility: req.GetVisibility(), OrgID: req.GetOrgId(), ProjectID: req.GetProjectId()})
+	out, err := s.uc.CreateSkill(ctx, principalFromContext(ctx), &biz.GitSkill{
+		Name: req.GetName(), DisplayName: req.GetDisplayName(), Description: req.GetDescription(),
+		Visibility: req.GetVisibility(), OrgID: req.GetOrgId(), ProjectID: req.GetProjectId(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -34,10 +38,7 @@ func (s *SkillService) CreateSkill(ctx context.Context, req *skillv1.CreateSkill
 
 func (s *SkillService) ImportSkillArchive(ctx context.Context, req *skillv1.ImportSkillArchiveRequest) (*skillv1.ImportSkillArchiveResponse, error) {
 	out, meta, err := s.uc.ImportSkillArchive(ctx, principalFromContext(ctx), &biz.SkillArchiveImport{
-		OrgID:      req.GetOrgId(),
-		ProjectID:  req.GetProjectId(),
-		Visibility: req.GetVisibility(),
-		ArchiveZip: req.GetArchiveZip(),
+		OrgID: req.GetOrgId(), ProjectID: req.GetProjectId(), Visibility: req.GetVisibility(), ArchiveZip: req.GetArchiveZip(),
 	})
 	if err != nil {
 		return nil, err
@@ -50,7 +51,10 @@ func (s *SkillService) ListSkills(ctx context.Context, req *skillv1.ListSkillsRe
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.uc.ListSkills(ctx, principalFromContext(ctx), biz.GitSkillListOptions{Limit: int(req.GetPageSize()), Offset: offset, Query: req.GetQuery(), Visibility: req.GetVisibility(), Status: biz.SkillStatusActive})
+	result, err := s.uc.ListSkills(ctx, principalFromContext(ctx), biz.GitSkillListOptions{
+		Limit: int(req.GetPageSize()), Offset: offset, Query: req.GetQuery(),
+		Visibility: req.GetVisibility(), Status: biz.SkillStatusActive,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +77,9 @@ func (s *SkillService) GetSkill(ctx context.Context, req *skillv1.GetSkillReques
 }
 
 func (s *SkillService) UpdateSkill(ctx context.Context, req *skillv1.UpdateSkillRequest) (*skillv1.UpdateSkillResponse, error) {
-	out, err := s.uc.UpdateSkill(ctx, &biz.GitSkill{Name: req.GetName(), DisplayName: req.GetDisplayName(), Description: req.GetDescription()})
+	out, err := s.uc.UpdateSkill(ctx, &biz.GitSkill{
+		Name: req.GetName(), DisplayName: req.GetDisplayName(), Description: req.GetDescription(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +114,10 @@ func (s *SkillService) ListSkillShares(ctx context.Context, req *skillv1.ListSki
 }
 
 func (s *SkillService) CreateSkillShare(ctx context.Context, req *skillv1.CreateSkillShareRequest) (*skillv1.CreateSkillShareResponse, error) {
-	out, err := s.uc.CreateSkillShare(ctx, biz.SkillShare{SkillName: req.GetName(), Relation: req.GetRelation(), SubjectType: req.GetSubjectType(), SubjectID: req.GetSubjectId(), SubjectRelation: req.GetSubjectRelation()})
+	out, err := s.uc.CreateSkillShare(ctx, biz.SkillShare{
+		SkillName: req.GetName(), Relation: req.GetRelation(), SubjectType: req.GetSubjectType(),
+		SubjectID: req.GetSubjectId(), SubjectRelation: req.GetSubjectRelation(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -116,14 +125,18 @@ func (s *SkillService) CreateSkillShare(ctx context.Context, req *skillv1.Create
 }
 
 func (s *SkillService) DeleteSkillShare(ctx context.Context, req *skillv1.DeleteSkillShareRequest) (*skillv1.DeleteSkillShareResponse, error) {
-	if err := s.uc.DeleteSkillShare(ctx, biz.SkillShare{SkillName: req.GetName(), Relation: req.GetRelation(), SubjectType: req.GetSubjectType(), SubjectID: req.GetSubjectId()}); err != nil {
+	if err := s.uc.DeleteSkillShare(ctx, biz.SkillShare{
+		SkillName: req.GetName(), Relation: req.GetRelation(), SubjectType: req.GetSubjectType(), SubjectID: req.GetSubjectId(),
+	}); err != nil {
 		return nil, err
 	}
 	return &skillv1.DeleteSkillShareResponse{}, nil
 }
 
 func (s *SkillService) CreatePullRequest(ctx context.Context, req *skillv1.CreatePullRequestRequest) (*skillv1.CreatePullRequestResponse, error) {
-	out, err := s.uc.CreatePullRequest(ctx, principalFromContext(ctx), &biz.SkillPullRequest{SkillName: req.GetName(), SourceRef: req.GetSourceRef(), Title: req.GetTitle(), Description: req.GetDescription()})
+	out, err := s.uc.CreatePullRequest(ctx, principalFromContext(ctx), &biz.SkillPullRequest{
+		SkillName: req.GetName(), SourceRef: req.GetSourceRef(), Title: req.GetTitle(), Description: req.GetDescription(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +148,9 @@ func (s *SkillService) ListPullRequests(ctx context.Context, req *skillv1.ListPu
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.uc.ListPullRequests(ctx, req.GetName(), biz.PullRequestListOptions{State: req.GetState(), Limit: int(req.GetPageSize()), Offset: offset})
+	result, err := s.uc.ListPullRequests(ctx, req.GetName(), biz.PullRequestListOptions{
+		State: req.GetState(), Limit: int(req.GetPageSize()), Offset: offset,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +169,10 @@ func (s *SkillService) GetPullRequest(ctx context.Context, req *skillv1.GetPullR
 	if err != nil {
 		return nil, err
 	}
-	out := &skillv1.GetPullRequestResponse{PullRequest: pullRequestToProto(pr), Reviews: make([]*skillv1.PullRequestReview, 0, len(reviews))}
+	out := &skillv1.GetPullRequestResponse{
+		PullRequest: pullRequestToProto(pr),
+		Reviews:     make([]*skillv1.PullRequestReview, 0, len(reviews)),
+	}
 	for _, review := range reviews {
 		out.Reviews = append(out.Reviews, reviewToProto(review))
 	}
@@ -162,7 +180,9 @@ func (s *SkillService) GetPullRequest(ctx context.Context, req *skillv1.GetPullR
 }
 
 func (s *SkillService) ReviewPullRequest(ctx context.Context, req *skillv1.ReviewPullRequestRequest) (*skillv1.ReviewPullRequestResponse, error) {
-	out, err := s.uc.ReviewPullRequest(ctx, principalFromContext(ctx), &biz.SkillPullRequestReview{PullRequestID: req.GetId(), Verdict: req.GetVerdict(), Comment: req.GetComment()})
+	out, err := s.uc.ReviewPullRequest(ctx, principalFromContext(ctx), &biz.SkillPullRequestReview{
+		PullRequestID: req.GetId(), Verdict: req.GetVerdict(), Comment: req.GetComment(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -190,9 +210,10 @@ func (s *SkillService) ListSkillReleases(ctx context.Context, req *skillv1.ListS
 	if err != nil {
 		return nil, err
 	}
+	items = filterSkillReleaseVersions(items)
 	out := &skillv1.ListSkillReleasesResponse{Releases: make([]*skillv1.SkillRelease, 0, len(items))}
-	for _, item := range items {
-		out.Releases = append(out.Releases, skillReleaseToProto(&item))
+	for i := range items {
+		out.Releases = append(out.Releases, skillReleaseToProto(&items[i]))
 	}
 	return out, nil
 }
@@ -201,32 +222,56 @@ func skillToProto(item *biz.GitSkill) *skillv1.Skill {
 	if item == nil {
 		return nil
 	}
-	return &skillv1.Skill{Name: item.Name, DisplayName: item.DisplayName, Description: item.Description, Visibility: item.Visibility, OwnerId: item.OwnerID, OwnerName: item.OwnerName, OrgId: item.OrgID, ProjectId: item.ProjectID, DefaultBranch: item.DefaultBranch, Status: item.Status, CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime)}
+	return &skillv1.Skill{
+		Name: item.Name, DisplayName: item.DisplayName, Description: item.Description,
+		Visibility: item.Visibility, OwnerId: item.OwnerID, OwnerName: item.OwnerName,
+		OrgId: item.OrgID, ProjectId: item.ProjectID, DefaultBranch: item.DefaultBranch,
+		Status: item.Status, CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime),
+	}
 }
+
 func archiveMetadataToProto(item *biz.SkillArchiveMetadata) *skillv1.SkillArchiveMetadata {
 	if item == nil {
 		return nil
 	}
-	return &skillv1.SkillArchiveMetadata{Name: item.Name, DisplayName: item.DisplayName, Description: item.Description, FileCount: int32(item.FileCount), UnpackedSize: item.UnpackedBytes}
+	return &skillv1.SkillArchiveMetadata{
+		Name: item.Name, DisplayName: item.DisplayName, Description: item.Description,
+		FileCount: int32(item.FileCount), UnpackedSize: item.UnpackedBytes,
+	}
 }
+
 func shareToProto(item *biz.SkillShare) *skillv1.SkillShare {
 	if item == nil {
 		return nil
 	}
-	return &skillv1.SkillShare{SkillName: item.SkillName, Relation: item.Relation, SubjectType: item.SubjectType, SubjectId: item.SubjectID, SubjectRelation: item.SubjectRelation}
+	return &skillv1.SkillShare{
+		SkillName: item.SkillName, Relation: item.Relation, SubjectType: item.SubjectType,
+		SubjectId: item.SubjectID, SubjectRelation: item.SubjectRelation,
+	}
 }
+
 func pullRequestToProto(item *biz.SkillPullRequest) *skillv1.PullRequest {
 	if item == nil {
 		return nil
 	}
-	return &skillv1.PullRequest{Id: item.ID, SkillName: item.SkillName, SourceRef: item.SourceRef, TargetRef: item.TargetRef, SourceSha: item.SourceSHA, TargetSha: item.TargetSHA, Title: item.Title, Description: item.Description, State: item.State, AuthorId: item.AuthorID, MergedSha: item.MergedSHA, CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime), MergedTime: timestamp(item.MergedTime)}
+	return &skillv1.PullRequest{
+		Id: item.ID, SkillName: item.SkillName, SourceRef: item.SourceRef, TargetRef: item.TargetRef,
+		SourceSha: item.SourceSHA, TargetSha: item.TargetSHA, Title: item.Title, Description: item.Description,
+		State: item.State, AuthorId: item.AuthorID, MergedSha: item.MergedSHA,
+		CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime), MergedTime: timestamp(item.MergedTime),
+	}
 }
+
 func reviewToProto(item *biz.SkillPullRequestReview) *skillv1.PullRequestReview {
 	if item == nil {
 		return nil
 	}
-	return &skillv1.PullRequestReview{Id: item.ID, PullRequestId: item.PullRequestID, ReviewerId: item.ReviewerID, Verdict: item.Verdict, Comment: item.Comment, CreateTime: timestamp(item.CreateTime)}
+	return &skillv1.PullRequestReview{
+		Id: item.ID, PullRequestId: item.PullRequestID, ReviewerId: item.ReviewerID,
+		Verdict: item.Verdict, Comment: item.Comment, CreateTime: timestamp(item.CreateTime),
+	}
 }
+
 func timestamp(value time.Time) *timestamppb.Timestamp {
 	if value.IsZero() {
 		return nil
@@ -238,6 +283,7 @@ func principalFromContext(ctx context.Context) authn.Principal {
 	principal, _ := authn.PrincipalFromContext(ctx)
 	return principal
 }
+
 func decodePageToken(token string) (int, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
