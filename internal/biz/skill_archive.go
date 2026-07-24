@@ -48,7 +48,6 @@ func ParseSkillArchive(data []byte, limits SkillArchiveLimits) (*SkillArchive, e
 	}
 	files := make([]SkillArchiveFile, 0, len(reader.File))
 	seen := map[string]struct{}{}
-	var skillMD string
 	var total int64
 	for _, entry := range reader.File {
 		info := entry.FileInfo()
@@ -61,6 +60,9 @@ func ParseSkillArchive(data []byte, limits SkillArchiveLimits) (*SkillArchive, e
 		p, err := normalizeArchiveFilePath(entry.Name)
 		if err != nil {
 			return nil, archiveError(ErrSkillArchiveInvalid, err.Error())
+		}
+		if isIgnoredArchiveFile(p) {
+			continue
 		}
 		if _, ok := seen[p]; ok {
 			return nil, archiveError(ErrSkillArchiveInvalid, "duplicate file path: "+p)
@@ -84,13 +86,12 @@ func ParseSkillArchive(data []byte, limits SkillArchiveLimits) (*SkillArchive, e
 		if total > limits.MaxUnpackedBytes {
 			return nil, archiveError(ErrSkillArchiveTooLarge, fmt.Sprintf("unpacked size exceeds %d bytes", limits.MaxUnpackedBytes))
 		}
-		if p == "SKILL.md" {
-			skillMD = string(content)
-		}
 		files = append(files, SkillArchiveFile{Path: p, Content: content})
 	}
-	if strings.TrimSpace(skillMD) == "" {
-		return nil, archiveError(ErrSkillArchiveMissingMeta, "root SKILL.md is required")
+
+	files, skillMD, err := normalizeSkillArchiveRoot(files)
+	if err != nil {
+		return nil, err
 	}
 	name, displayName, description, err := ParseSkillMetadataDocument(skillMD)
 	if err != nil {
@@ -107,6 +108,60 @@ func ParseSkillArchive(data []byte, limits SkillArchiveLimits) (*SkillArchive, e
 		FileCount:     len(files),
 		UnpackedBytes: total,
 	}, nil
+}
+
+// normalizeSkillArchiveRoot accepts the canonical root layout and the common
+// GitHub-style layout where every file is wrapped in one top-level directory.
+// Wrapped archives are stripped before they are committed so SKILL.md remains
+// the repository root document.
+func normalizeSkillArchiveRoot(files []SkillArchiveFile) ([]SkillArchiveFile, string, error) {
+	for _, file := range files {
+		if file.Path == "SKILL.md" {
+			return files, string(file.Content), nil
+		}
+	}
+
+	wrapper := ""
+	for _, file := range files {
+		parts := strings.Split(file.Path, "/")
+		if len(parts) != 2 || parts[1] != "SKILL.md" {
+			continue
+		}
+		if wrapper != "" && wrapper != parts[0] {
+			return nil, "", archiveError(ErrSkillArchiveInvalid, "archive contains multiple top-level SKILL.md files")
+		}
+		wrapper = parts[0]
+	}
+	if wrapper == "" {
+		return nil, "", archiveError(ErrSkillArchiveMissingMeta, "SKILL.md is required at archive root or inside a single top-level directory")
+	}
+
+	prefix := wrapper + "/"
+	normalized := make([]SkillArchiveFile, 0, len(files))
+	seen := make(map[string]struct{}, len(files))
+	var skillMD string
+	for _, file := range files {
+		if !strings.HasPrefix(file.Path, prefix) {
+			return nil, "", archiveError(ErrSkillArchiveInvalid, "all archive files must share the SKILL.md top-level directory")
+		}
+		p := strings.TrimPrefix(file.Path, prefix)
+		if p == "" {
+			continue
+		}
+		if _, ok := seen[p]; ok {
+			return nil, "", archiveError(ErrSkillArchiveInvalid, "duplicate file path after stripping top-level directory: "+p)
+		}
+		seen[p] = struct{}{}
+		file.Path = p
+		if p == "SKILL.md" {
+			skillMD = string(file.Content)
+		}
+		normalized = append(normalized, file)
+	}
+	if strings.TrimSpace(skillMD) == "" {
+		return nil, "", archiveError(ErrSkillArchiveMissingMeta, "SKILL.md is required")
+	}
+	return normalized, skillMD, nil
 }
 
 func ParseSkillMetadataDocument(content string) (name, displayName, description string, err error) {
@@ -181,6 +236,10 @@ func normalizeArchiveFilePath(raw string) (string, error) {
 		return "", fmt.Errorf(".git paths are not allowed: %s", clean)
 	}
 	return clean, nil
+}
+
+func isIgnoredArchiveFile(p string) bool {
+	return p == ".DS_Store" || strings.HasSuffix(p, "/.DS_Store") || strings.HasPrefix(p, "__MACOSX/")
 }
 
 func readZipFile(entry *zip.File, maxBytes int64) ([]byte, error) {
