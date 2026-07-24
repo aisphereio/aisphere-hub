@@ -82,6 +82,21 @@ func (e *Engine) GetRelease(ctx context.Context, skill, version string) (*biz.Sk
 }
 
 func (e *Engine) releaseForTag(ctx context.Context, repo *softgit.Repository, tag string) (*biz.SkillRelease, error) {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
+		return nil, biz.ErrSkillInvalidArgument
+	}
+
+	// The Git repository may contain operational tags such as backup, demo or
+	// before-refactor. They are valid Git refs but are not SkillHub versions.
+	// ListReleases enumerates every repository tag, so return a lightweight
+	// placeholder here and let the service boundary filter it out. This keeps
+	// ordinary Git tags from making the complete Skill version list fail while
+	// exact GetRelease calls remain strict because they normalize SemVer first.
+	if _, valid := biz.NormalizeReleaseVersion(tag); !valid {
+		return &biz.SkillRelease{Tag: tag}, nil
+	}
+
 	commitSHA, err := runGitRepo(ctx, repo.Path, nil, "rev-parse", "--verify", "refs/tags/"+tag+"^{commit}")
 	if err != nil {
 		return nil, biz.ErrSkillReleaseNotFound
