@@ -208,6 +208,35 @@ func (r *fakeNamespaceRepo) ListSharesBySyncStatus(_ context.Context, syncStatus
 	return out, nil
 }
 
+func (r *fakeNamespaceRepo) ListNamespacesForReconcile(_ context.Context, limit int) ([]*Namespace, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := []*Namespace{}
+	for _, ns := range r.namespaces {
+		if r.softDeleted[ns.ID] {
+			continue
+		}
+		if ns.KubernetesUID == "" || ns.Lifecycle != NamespaceLifecycleReady {
+			continue
+		}
+		stored := *ns
+		out = append(out, &stored)
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+func (r *fakeNamespaceRepo) TouchNamespaceSync(_ context.Context, id string, at time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if ns, ok := r.namespaces[id]; ok {
+		ns.LastSyncAt = at
+	}
+	return nil
+}
+
 // fakeNamespaceRels extends fakeClusterRels with the NamespaceRelationships
 // surface (DeleteRelationships recording + LookupSubjects). writeFailOnRelation
 // fails only wildcard projection writes so the visibility compensate path is

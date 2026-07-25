@@ -465,6 +465,50 @@ func (r *namespaceRepo) ListNamespacesBySyncStatus(ctx context.Context, syncStat
 	return out, nil
 }
 
+// ListNamespacesForReconcile returns non-deleted, remotely-created namespaces
+// in lifecycle READY, ordered by last_sync_at ASC (least-recently-synced first)
+// for the SandboxReconciler's fair round-robin. Postgres sorts NULL last under
+// ASC, so never-synced namespaces surface once the caught-up tail is processed.
+func (r *namespaceRepo) ListNamespacesForReconcile(ctx context.Context, limit int) ([]*biz.Namespace, error) {
+	db := r.db(ctx)
+	if db == nil {
+		return nil, errors.New("namespace repo: database not configured")
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	var rows []k8sNamespaceModel
+	if err := db.WithContext(ctx).
+		Where("deleted_at IS NULL AND kubernetes_uid <> '' AND lifecycle = ?", biz.NamespaceLifecycleReady).
+		Order("last_sync_at ASC").
+		Limit(limit).
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("namespace repo: list for reconcile: %w", err)
+	}
+	out := make([]*biz.Namespace, len(rows))
+	for i, row := range rows {
+		out[i] = namespaceModelToBiz(row)
+	}
+	return out, nil
+}
+
+// TouchNamespaceSync stamps last_sync_at without a CAS or status transition;
+// it is a progress marker so a failing namespace does not monopolize the
+// reconciler's round-robin.
+func (r *namespaceRepo) TouchNamespaceSync(ctx context.Context, id string, at time.Time) error {
+	db := r.db(ctx)
+	if db == nil {
+		return errors.New("namespace repo: database not configured")
+	}
+	if err := db.WithContext(ctx).
+		Model(&k8sNamespaceModel{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Update("last_sync_at", at.UTC()).Error; err != nil {
+		return fmt.Errorf("namespace repo: touch sync: %w", err)
+	}
+	return nil
+}
+
 func (r *namespaceRepo) ListSharesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*biz.NamespaceShare, error) {
 	db := r.db(ctx)
 	if db == nil {
