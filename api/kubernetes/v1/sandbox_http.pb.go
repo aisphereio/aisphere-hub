@@ -34,6 +34,7 @@ const OperationSandboxServiceListSandboxTools = "/kubernetes.v1.SandboxService/L
 const OperationSandboxServiceListSandboxes = "/kubernetes.v1.SandboxService/ListSandboxes"
 const OperationSandboxServiceListWarmPools = "/kubernetes.v1.SandboxService/ListWarmPools"
 const OperationSandboxServiceSyncSandboxes = "/kubernetes.v1.SandboxService/SyncSandboxes"
+const OperationSandboxServiceSyncWarmPools = "/kubernetes.v1.SandboxService/SyncWarmPools"
 
 type SandboxServiceHTTPServer interface {
 	CallSandboxTool(context.Context, *CallSandboxToolRequest) (*CallSandboxToolResponse, error)
@@ -53,6 +54,11 @@ type SandboxServiceHTTPServer interface {
 	ListSandboxes(context.Context, *ListSandboxesRequest) (*ListSandboxesResponse, error)
 	ListWarmPools(context.Context, *ListWarmPoolsRequest) (*ListWarmPoolsResponse, error)
 	SyncSandboxes(context.Context, *SyncSandboxesRequest) (*SyncSandboxesResponse, error)
+	// SyncWarmPools SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
+	// observed status (status.readyReplicas). Apply success only means the API
+	// server accepted the resource; Ready must be driven by readyReplicas ==
+	// replicas. Mirrors SyncSandboxes but without importing remote-only pools.
+	SyncWarmPools(context.Context, *SyncWarmPoolsRequest) (*SyncWarmPoolsResponse, error)
 }
 
 func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServer) {
@@ -73,6 +79,7 @@ func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServ
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes", _SandboxService_CreateSandbox0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes:sync", _SandboxService_SyncSandboxes0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools", _SandboxService_CreateWarmPool0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools:sync", _SandboxService_SyncWarmPools0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/sandboxes/{id}/tools:call", _SandboxService_CallSandboxTool0_HTTP_Handler(srv))
 }
 
@@ -476,6 +483,31 @@ func _SandboxService_CreateWarmPool0_HTTP_Handler(srv SandboxServiceHTTPServer) 
 	}
 }
 
+func _SandboxService_SyncWarmPools0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SyncWarmPoolsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceSyncWarmPools)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SyncWarmPools(ctx, req.(*SyncWarmPoolsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*SyncWarmPoolsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _SandboxService_CallSandboxTool0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in CallSandboxToolRequest
@@ -519,6 +551,11 @@ type SandboxServiceHTTPClient interface {
 	ListSandboxes(ctx context.Context, req *ListSandboxesRequest, opts ...http.CallOption) (rsp *ListSandboxesResponse, err error)
 	ListWarmPools(ctx context.Context, req *ListWarmPoolsRequest, opts ...http.CallOption) (rsp *ListWarmPoolsResponse, err error)
 	SyncSandboxes(ctx context.Context, req *SyncSandboxesRequest, opts ...http.CallOption) (rsp *SyncSandboxesResponse, err error)
+	// SyncWarmPools SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
+	// observed status (status.readyReplicas). Apply success only means the API
+	// server accepted the resource; Ready must be driven by readyReplicas ==
+	// replicas. Mirrors SyncSandboxes but without importing remote-only pools.
+	SyncWarmPools(ctx context.Context, req *SyncWarmPoolsRequest, opts ...http.CallOption) (rsp *SyncWarmPoolsResponse, err error)
 }
 
 type SandboxServiceHTTPClientImpl struct {
@@ -797,6 +834,26 @@ func (c *SandboxServiceHTTPClientImpl) SyncSandboxes(ctx context.Context, in *Sy
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationSandboxServiceSyncSandboxes),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// SyncWarmPools SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
+// observed status (status.readyReplicas). Apply success only means the API
+// server accepted the resource; Ready must be driven by readyReplicas ==
+// replicas. Mirrors SyncSandboxes but without importing remote-only pools.
+func (c *SandboxServiceHTTPClientImpl) SyncWarmPools(ctx context.Context, in *SyncWarmPoolsRequest, opts ...http.CallOption) (*SyncWarmPoolsResponse, error) {
+	var out SyncWarmPoolsResponse
+	pattern := "/v1/namespaces/{namespace_id}/warm-pools:sync"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSandboxServiceSyncWarmPools),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)

@@ -184,6 +184,17 @@ var SandboxServiceKernelAuthzRules = authz.Rules{
 		AuditEvent: "hub.warm_pool.delete",
 		AuditRisk:  "high",
 	},
+	"/kubernetes.v1.SandboxService/SyncWarmPools": {
+		Service:    "kubernetes.v1.SandboxService",
+		Method:     "SyncWarmPools",
+		FullMethod: "/kubernetes.v1.SandboxService/SyncWarmPools",
+		Action:     "operate",
+		Resource:   "k8s_namespace:{namespace_id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.warm_pool.sync",
+		AuditRisk:  "medium",
+	},
 	"/kubernetes.v1.SandboxService/CreateSandboxClaim": {
 		Service:    "kubernetes.v1.SandboxService",
 		Method:     "CreateSandboxClaim",
@@ -426,6 +437,21 @@ func SandboxServiceKernelRequestInfoResolver(ctx context.Context, operation stri
 		info.Labels["audit_event"] = "hub.warm_pool.delete"
 		info.Labels["audit_risk"] = "high"
 		return info.Normalize(), true, nil
+	case "/kubernetes.v1.SandboxService/SyncWarmPools":
+		info := requestx.Info{
+			Service:       "kubernetes.v1.SandboxService",
+			Method:        "SyncWarmPools",
+			Operation:     "/kubernetes.v1.SandboxService/SyncWarmPools",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "operate",
+			Resource:      "k8s_namespace:{namespace_id}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.warm_pool.sync"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
 	case "/kubernetes.v1.SandboxService/CreateSandboxClaim":
 		info := requestx.Info{
 			Service:       "kubernetes.v1.SandboxService",
@@ -555,6 +581,8 @@ func _SandboxServiceKernelNormalizeOperation(operation string) string {
 		return "/kubernetes.v1.SandboxService/ListWarmPools"
 	case "DeleteWarmPool", "kubernetes.v1.SandboxService/DeleteWarmPool":
 		return "/kubernetes.v1.SandboxService/DeleteWarmPool"
+	case "SyncWarmPools", "kubernetes.v1.SandboxService/SyncWarmPools":
+		return "/kubernetes.v1.SandboxService/SyncWarmPools"
 	case "CreateSandboxClaim", "kubernetes.v1.SandboxService/CreateSandboxClaim":
 		return "/kubernetes.v1.SandboxService/CreateSandboxClaim"
 	case "ListSandboxClaims", "kubernetes.v1.SandboxService/ListSandboxClaims":

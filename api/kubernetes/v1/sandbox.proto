@@ -130,6 +130,19 @@ service SandboxService {
     };
   }
 
+  // SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
+  // observed status (status.readyReplicas). Apply success only means the API
+  // server accepted the resource; Ready must be driven by readyReplicas ==
+  // replicas. Mirrors SyncSandboxes but without importing remote-only pools.
+  rpc SyncWarmPools(SyncWarmPoolsRequest) returns (SyncWarmPoolsResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/warm-pools:sync" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.warm_pool.sync" risk: "medium" }
+    };
+  }
+
   // ---- SandboxClaim (claim from WarmPool) ----
 
   rpc CreateSandboxClaim(CreateSandboxClaimRequest) returns (CreateSandboxClaimResponse) {
@@ -478,6 +491,15 @@ message DeleteWarmPoolRequest {
 
 message DeleteWarmPoolResponse {
   WarmPool warm_pool = 1;
+}
+
+message SyncWarmPoolsRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SyncWarmPoolsResponse {
+  int32 updated = 1;
+  int32 removed = 2;
 }
 
 // ---- SandboxClaim request/response messages ----

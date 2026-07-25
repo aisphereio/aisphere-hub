@@ -31,6 +31,7 @@ const (
 	SandboxService_CreateWarmPool_FullMethodName        = "/kubernetes.v1.SandboxService/CreateWarmPool"
 	SandboxService_ListWarmPools_FullMethodName         = "/kubernetes.v1.SandboxService/ListWarmPools"
 	SandboxService_DeleteWarmPool_FullMethodName        = "/kubernetes.v1.SandboxService/DeleteWarmPool"
+	SandboxService_SyncWarmPools_FullMethodName         = "/kubernetes.v1.SandboxService/SyncWarmPools"
 	SandboxService_CreateSandboxClaim_FullMethodName    = "/kubernetes.v1.SandboxService/CreateSandboxClaim"
 	SandboxService_ListSandboxClaims_FullMethodName     = "/kubernetes.v1.SandboxService/ListSandboxClaims"
 	SandboxService_DeleteSandboxClaim_FullMethodName    = "/kubernetes.v1.SandboxService/DeleteSandboxClaim"
@@ -60,6 +61,11 @@ type SandboxServiceClient interface {
 	CreateWarmPool(ctx context.Context, in *CreateWarmPoolRequest, opts ...grpc.CallOption) (*CreateWarmPoolResponse, error)
 	ListWarmPools(ctx context.Context, in *ListWarmPoolsRequest, opts ...grpc.CallOption) (*ListWarmPoolsResponse, error)
 	DeleteWarmPool(ctx context.Context, in *DeleteWarmPoolRequest, opts ...grpc.CallOption) (*DeleteWarmPoolResponse, error)
+	// SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
+	// observed status (status.readyReplicas). Apply success only means the API
+	// server accepted the resource; Ready must be driven by readyReplicas ==
+	// replicas. Mirrors SyncSandboxes but without importing remote-only pools.
+	SyncWarmPools(ctx context.Context, in *SyncWarmPoolsRequest, opts ...grpc.CallOption) (*SyncWarmPoolsResponse, error)
 	CreateSandboxClaim(ctx context.Context, in *CreateSandboxClaimRequest, opts ...grpc.CallOption) (*CreateSandboxClaimResponse, error)
 	ListSandboxClaims(ctx context.Context, in *ListSandboxClaimsRequest, opts ...grpc.CallOption) (*ListSandboxClaimsResponse, error)
 	DeleteSandboxClaim(ctx context.Context, in *DeleteSandboxClaimRequest, opts ...grpc.CallOption) (*DeleteSandboxClaimResponse, error)
@@ -195,6 +201,16 @@ func (c *sandboxServiceClient) DeleteWarmPool(ctx context.Context, in *DeleteWar
 	return out, nil
 }
 
+func (c *sandboxServiceClient) SyncWarmPools(ctx context.Context, in *SyncWarmPoolsRequest, opts ...grpc.CallOption) (*SyncWarmPoolsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SyncWarmPoolsResponse)
+	err := c.cc.Invoke(ctx, SandboxService_SyncWarmPools_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sandboxServiceClient) CreateSandboxClaim(ctx context.Context, in *CreateSandboxClaimRequest, opts ...grpc.CallOption) (*CreateSandboxClaimResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSandboxClaimResponse)
@@ -267,6 +283,11 @@ type SandboxServiceServer interface {
 	CreateWarmPool(context.Context, *CreateWarmPoolRequest) (*CreateWarmPoolResponse, error)
 	ListWarmPools(context.Context, *ListWarmPoolsRequest) (*ListWarmPoolsResponse, error)
 	DeleteWarmPool(context.Context, *DeleteWarmPoolRequest) (*DeleteWarmPoolResponse, error)
+	// SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
+	// observed status (status.readyReplicas). Apply success only means the API
+	// server accepted the resource; Ready must be driven by readyReplicas ==
+	// replicas. Mirrors SyncSandboxes but without importing remote-only pools.
+	SyncWarmPools(context.Context, *SyncWarmPoolsRequest) (*SyncWarmPoolsResponse, error)
 	CreateSandboxClaim(context.Context, *CreateSandboxClaimRequest) (*CreateSandboxClaimResponse, error)
 	ListSandboxClaims(context.Context, *ListSandboxClaimsRequest) (*ListSandboxClaimsResponse, error)
 	DeleteSandboxClaim(context.Context, *DeleteSandboxClaimRequest) (*DeleteSandboxClaimResponse, error)
@@ -317,6 +338,9 @@ func (UnimplementedSandboxServiceServer) ListWarmPools(context.Context, *ListWar
 }
 func (UnimplementedSandboxServiceServer) DeleteWarmPool(context.Context, *DeleteWarmPoolRequest) (*DeleteWarmPoolResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteWarmPool not implemented")
+}
+func (UnimplementedSandboxServiceServer) SyncWarmPools(context.Context, *SyncWarmPoolsRequest) (*SyncWarmPoolsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SyncWarmPools not implemented")
 }
 func (UnimplementedSandboxServiceServer) CreateSandboxClaim(context.Context, *CreateSandboxClaimRequest) (*CreateSandboxClaimResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSandboxClaim not implemented")
@@ -570,6 +594,24 @@ func _SandboxService_DeleteWarmPool_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SandboxService_SyncWarmPools_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncWarmPoolsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SandboxServiceServer).SyncWarmPools(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SandboxService_SyncWarmPools_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SandboxServiceServer).SyncWarmPools(ctx, req.(*SyncWarmPoolsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SandboxService_CreateSandboxClaim_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSandboxClaimRequest)
 	if err := dec(in); err != nil {
@@ -714,6 +756,10 @@ var SandboxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteWarmPool",
 			Handler:    _SandboxService_DeleteWarmPool_Handler,
+		},
+		{
+			MethodName: "SyncWarmPools",
+			Handler:    _SandboxService_SyncWarmPools_Handler,
 		},
 		{
 			MethodName: "CreateSandboxClaim",

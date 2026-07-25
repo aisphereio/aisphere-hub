@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "4e0baf2fc546368165607c8c8a00a71057bdabec",
-  "ref": "fix/sandbox-mvp-pr1-4",
-  "sha256": "dfe840887beaf2be7e077f7104d64d85a9643832672b3dc2b6777e9029cc7aa3",
+  "git_sha": "be476e8c22e2bd9ac09386be4666ccf5381dc883",
+  "ref": "fix/sandbox-warm-pool-sync-pr5",
+  "sha256": "2375c0f29ec9e9b1767eb1453a24091f1e70dd09a0ebc8a373c5c1884b05f35a",
   "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }

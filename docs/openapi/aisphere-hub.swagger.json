@@ -2944,6 +2944,19 @@
       },
       "type": "object"
     },
+    "v1SyncWarmPoolsResponse": {
+      "properties": {
+        "removed": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "updated": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "v1UpdateClusterResponse": {
       "properties": {
         "cluster": {
@@ -5196,6 +5209,37 @@
             }
           }
         },
+        "tags": [
+          "SandboxService"
+        ]
+      }
+    },
+    "/v1/namespaces/{namespaceId}/warm-pools:sync": {
+      "post": {
+        "operationId": "SandboxService_SyncWarmPools",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "namespaceId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncWarmPoolsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's\nobserved status (status.readyReplicas). Apply success only means the API\nserver accepted the resource; Ready must be driven by readyReplicas ==\nreplicas. Mirrors SyncSandboxes but without importing remote-only pools.",
         "tags": [
           "SandboxService"
         ]
