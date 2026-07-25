@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "0b266419d2b939b80bc5f3b991057fda22d46dc1",
+  "git_sha": "802d894c5b720e2275867ed40ac03287435c9f1e",
   "ref": "fix/sandbox-claim-link-pr6",
-  "sha256": "81be971f3b8f7f23af1deaf14101a25af19725c438efa4528dc77e45679b86ac",
+  "sha256": "e8008901910c122c44eae7fbf4bd7d7ecd2fcd3bef4c47ff9b01e47c1756153e",
   "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }
