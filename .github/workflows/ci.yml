@@ -36,7 +36,16 @@ jobs:
         run: |
           set -euo pipefail
           BASE_REF="${{ github.base_ref || 'main' }}"
-          git branch --force "${BASE_REF}" "origin/${BASE_REF}"
+          # On a push to BASE_REF itself (e.g. push to main), HEAD is already on
+          # BASE_REF at the pushed commit, and `git branch --force` would fail
+          # with "cannot force update the branch used by worktree". Only
+          # materialize when we are NOT already on BASE_REF (the pull_request
+          # case, where HEAD is the PR head and origin/main must be projected
+          # onto a local main for buf breaking --against '.git#branch=main').
+          CURRENT_REF="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+          if [ "${CURRENT_REF}" != "${BASE_REF}" ]; then
+            git branch --force "${BASE_REF}" "origin/${BASE_REF}"
+          fi
           git show-ref --verify "refs/heads/${BASE_REF}"
 
       - name: Set up Go
