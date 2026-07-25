@@ -225,19 +225,20 @@ resource.namespace_id == request.namespace_id
 - 补充 Sandbox 专项测试；
 - 确保完整执行而非因版本校验提前跳过：
 
-```text
+```bash
+# aisphere-hub
 make contract-check
 go test ./... -count=1
 go build ./...
-Kubernetes manifests render
-frontend lint
-afrontend typecheck
-frontend test
-frontend build
-container image build
+
+# aisphere-hub-frontend
+npm run lint
+npm run typecheck
+npm test
+npm run build
 ```
 
-> 注：上方 `afrontend typecheck` 实施时应使用仓库实际脚本名，例如 `npm run typecheck`；文档落地后可在首次执行 PR 中一并校正为准确命令。
+同时执行 Kubernetes manifests render 和前后端 container image build。
 
 #### 验收标准
 
