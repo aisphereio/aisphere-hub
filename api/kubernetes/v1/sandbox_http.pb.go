@@ -97,9 +97,9 @@ func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServ
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes:sync", _SandboxService_SyncSandboxes0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools", _SandboxService_CreateWarmPool0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools:sync", _SandboxService_SyncWarmPools0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/sandboxes/{id}/resume", _SandboxService_ResumeSandbox0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/sandboxes/{id}/suspend", _SandboxService_SuspendSandbox0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/sandboxes/{id}/tools:call", _SandboxService_CallSandboxTool0_HTTP_Handler(srv))
-	r.Handle("POST", "/v1/sandboxes/{id}:resume", _SandboxService_ResumeSandbox0_HTTP_Handler(srv))
-	r.Handle("POST", "/v1/sandboxes/{id}:suspend", _SandboxService_SuspendSandbox0_HTTP_Handler(srv))
 }
 
 func _SandboxService_DeleteSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
@@ -552,31 +552,6 @@ func _SandboxService_SyncWarmPools0_HTTP_Handler(srv SandboxServiceHTTPServer) f
 	}
 }
 
-func _SandboxService_CallSandboxTool0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in CallSandboxToolRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		if err := http.ValidateRequest(ctx, &in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationSandboxServiceCallSandboxTool)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CallSandboxTool(ctx, req.(*CallSandboxToolRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*CallSandboxToolResponse)
-		return ctx.Result(200, reply)
-	}
-}
-
 func _SandboxService_ResumeSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ResumeSandboxRequest
@@ -623,6 +598,31 @@ func _SandboxService_SuspendSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) 
 			return err
 		}
 		reply := out.(*SuspendSandboxResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _SandboxService_CallSandboxTool0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CallSandboxToolRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceCallSandboxTool)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CallSandboxTool(ctx, req.(*CallSandboxToolRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CallSandboxToolResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -936,7 +936,7 @@ func (c *SandboxServiceHTTPClientImpl) ListWarmPools(ctx context.Context, in *Li
 
 func (c *SandboxServiceHTTPClientImpl) ResumeSandbox(ctx context.Context, in *ResumeSandboxRequest, opts ...http.CallOption) (*ResumeSandboxResponse, error) {
 	var out ResumeSandboxResponse
-	pattern := "/v1/sandboxes/{id}:resume"
+	pattern := "/v1/sandboxes/{id}/resume"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
@@ -955,7 +955,7 @@ func (c *SandboxServiceHTTPClientImpl) ResumeSandbox(ctx context.Context, in *Re
 // transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
 func (c *SandboxServiceHTTPClientImpl) SuspendSandbox(ctx context.Context, in *SuspendSandboxRequest, opts ...http.CallOption) (*SuspendSandboxResponse, error) {
 	var out SuspendSandboxResponse
-	pattern := "/v1/sandboxes/{id}:suspend"
+	pattern := "/v1/sandboxes/{id}/suspend"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),

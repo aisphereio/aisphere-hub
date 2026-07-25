@@ -1260,7 +1260,7 @@ func RegisterSandboxServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SuspendSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}:suspend"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SuspendSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}/suspend"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1280,7 +1280,7 @@ func RegisterSandboxServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/ResumeSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}:resume"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/kubernetes.v1.SandboxService/ResumeSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}/resume"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1694,7 +1694,7 @@ func RegisterSandboxServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SuspendSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}:suspend"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/SuspendSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}/suspend"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1711,7 +1711,7 @@ func RegisterSandboxServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/ResumeSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}:resume"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/kubernetes.v1.SandboxService/ResumeSandbox", runtime.WithHTTPPathPattern("/v1/sandboxes/{id}/resume"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1977,8 +1977,8 @@ var (
 	pattern_SandboxService_ListSandboxes_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "sandboxes"}, ""))
 	pattern_SandboxService_GetSandbox_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandboxes", "id"}, ""))
 	pattern_SandboxService_DeleteSandbox_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandboxes", "id"}, ""))
-	pattern_SandboxService_SuspendSandbox_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandboxes", "id"}, "suspend"))
-	pattern_SandboxService_ResumeSandbox_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "sandboxes", "id"}, "resume"))
+	pattern_SandboxService_SuspendSandbox_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sandboxes", "id", "suspend"}, ""))
+	pattern_SandboxService_ResumeSandbox_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "sandboxes", "id", "resume"}, ""))
 	pattern_SandboxService_SyncSandboxes_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "sandboxes"}, "sync"))
 	pattern_SandboxService_CreateWarmPool_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "warm-pools"}, ""))
 	pattern_SandboxService_ListWarmPools_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "namespaces", "namespace_id", "warm-pools"}, ""))
