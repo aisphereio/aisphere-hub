@@ -153,6 +153,11 @@ var sandboxToolRegistry = []SandboxToolSchema{
 		Description: "Open a URL in the sandbox browser environment.",
 		InputSchema: `{"type":"object","properties":{"url":{"type":"string","format":"uri"}},"required":["url"],"additionalProperties":false}`,
 	},
+	{
+		Name:        "skill.fetch",
+		Description: "Fetch a published skill release into the sandbox workspace. Resolves <name>@<version> to a release tag and shallow-clones its snapshot.",
+		InputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name, e.g. \"ttt1\"."},"version":{"type":"string","description":"SemVer, e.g. \"1.4.2\" or \"v1.4.2\"."},"dest":{"type":"string","default":"./skills/{name}","description":"Destination directory relative to the workspace root."}},"required":["name","version"],"additionalProperties":false}`,
+	},
 }
 
 // ===================== SandboxTemplate operations =====================
@@ -433,6 +438,8 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 		if cmd := strings.TrimSpace(tmpl.ContainerCommand); cmd != "" {
 			templateCommand = parseContainerCommand(cmd)
 		}
+		// Merge template skills with inline skills (inline wins on name clash).
+		s.Skills = mergeSandboxSkills(tmpl.Skills, s.Skills)
 	}
 
 	// Step 4: stamp owner/created_by + defaults.
@@ -493,6 +500,7 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 		ContainerCommand: templateCommand,
 		OperatingMode:   created.OperatingMode,
 		Labels:          created.Labels,
+		SkillAnnotations: sandboxSkillAnnotations(created.Skills),
 	}
 	if err := uc.provider.ApplySandbox(ctx, created.ClusterID, locator, applySpec); err != nil {
 		// Remote apply failed → mark FAILED + compensate SpiceDB (design §11).
@@ -1591,4 +1599,65 @@ func parseContainerCommand(raw string) []string {
 		return argv
 	}
 	return strings.Fields(cmd)
+}
+
+// mergeSandboxSkills combines template-declared skills with inline
+// CreateSandboxRequest skills. Inline entries override template entries with
+// the same name (so a caller can pin a different version). The template list
+// is taken first; dedup is by Name (case-sensitive). A nil/empty result is
+// returned when neither side declares anything.
+func mergeSandboxSkills(template, inline []SandboxSkillRef) []SandboxSkillRef {
+	if len(template) == 0 && len(inline) == 0 {
+		return nil
+	}
+	seen := make(map[string]int, len(template)+len(inline))
+	out := make([]SandboxSkillRef, 0, len(template)+len(inline))
+	for _, s := range template {
+		if s.Name == "" {
+			continue
+		}
+		if _, ok := seen[s.Name]; !ok {
+			seen[s.Name] = len(out)
+			out = append(out, s)
+		}
+	}
+	for _, s := range inline {
+		if s.Name == "" {
+			continue
+		}
+		if idx, ok := seen[s.Name]; ok {
+			out[idx] = s // inline override
+			continue
+		}
+		seen[s.Name] = len(out)
+		out = append(out, s)
+	}
+	return out
+}
+
+// sandboxSkillAnnotations renders the resolved skill declarations as the CRD
+// metadata.annotations payload the future Runtime/sidecar reads at pod boot.
+// Returns nil when there are no skills (so no annotation is written). The
+// annotation key is aisphere.io/skills; the value is a JSON array of
+// {"name","version"} objects.
+func sandboxSkillAnnotations(skills []SandboxSkillRef) map[string]string {
+	if len(skills) == 0 {
+		return nil
+	}
+	type ref struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+	}
+	out := make([]ref, 0, len(skills))
+	for _, s := range skills {
+		out = append(out, ref{Name: s.Name, Version: s.Version})
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		// SandboxSkillRef only holds strings; json.Marshal cannot fail here in
+		// practice. Fall back to an empty annotation rather than failing the
+		// whole create over a serialization error.
+		return nil
+	}
+	return map[string]string{"aisphere.io/skills": string(b)}
 }

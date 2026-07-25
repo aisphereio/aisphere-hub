@@ -209,6 +209,17 @@ service SandboxService {
   }
 }
 
+// SandboxSkillRef names a published skill release to install into a sandbox.
+// The future AISphere Runtime / sandbox sidecar reads these from the Sandbox
+// CRD annotation (aisphere.io/skills) at pod boot and fetches each release via
+// the skillx SDK (git clone --depth 1 --branch <tag>). Hub only carries the
+// declaration; it does not fetch skills itself (design §2.2: Hub = control
+// plane, Runtime = execution plane).
+message SandboxSkillRef {
+  string name = 1;    // skill name, e.g. "ttt1"
+  string version = 2; // SemVer, e.g. "1.4.2" or "v1.4.2" (canonicalized to "v1.4.2")
+}
+
 // ---- Core domain messages ----
 
 // Sandbox is the AISphere control-plane record for an Agent Sandbox instance
@@ -241,6 +252,10 @@ message Sandbox {
   string created_by_type = 24;
   string created_by = 25;
   string health_message = 26;
+  // Skills to install into the sandbox. Resolved from the SandboxTemplate +
+  // inline CreateSandboxRequest skills at create time; the resolved snapshot
+  // is carried here and written to the Sandbox CRD annotation for the Runtime.
+  repeated SandboxSkillRef skills = 27;
 }
 
 // SandboxTemplate defines a reusable Pod template for Sandboxes. It maps to a
@@ -265,6 +280,9 @@ message SandboxTemplate {
   string created_by_type = 17;
   string created_by = 18;
   string health_message = 19;
+  // Skills declared on the template; inherited by Sandboxes created from it
+  // unless overridden inline in CreateSandboxRequest.
+  repeated SandboxSkillRef skills = 20;
 }
 
 // WarmPool pre-warms N sandbox pods for sub-5s allocation via SandboxClaim.
@@ -378,6 +396,8 @@ message CreateSandboxTemplateRequest {
   map<string, string> labels = 7;
   string owner_type = 8;
   string owner_id = 9;
+  // Skills to declare on the template; inherited by sandboxes created from it.
+  repeated SandboxSkillRef skills = 10;
 }
 
 message CreateSandboxTemplateResponse {
@@ -425,6 +445,8 @@ message CreateSandboxRequest {
   map<string, string> labels = 6;
   string owner_type = 7;
   string owner_id = 8;
+  // Inline skill declarations; merged with (and override) the template's skills.
+  repeated SandboxSkillRef skills = 9;
 }
 
 message CreateSandboxResponse {

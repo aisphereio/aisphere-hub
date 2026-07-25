@@ -42,6 +42,7 @@ func (s *SandboxService) CreateSandboxTemplate(ctx context.Context, req *kuberne
 		ContainerCommand: req.GetContainerCommand(),
 		Labels:          req.GetLabels(),
 		KubernetesName:  req.GetName(),
+		Skills:          sandboxSkillsFromProto(req.GetSkills()),
 	}
 	if req.GetOwnerType() != "" && req.GetOwnerId() != "" {
 		principal = authn.Principal{SubjectType: req.GetOwnerType(), SubjectID: req.GetOwnerId(), OrgID: principal.OrgID}
@@ -95,6 +96,7 @@ func (s *SandboxService) CreateSandbox(ctx context.Context, req *kubernetesv1.Cr
 		OperatingMode: sandboxOperatingModeFromProto(req.GetOperatingMode()),
 		NetworkMode:   biz.SandboxNetworkModeOffline,
 		Labels:        req.GetLabels(),
+		Skills:        sandboxSkillsFromProto(req.GetSkills()),
 	}
 	if req.GetOwnerType() != "" && req.GetOwnerId() != "" {
 		principal = authn.Principal{SubjectType: req.GetOwnerType(), SubjectID: req.GetOwnerId(), OrgID: principal.OrgID}
@@ -303,6 +305,7 @@ func sandboxToProto(sb *biz.Sandbox) *kubernetesv1.Sandbox {
 		CreatedByType:  sb.CreatedByType,
 		CreatedBy:      sb.CreatedBy,
 		HealthMessage:  sb.HealthMessage,
+		Skills:         sandboxSkillsToProto(sb.Skills),
 	}
 	if !sb.LastSyncAt.IsZero() {
 		p.LastSyncTime = timestamppb.New(sb.LastSyncAt)
@@ -334,6 +337,7 @@ func sandboxTemplateToProto(t *biz.SandboxTemplate) *kubernetesv1.SandboxTemplat
 		CreatedByType:    t.CreatedByType,
 		CreatedBy:        t.CreatedBy,
 		HealthMessage:    t.HealthMessage,
+		Skills:           sandboxSkillsToProto(t.Skills),
 	}
 	return p
 }
@@ -437,6 +441,34 @@ func sandboxOperatingModeFromProto(v kubernetesv1.SandboxOperatingMode) string {
 		return biz.SandboxOperatingModeSuspended
 	}
 	return biz.SandboxOperatingModeRunning
+}
+
+// sandboxSkillsFromProto converts the proto SandboxSkillRef list to the biz
+// domain type. Nil/empty input yields nil (no skills declared).
+func sandboxSkillsFromProto(in []*kubernetesv1.SandboxSkillRef) []biz.SandboxSkillRef {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]biz.SandboxSkillRef, 0, len(in))
+	for _, s := range in {
+		if s == nil {
+			continue
+		}
+		out = append(out, biz.SandboxSkillRef{Name: s.GetName(), Version: s.GetVersion()})
+	}
+	return out
+}
+
+// sandboxSkillsToProto is the inverse of sandboxSkillsFromProto.
+func sandboxSkillsToProto(in []biz.SandboxSkillRef) []*kubernetesv1.SandboxSkillRef {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]*kubernetesv1.SandboxSkillRef, 0, len(in))
+	for i := range in {
+		out = append(out, &kubernetesv1.SandboxSkillRef{Name: in[i].Name, Version: in[i].Version})
+	}
+	return out
 }
 
 func sandboxTemplateStatusToProto(v string) kubernetesv1.SandboxTemplateStatus {

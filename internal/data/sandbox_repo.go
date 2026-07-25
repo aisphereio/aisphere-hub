@@ -63,6 +63,7 @@ type k8sSandboxTemplateModel struct {
 	Image               string          `gorm:"column:image;type:text;not null"`
 	ContainerCommand    string          `gorm:"column:container_command;type:text;not null;default:'[]'"`
 	LabelsJSON          json.RawMessage `gorm:"column:labels_json;type:jsonb;not null;default:'{}'::jsonb"`
+	SkillsJSON          json.RawMessage `gorm:"column:skills_json;type:jsonb;not null;default:'[]'::jsonb"`
 	Status              string          `gorm:"column:status;size:32;not null;default:'CREATING'"`
 	HealthMessage       string          `gorm:"column:health_message;type:text;not null;default:''"`
 	OwnerType           string          `gorm:"column:owner_type;size:32;not null"`
@@ -99,6 +100,7 @@ type k8sSandboxModel struct {
 	WorkspacePVC    string          `gorm:"column:workspace_pvc;size:256;not null;default:''"`
 	NetworkMode     string          `gorm:"column:network_mode;size:32;not null;default:'OFFLINE'"`
 	LabelsJSON      json.RawMessage `gorm:"column:labels_json;type:jsonb;not null;default:'{}'::jsonb"`
+	SkillsJSON      json.RawMessage `gorm:"column:skills_json;type:jsonb;not null;default:'[]'::jsonb"`
 	HealthMessage   string          `gorm:"column:health_message;type:text;not null;default:''"`
 	LastSyncAt      *time.Time      `gorm:"column:last_sync_at"`
 	OwnerType       string          `gorm:"column:owner_type;size:32;not null"`
@@ -915,6 +917,33 @@ func applySandboxFieldUpdates(updates map[string]any, fields map[string]any) err
 
 // --- model <-> biz ---
 
+// sandboxSkillsFromModel decodes the skills_json jsonb column into the biz
+// SandboxSkillRef slice. Malformed JSON yields nil (defensive; the column
+// defaults to '[]').
+func sandboxSkillsFromModel(raw json.RawMessage) []biz.SandboxSkillRef {
+	if len(raw) == 0 {
+		return nil
+	}
+	var out []biz.SandboxSkillRef
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil
+	}
+	return out
+}
+
+// sandboxSkillsToModel encodes the biz SandboxSkillRef slice into the
+// skills_json jsonb payload. A nil/empty slice marshals to "[]".
+func sandboxSkillsToModel(skills []biz.SandboxSkillRef) (json.RawMessage, error) {
+	if skills == nil {
+		skills = []biz.SandboxSkillRef{}
+	}
+	b, err := json.Marshal(skills)
+	if err != nil {
+		return nil, fmt.Errorf("marshal skills: %w", err)
+	}
+	return b, nil
+}
+
 func sandboxTemplateModelToBiz(m k8sSandboxTemplateModel) *biz.SandboxTemplate {
 	var labels map[string]string
 	if len(m.LabelsJSON) > 0 {
@@ -923,6 +952,7 @@ func sandboxTemplateModelToBiz(m k8sSandboxTemplateModel) *biz.SandboxTemplate {
 	if labels == nil {
 		labels = map[string]string{}
 	}
+	skills := sandboxSkillsFromModel(m.SkillsJSON)
 	return &biz.SandboxTemplate{
 		ID:                  m.ID,
 		ClusterID:           m.ClusterID,
@@ -937,6 +967,7 @@ func sandboxTemplateModelToBiz(m k8sSandboxTemplateModel) *biz.SandboxTemplate {
 		Image:               m.Image,
 		ContainerCommand:    m.ContainerCommand,
 		Labels:              labels,
+		Skills:              skills,
 		Status:              m.Status,
 		HealthMessage:       m.HealthMessage,
 		OwnerType:           m.OwnerType,
@@ -958,6 +989,10 @@ func sandboxTemplateModelFromBiz(t *biz.SandboxTemplate) (k8sSandboxTemplateMode
 	if err != nil {
 		return k8sSandboxTemplateModel{}, fmt.Errorf("marshal labels: %w", err)
 	}
+	skillsJSON, err := sandboxSkillsToModel(t.Skills)
+	if err != nil {
+		return k8sSandboxTemplateModel{}, err
+	}
 	return k8sSandboxTemplateModel{
 		ID:                  t.ID,
 		ClusterID:           t.ClusterID,
@@ -972,6 +1007,7 @@ func sandboxTemplateModelFromBiz(t *biz.SandboxTemplate) (k8sSandboxTemplateMode
 		Image:               t.Image,
 		ContainerCommand:    t.ContainerCommand,
 		LabelsJSON:          labelsJSON,
+		SkillsJSON:          skillsJSON,
 		Status:              t.Status,
 		HealthMessage:       t.HealthMessage,
 		OwnerType:           t.OwnerType,
@@ -990,6 +1026,7 @@ func sandboxModelToBiz(m k8sSandboxModel) *biz.Sandbox {
 	if labels == nil {
 		labels = map[string]string{}
 	}
+	skills := sandboxSkillsFromModel(m.SkillsJSON)
 	var lastSync time.Time
 	if m.LastSyncAt != nil {
 		lastSync = *m.LastSyncAt
@@ -1012,6 +1049,7 @@ func sandboxModelToBiz(m k8sSandboxModel) *biz.Sandbox {
 		WorkspacePVC:    m.WorkspacePVC,
 		NetworkMode:     m.NetworkMode,
 		Labels:          labels,
+		Skills:          skills,
 		HealthMessage:   m.HealthMessage,
 		LastSyncAt:      lastSync,
 		OwnerType:       m.OwnerType,
@@ -1043,6 +1081,10 @@ func sandboxModelFromBiz(s *biz.Sandbox) (k8sSandboxModel, error) {
 	if err != nil {
 		return k8sSandboxModel{}, fmt.Errorf("marshal labels: %w", err)
 	}
+	skillsJSON, err := sandboxSkillsToModel(s.Skills)
+	if err != nil {
+		return k8sSandboxModel{}, err
+	}
 	var lastSync *time.Time
 	if !s.LastSyncAt.IsZero() {
 		t := s.LastSyncAt.UTC()
@@ -1066,6 +1108,7 @@ func sandboxModelFromBiz(s *biz.Sandbox) (k8sSandboxModel, error) {
 		WorkspacePVC:    s.WorkspacePVC,
 		NetworkMode:     s.NetworkMode,
 		LabelsJSON:      labelsJSON,
+		SkillsJSON:      skillsJSON,
 		HealthMessage:   s.HealthMessage,
 		LastSyncAt:      lastSync,
 		OwnerType:       s.OwnerType,
