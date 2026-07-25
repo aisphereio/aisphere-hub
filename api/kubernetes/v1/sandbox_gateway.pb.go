@@ -128,6 +128,13 @@ func SandboxServiceGatewayManifest() gatewayx.Manifest {
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
+				ID:       "sandbox.sync.sandbox.claims",
+				Method:   "POST",
+				Path:     "/v1/namespaces/{namespace_id}/sandbox-claims:sync",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/SyncSandboxClaims"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
 				ID:       "sandbox.list.sandbox.tools",
 				Method:   "GET",
 				Path:     "/v1/sandboxes/{id}/tools",
@@ -381,6 +388,20 @@ func SandboxServiceGatewayBindDeleteSandboxClaim(req gatewayx.DispatchRequest, m
 	return out, nil
 }
 
+func SandboxServiceGatewayBindSyncSandboxClaims(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*SyncSandboxClaimsRequest, error) {
+	out := &SyncSandboxClaimsRequest{}
+	if v, ok := req.Body.(*SyncSandboxClaimsRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(SyncSandboxClaimsRequest); ok {
+		out = &v
+	}
+	if v := match.Params["namespace_id"]; v != "" {
+		out.NamespaceId = v
+	}
+	return out, nil
+}
+
 func SandboxServiceGatewayBindListSandboxTools(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ListSandboxToolsRequest, error) {
 	out := &ListSandboxToolsRequest{}
 	if v, ok := req.Body.(*ListSandboxToolsRequest); ok && v != nil {
@@ -456,6 +477,9 @@ func RegisterSandboxServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, c
 		return err
 	}
 	if err := registry.Register("/kubernetes.v1.SandboxService/DeleteSandboxClaim", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindDeleteSandboxClaim, client.DeleteSandboxClaim)); err != nil {
+		return err
+	}
+	if err := registry.Register("/kubernetes.v1.SandboxService/SyncSandboxClaims", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindSyncSandboxClaims, client.SyncSandboxClaims)); err != nil {
 		return err
 	}
 	if err := registry.Register("/kubernetes.v1.SandboxService/ListSandboxTools", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindListSandboxTools, client.ListSandboxTools)); err != nil {

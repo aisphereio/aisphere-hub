@@ -195,6 +195,17 @@ var SandboxServiceAuthzRules = authz.Rules{
 		AuditEvent: "hub.sandbox_claim.delete",
 		AuditRisk:  "high",
 	},
+	"/kubernetes.v1.SandboxService/SyncSandboxClaims": {
+		Service:    "kubernetes.v1.SandboxService",
+		Method:     "SyncSandboxClaims",
+		FullMethod: "/kubernetes.v1.SandboxService/SyncSandboxClaims",
+		Action:     "operate",
+		Resource:   "k8s_namespace:{namespace_id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.sandbox_claim.sync",
+		AuditRisk:  "medium",
+	},
 	"/kubernetes.v1.SandboxService/ListSandboxTools": {
 		Service:    "kubernetes.v1.SandboxService",
 		Method:     "ListSandboxTools",
@@ -399,6 +410,17 @@ const SandboxServiceAuthzManifestJSON = `{
     },
     {
       "service": "kubernetes.v1.SandboxService",
+      "method": "SyncSandboxClaims",
+      "full_method": "/kubernetes.v1.SandboxService/SyncSandboxClaims",
+      "action": "operate",
+      "resource": "k8s_namespace:{namespace_id}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.sandbox_claim.sync",
+      "audit_risk": "medium"
+    },
+    {
+      "service": "kubernetes.v1.SandboxService",
       "method": "ListSandboxTools",
       "full_method": "/kubernetes.v1.SandboxService/ListSandboxTools",
       "action": "use",
@@ -518,6 +540,8 @@ func _SandboxServiceNormalizeOperation(operation string) string {
 		return "/kubernetes.v1.SandboxService/ListSandboxClaims"
 	case "DeleteSandboxClaim", "kubernetes.v1.SandboxService/DeleteSandboxClaim":
 		return "/kubernetes.v1.SandboxService/DeleteSandboxClaim"
+	case "SyncSandboxClaims", "kubernetes.v1.SandboxService/SyncSandboxClaims":
+		return "/kubernetes.v1.SandboxService/SyncSandboxClaims"
 	case "ListSandboxTools", "kubernetes.v1.SandboxService/ListSandboxTools":
 		return "/kubernetes.v1.SandboxService/ListSandboxTools"
 	case "CallSandboxTool", "kubernetes.v1.SandboxService/CallSandboxTool":
@@ -1161,6 +1185,45 @@ func (c *SandboxServiceSecureClient) DeleteSandboxClaim(ctx context.Context, in 
 		}
 	}
 	return c.raw.DeleteSandboxClaim(ctx, in, opts...)
+}
+
+func (c *SandboxServiceSecureClient) SyncSandboxClaims(ctx context.Context, in *SyncSandboxClaimsRequest, opts ...grpc.CallOption) (*SyncSandboxClaimsResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SandboxServiceAuthzRules["/kubernetes.v1.SandboxService/SyncSandboxClaims"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SandboxServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.SyncSandboxClaims(ctx, in, opts...)
 }
 
 func (c *SandboxServiceSecureClient) ListSandboxTools(ctx context.Context, in *ListSandboxToolsRequest, opts ...grpc.CallOption) (*ListSandboxToolsResponse, error) {

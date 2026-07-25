@@ -1171,13 +1171,230 @@ func (uc *SandboxUsecase) CreateSandboxClaim(ctx context.Context, principal auth
 		return created, nil
 	}
 
-	ready, err := uc.sandboxes.UpdateSandboxClaimStatus(ctx, created.ID, SandboxClaimStatusReady, map[string]any{
-		"health_message": "",
+	// Apply only means the API server accepted the CRD; Ready is driven by the
+	// controller allocating a sandbox (status.sandbox.name + Ready condition)
+	// via SyncSandboxClaims (or a future reconciler). Keep status=PENDING (set
+	// above) and return the row as-is.
+	return created, nil
+}
+
+// SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the observed
+// CRD status (status.conditions[Ready], status.sandbox.name). When a claim
+// becomes Ready and the controller has filled status.sandbox.name, the sandbox
+// name/podIP are mirrored onto the claim and a Hub Sandbox row is created
+// (template_id=NULL, warm_pool_id+claim_id set) so the delivered sandbox is
+// operable from Hub.
+//
+// Mirrors SyncSandboxes/SyncWarmPools (List CRD -> diff by KubernetesName ->
+// update/remove) but adds the sandbox-linkage step and does NOT import
+// remote-only claims. Authz: `operate` on the namespace.
+func (uc *SandboxUsecase) SyncSandboxClaims(ctx context.Context, principal authn.Principal, namespaceID string) (updated, removed, sandboxesLinked int, err error) {
+	subject, err := canonicalSubject(principal)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
+		Subject:    subject,
+		Resource:   namespaceResource(namespaceID),
+		Permission: "operate",
+		OrgID:      principal.OrgID,
 	})
 	if err != nil {
-		return created, nil
+		return 0, 0, 0, err
 	}
-	return ready, nil
+	if !dec.Allowed {
+		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
+	}
+
+	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	cluster, err := uc.clusters.GetCluster(ctx, ns.ClusterID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	remote, err := uc.provider.ListSandboxClaims(ctx, ns.ClusterID, locator, ns.KubeName)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	local, err := uc.sandboxes.ListSandboxClaimsByNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	// Existing Hub sandboxes in this namespace, keyed by KubernetesName, so we
+	// can tell whether the controller-allocated sandbox already has a Hub row.
+	existingSandboxes, err := uc.sandboxes.ListSandboxesByNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	sandboxByKubeName := make(map[string]*Sandbox, len(existingSandboxes))
+	for _, s := range existingSandboxes {
+		sandboxByKubeName[s.KubernetesName] = s
+	}
+
+	localByName := make(map[string]*SandboxClaim, len(local))
+	for _, c := range local {
+		localByName[c.KubernetesName] = c
+	}
+	remoteByName := make(map[string]bool, len(remote))
+	now := time.Now().UTC()
+
+	for _, r := range remote {
+		remoteByName[r.Name] = true
+		existing, ok := localByName[r.Name]
+		if !ok {
+			uc.log.WithContext(ctx).Warn("sync sandbox claims: remote claim has no Hub row; skipping import",
+				logx.String("kube_name", r.Name),
+				logx.String("namespace", ns.KubeName),
+				logx.String("warm_pool_ref", r.WarmPoolRef))
+			continue
+		}
+
+		// Drive status from the Ready condition + allocated sandbox name.
+		var status, health string
+		switch {
+		case r.Ready && r.SandboxName != "":
+			status = SandboxClaimStatusReady
+			health = ""
+		case r.Ready && r.SandboxName == "":
+			// Ready condition true but no sandbox name yet — still allocating.
+			status = SandboxClaimStatusPending
+			health = "ready condition true but sandbox not yet allocated"
+		default:
+			// Not ready. Keep a pre-existing FAILED's health_message; otherwise
+			// PENDING (do not clobber a controller-reported failure).
+			if existing.Status == SandboxClaimStatusFailed {
+				status = SandboxClaimStatusFailed
+				health = existing.HealthMessage
+			} else {
+				status = SandboxClaimStatusPending
+				health = "waiting for warm pool to allocate a sandbox"
+			}
+		}
+
+		fields := map[string]any{
+			"kubernetes_uid":   r.UID,
+			"resource_version": r.ResourceVersion,
+			"sandbox_kube_name": r.SandboxName,
+			"sandbox_pod_ip":   r.SandboxPodIP,
+			"health_message":   health,
+			"last_sync_at":     now,
+		}
+
+		// Sandbox linkage: when the controller has allocated a sandbox, ensure a
+		// Hub Sandbox row exists and is back-linked to this claim.
+		if r.SandboxName != "" {
+			if hubSandbox, ok := sandboxByKubeName[r.SandboxName]; ok {
+				// A Hub Sandbox row already exists for this kube_name (e.g. a
+				// prior sync, or SyncSandboxes imported it). Link it to this
+				// claim if not already, and refresh observed pod_ip.
+				if hubSandbox.ClaimID == "" {
+					hubSandbox.ClaimID = existing.ID
+					hubSandbox.WarmPoolID = existing.WarmPoolID
+					if r.SandboxPodIP != "" {
+						hubSandbox.PodIP = r.SandboxPodIP
+					}
+					hubSandbox.ResourceVersion = r.ResourceVersion
+					hubSandbox.LastSyncAt = now
+					if _, e := uc.sandboxes.UpdateSandboxSync(ctx, hubSandbox.ID, map[string]any{
+						"claim_id":        existing.ID,
+						"warm_pool_id":    existing.WarmPoolID,
+						"pod_ip":          hubSandbox.PodIP,
+						"resource_version": r.ResourceVersion,
+						"last_sync_at":    now,
+					}); e != nil {
+						uc.log.WithContext(ctx).Warn("sync sandbox claims: link existing sandbox failed",
+							logx.String("claim_id", existing.ID),
+							logx.String("sandbox_kube_name", r.SandboxName),
+							logx.Err(e))
+					} else {
+						sandboxesLinked++
+					}
+				}
+				fields["sandbox_id"] = hubSandbox.ID
+			} else {
+				// No Hub Sandbox row yet — create one representing the delivered
+				// sandbox. template_id is NULL (derived from a warm pool, not a
+				// direct template create); warm_pool_id + claim_id link it back.
+				created, cerr := uc.sandboxes.CreateSandbox(ctx, &Sandbox{
+					ID:              uuid.NewString(),
+					NamespaceID:     namespaceID,
+					ClusterID:       ns.ClusterID,
+					OrgID:           cluster.OrgID,
+					Name:            r.SandboxName,
+					KubernetesName:  r.SandboxName,
+					KubernetesUID:   r.UID,
+					ResourceVersion: r.ResourceVersion,
+					WarmPoolID:      existing.WarmPoolID,
+					ClaimID:         existing.ID,
+					PodIP:           r.SandboxPodIP,
+					Lifecycle:       SandboxLifecycleReady,
+					OperatingMode:   SandboxOperatingModeRunning,
+					NetworkMode:     SandboxNetworkModeOffline,
+					OwnerType:       existing.OwnerType,
+					OwnerID:         existing.OwnerID,
+					CreatedByType:   existing.OwnerType,
+					CreatedBy:       existing.OwnerID,
+					Revision:        1,
+					LastSyncAt:      now,
+				})
+				if cerr != nil {
+					uc.log.WithContext(ctx).Warn("sync sandbox claims: create linked sandbox failed",
+						logx.String("claim_id", existing.ID),
+						logx.String("sandbox_kube_name", r.SandboxName),
+						logx.Err(cerr))
+				} else {
+					sandboxByKubeName[r.SandboxName] = created
+					fields["sandbox_id"] = created.ID
+					sandboxesLinked++
+					// Project SpiceDB relationships best-effort (reconciler
+					// converges on miss) so the claim owner can operate the
+					// delivered sandbox.
+					if _, werr := uc.rels.WriteRelationships(ctx,
+						AuthzRelationship{Resource: sandboxResource(created.ID), Relation: "owner", Subject: AuthzSubjectRef{Type: existing.OwnerType, ID: existing.OwnerID}},
+						AuthzRelationship{Resource: sandboxResource(created.ID), Relation: "namespace", Subject: AuthzSubjectRef{Type: "k8s_namespace", ID: namespaceID}},
+					); werr != nil {
+						uc.log.WithContext(ctx).Warn("sync sandbox claims: SpiceDB projection failed; reconciler will converge",
+							logx.String("sandbox_id", created.ID),
+							logx.String("claim_id", existing.ID),
+							logx.Err(werr))
+					}
+				}
+			}
+		}
+
+		if _, e := uc.sandboxes.UpdateSandboxClaimStatus(ctx, existing.ID, status, fields); e != nil {
+			uc.log.WithContext(ctx).Warn("sync sandbox claims: update failed",
+				logx.String("claim_id", existing.ID),
+				logx.String("kube_name", r.Name),
+				logx.Err(e))
+			continue
+		}
+		updated++
+	}
+
+	// Remove local claims no longer present remotely. Skip PENDING/DELETED so
+	// an in-flight claim (CRD not yet listed) is never clobbered. Deleting a
+	// claim does NOT cascade to the delivered sandbox (plan: default retain).
+	for name, c := range localByName {
+		if remoteByName[name] {
+			continue
+		}
+		if c.Status == SandboxClaimStatusPending || c.Status == SandboxClaimStatusDeleted {
+			continue
+		}
+		if _, derr := uc.sandboxes.DeleteSandboxClaim(ctx, c.ID, c.Revision); derr != nil {
+			uc.log.WithContext(ctx).Warn("sync sandbox claims: remove failed",
+				logx.String("claim_id", c.ID),
+				logx.String("kube_name", name),
+				logx.Err(derr))
+			continue
+		}
+		removed++
+	}
+	return updated, removed, sandboxesLinked, nil
 }
 
 // ListSandboxClaims lists claims in a namespace, gated by `use` on the namespace.

@@ -414,6 +414,24 @@ type WarmPoolSyncResult struct {
 	ReadyReplicas   int32
 }
 
+// SandboxClaimSyncResult is the biz-layer view of a SandboxClaim CRD's observed
+// state, used by SyncSandboxClaims to drive Hub-side claim status and to link
+// the claim to the sandbox the controller allocated from the warm pool.
+type SandboxClaimSyncResult struct {
+	Name            string
+	Namespace       string
+	UID             string
+	ResourceVersion string
+	WarmPoolRef     string
+	// SandboxName is status.sandbox.name — populated by the controller once it
+	// allocates a sandbox from the warm pool. Empty until allocation.
+	SandboxName string
+	// SandboxPodIP is the first entry of status.sandbox.podIPs, if any.
+	SandboxPodIP string
+	// Ready mirrors the Ready condition (type=="Ready", status=="True").
+	Ready bool
+}
+
 // SandboxClaimApplySpec is the biz-layer view of a SandboxClaim CRD.
 type SandboxClaimApplySpec struct {
 	Name        string // K8s SandboxClaim name
@@ -555,6 +573,7 @@ type SandboxProvider interface {
 	// SandboxClaim operations.
 	ApplySandboxClaim(ctx context.Context, clusterID string, locator CredentialLocator, spec SandboxClaimApplySpec) error
 	DeleteSandboxClaim(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) error
+	ListSandboxClaims(ctx context.Context, clusterID string, locator CredentialLocator, namespace string) ([]SandboxClaimSyncResult, error)
 }
 
 // ClusterRepository is the persistence interface for k8s_clusters (design §5.3).

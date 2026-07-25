@@ -358,6 +358,66 @@ func (p *k8sClientPool) DeleteSandboxClaim(ctx context.Context, clusterID string
 	return client.Delete(ctx, obj)
 }
 
+// ListSandboxClaims reads observed SandboxClaim CRDs: spec.warmPoolRef.name,
+// status.sandbox.{name, podIPs}, and the Ready condition. Used by
+// SyncSandboxClaims to drive Hub claim status and link the allocated sandbox.
+func (p *k8sClientPool) ListSandboxClaims(ctx context.Context, clusterID string, locator biz.CredentialLocator, namespace string) ([]biz.SandboxClaimSyncResult, error) {
+	client, err := p.getOrBuild(ctx, clusterID, locator, kubernetesx.Credential{})
+	if err != nil {
+		return nil, err
+	}
+	dyn := client.Dynamic()
+	if dyn == nil {
+		return nil, errors.New("dynamic client not available")
+	}
+	list, err := dyn.Resource(sandboxClaimGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list sandbox claims: %w", err)
+	}
+	out := make([]biz.SandboxClaimSyncResult, 0, len(list.Items))
+	for _, item := range list.Items {
+		warmPoolRef, _, _ := unstructured.NestedString(item.Object, "spec", "warmPoolRef", "name")
+		sandboxName, _, _ := unstructured.NestedString(item.Object, "status", "sandbox", "name")
+		var sandboxPodIP string
+		if ips, found, _ := unstructured.NestedStringSlice(item.Object, "status", "sandbox", "podIPs"); found && len(ips) > 0 {
+			sandboxPodIP = ips[0]
+		}
+		out = append(out, biz.SandboxClaimSyncResult{
+			Name:            item.GetName(),
+			Namespace:       item.GetNamespace(),
+			UID:             string(item.GetUID()),
+			ResourceVersion: item.GetResourceVersion(),
+			WarmPoolRef:     warmPoolRef,
+			SandboxName:     sandboxName,
+			SandboxPodIP:    sandboxPodIP,
+			Ready:           sandboxClaimReady(item.Object),
+		})
+	}
+	return out, nil
+}
+
+// sandboxClaimReady reports the Ready condition (type=="Ready", status=="True")
+// from a SandboxClaim CRD's status.conditions.
+func sandboxClaimReady(obj map[string]interface{}) bool {
+	conditions, found, _ := unstructured.NestedSlice(obj, "status", "conditions")
+	if !found {
+		return false
+	}
+	for _, c := range conditions {
+		cond, ok := c.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if t, _ := cond["type"].(string); t == "Ready" {
+			if status, _ := cond["status"].(string); status == "True" {
+				return true
+			}
+			return false
+		}
+	}
+	return false
+}
+
 // ---- Helpers ----
 
 // sandboxReadyReason extracts the Ready condition reason from a Sandbox CRD's

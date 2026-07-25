@@ -2927,6 +2927,24 @@
       },
       "type": "object"
     },
+    "v1SyncSandboxClaimsResponse": {
+      "properties": {
+        "removed": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "sandboxesLinked": {
+          "description": "sandboxes_linked counts Hub Sandbox rows created or linked to a claim\nduring this sync (i.e. newly delivered sandboxes made operable from Hub).",
+          "format": "int32",
+          "type": "integer"
+        },
+        "updated": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "v1SyncSandboxesResponse": {
       "properties": {
         "imported": {
@@ -4977,6 +4995,37 @@
             }
           }
         },
+        "tags": [
+          "SandboxService"
+        ]
+      }
+    },
+    "/v1/namespaces/{namespaceId}/sandbox-claims:sync": {
+      "post": {
+        "operationId": "SandboxService_SyncSandboxClaims",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "namespaceId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncSandboxClaimsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed\nCRD's observed status (status.conditions[Ready], status.sandbox.name). When\na claim becomes Ready and the controller has allocated a sandbox, the\nsandbox name/podIP are mirrored onto the claim and a Hub Sandbox row is\ncreated (template_id=NULL, warm_pool_id+claim_id set) so the delivered\nsandbox is operable from Hub. Mirrors SyncSandboxes/SyncWarmPools but with\nthe extra sandbox-linkage step.",
         "tags": [
           "SandboxService"
         ]

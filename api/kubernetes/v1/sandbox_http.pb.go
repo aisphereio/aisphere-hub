@@ -33,6 +33,7 @@ const OperationSandboxServiceListSandboxTemplates = "/kubernetes.v1.SandboxServi
 const OperationSandboxServiceListSandboxTools = "/kubernetes.v1.SandboxService/ListSandboxTools"
 const OperationSandboxServiceListSandboxes = "/kubernetes.v1.SandboxService/ListSandboxes"
 const OperationSandboxServiceListWarmPools = "/kubernetes.v1.SandboxService/ListWarmPools"
+const OperationSandboxServiceSyncSandboxClaims = "/kubernetes.v1.SandboxService/SyncSandboxClaims"
 const OperationSandboxServiceSyncSandboxes = "/kubernetes.v1.SandboxService/SyncSandboxes"
 const OperationSandboxServiceSyncWarmPools = "/kubernetes.v1.SandboxService/SyncWarmPools"
 
@@ -53,6 +54,14 @@ type SandboxServiceHTTPServer interface {
 	ListSandboxTools(context.Context, *ListSandboxToolsRequest) (*ListSandboxToolsResponse, error)
 	ListSandboxes(context.Context, *ListSandboxesRequest) (*ListSandboxesResponse, error)
 	ListWarmPools(context.Context, *ListWarmPoolsRequest) (*ListWarmPoolsResponse, error)
+	// SyncSandboxClaims SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
+	// CRD's observed status (status.conditions[Ready], status.sandbox.name). When
+	// a claim becomes Ready and the controller has allocated a sandbox, the
+	// sandbox name/podIP are mirrored onto the claim and a Hub Sandbox row is
+	// created (template_id=NULL, warm_pool_id+claim_id set) so the delivered
+	// sandbox is operable from Hub. Mirrors SyncSandboxes/SyncWarmPools but with
+	// the extra sandbox-linkage step.
+	SyncSandboxClaims(context.Context, *SyncSandboxClaimsRequest) (*SyncSandboxClaimsResponse, error)
 	SyncSandboxes(context.Context, *SyncSandboxesRequest) (*SyncSandboxesResponse, error)
 	// SyncWarmPools SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
 	// observed status (status.readyReplicas). Apply success only means the API
@@ -76,6 +85,7 @@ func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServ
 	r.Handle("GET", "/v1/clusters/{cluster_id}/sandbox-templates/{id}", _SandboxService_GetSandboxTemplate0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/clusters/{cluster_id}/sandbox-templates", _SandboxService_CreateSandboxTemplate0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandbox-claims", _SandboxService_CreateSandboxClaim0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandbox-claims:sync", _SandboxService_SyncSandboxClaims0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes", _SandboxService_CreateSandbox0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes:sync", _SandboxService_SyncSandboxes0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools", _SandboxService_CreateWarmPool0_HTTP_Handler(srv))
@@ -408,6 +418,31 @@ func _SandboxService_CreateSandboxClaim0_HTTP_Handler(srv SandboxServiceHTTPServ
 	}
 }
 
+func _SandboxService_SyncSandboxClaims0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SyncSandboxClaimsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceSyncSandboxClaims)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SyncSandboxClaims(ctx, req.(*SyncSandboxClaimsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*SyncSandboxClaimsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _SandboxService_CreateSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in CreateSandboxRequest
@@ -550,6 +585,14 @@ type SandboxServiceHTTPClient interface {
 	ListSandboxTools(ctx context.Context, req *ListSandboxToolsRequest, opts ...http.CallOption) (rsp *ListSandboxToolsResponse, err error)
 	ListSandboxes(ctx context.Context, req *ListSandboxesRequest, opts ...http.CallOption) (rsp *ListSandboxesResponse, err error)
 	ListWarmPools(ctx context.Context, req *ListWarmPoolsRequest, opts ...http.CallOption) (rsp *ListWarmPoolsResponse, err error)
+	// SyncSandboxClaims SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
+	// CRD's observed status (status.conditions[Ready], status.sandbox.name). When
+	// a claim becomes Ready and the controller has allocated a sandbox, the
+	// sandbox name/podIP are mirrored onto the claim and a Hub Sandbox row is
+	// created (template_id=NULL, warm_pool_id+claim_id set) so the delivered
+	// sandbox is operable from Hub. Mirrors SyncSandboxes/SyncWarmPools but with
+	// the extra sandbox-linkage step.
+	SyncSandboxClaims(ctx context.Context, req *SyncSandboxClaimsRequest, opts ...http.CallOption) (rsp *SyncSandboxClaimsResponse, err error)
 	SyncSandboxes(ctx context.Context, req *SyncSandboxesRequest, opts ...http.CallOption) (rsp *SyncSandboxesResponse, err error)
 	// SyncWarmPools SyncWarmPools reconciles Hub-side WarmPool rows with the installed CRD's
 	// observed status (status.readyReplicas). Apply success only means the API
@@ -821,6 +864,29 @@ func (c *SandboxServiceHTTPClientImpl) ListWarmPools(ctx context.Context, in *Li
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// SyncSandboxClaims SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
+// CRD's observed status (status.conditions[Ready], status.sandbox.name). When
+// a claim becomes Ready and the controller has allocated a sandbox, the
+// sandbox name/podIP are mirrored onto the claim and a Hub Sandbox row is
+// created (template_id=NULL, warm_pool_id+claim_id set) so the delivered
+// sandbox is operable from Hub. Mirrors SyncSandboxes/SyncWarmPools but with
+// the extra sandbox-linkage step.
+func (c *SandboxServiceHTTPClientImpl) SyncSandboxClaims(ctx context.Context, in *SyncSandboxClaimsRequest, opts ...http.CallOption) (*SyncSandboxClaimsResponse, error) {
+	var out SyncSandboxClaimsResponse
+	pattern := "/v1/namespaces/{namespace_id}/sandbox-claims:sync"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSandboxServiceSyncSandboxClaims),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
