@@ -92,6 +92,27 @@ service SandboxService {
     };
   }
 
+  // SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
+  // (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
+  // transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
+  rpc SuspendSandbox(SuspendSandboxRequest) returns (SuspendSandboxResponse) {
+    option (google.api.http) = { post: "/v1/sandboxes/{id}:suspend" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.suspend" risk: "medium" }
+    };
+  }
+
+  rpc ResumeSandbox(ResumeSandboxRequest) returns (ResumeSandboxResponse) {
+    option (google.api.http) = { post: "/v1/sandboxes/{id}:resume" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.resume" risk: "medium" }
+    };
+  }
+
   rpc SyncSandboxes(SyncSandboxesRequest) returns (SyncSandboxesResponse) {
     option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/sandboxes:sync" };
     option (aisphere.access.v1.policy) = {
@@ -479,6 +500,24 @@ message DeleteSandboxRequest {
 }
 
 message DeleteSandboxResponse {
+  Sandbox sandbox = 1;
+}
+
+message SuspendSandboxRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SuspendSandboxResponse {
+  Sandbox sandbox = 1;
+}
+
+message ResumeSandboxRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ResumeSandboxResponse {
   Sandbox sandbox = 1;
 }
 

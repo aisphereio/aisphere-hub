@@ -33,6 +33,8 @@ const OperationSandboxServiceListSandboxTemplates = "/kubernetes.v1.SandboxServi
 const OperationSandboxServiceListSandboxTools = "/kubernetes.v1.SandboxService/ListSandboxTools"
 const OperationSandboxServiceListSandboxes = "/kubernetes.v1.SandboxService/ListSandboxes"
 const OperationSandboxServiceListWarmPools = "/kubernetes.v1.SandboxService/ListWarmPools"
+const OperationSandboxServiceResumeSandbox = "/kubernetes.v1.SandboxService/ResumeSandbox"
+const OperationSandboxServiceSuspendSandbox = "/kubernetes.v1.SandboxService/SuspendSandbox"
 const OperationSandboxServiceSyncSandboxClaims = "/kubernetes.v1.SandboxService/SyncSandboxClaims"
 const OperationSandboxServiceSyncSandboxes = "/kubernetes.v1.SandboxService/SyncSandboxes"
 const OperationSandboxServiceSyncWarmPools = "/kubernetes.v1.SandboxService/SyncWarmPools"
@@ -54,6 +56,11 @@ type SandboxServiceHTTPServer interface {
 	ListSandboxTools(context.Context, *ListSandboxToolsRequest) (*ListSandboxToolsResponse, error)
 	ListSandboxes(context.Context, *ListSandboxesRequest) (*ListSandboxesResponse, error)
 	ListWarmPools(context.Context, *ListWarmPoolsRequest) (*ListWarmPoolsResponse, error)
+	ResumeSandbox(context.Context, *ResumeSandboxRequest) (*ResumeSandboxResponse, error)
+	// SuspendSandbox SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
+	// (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
+	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
+	SuspendSandbox(context.Context, *SuspendSandboxRequest) (*SuspendSandboxResponse, error)
 	// SyncSandboxClaims SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
 	// CRD's observed status (status.conditions[Ready], status.sandbox.name). When
 	// a claim becomes Ready and the controller has allocated a sandbox, the
@@ -91,6 +98,8 @@ func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServ
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools", _SandboxService_CreateWarmPool0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools:sync", _SandboxService_SyncWarmPools0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/sandboxes/{id}/tools:call", _SandboxService_CallSandboxTool0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/sandboxes/{id}:resume", _SandboxService_ResumeSandbox0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/sandboxes/{id}:suspend", _SandboxService_SuspendSandbox0_HTTP_Handler(srv))
 }
 
 func _SandboxService_DeleteSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
@@ -568,6 +577,56 @@ func _SandboxService_CallSandboxTool0_HTTP_Handler(srv SandboxServiceHTTPServer)
 	}
 }
 
+func _SandboxService_ResumeSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ResumeSandboxRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceResumeSandbox)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ResumeSandbox(ctx, req.(*ResumeSandboxRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ResumeSandboxResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _SandboxService_SuspendSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SuspendSandboxRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceSuspendSandbox)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SuspendSandbox(ctx, req.(*SuspendSandboxRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*SuspendSandboxResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 type SandboxServiceHTTPClient interface {
 	CallSandboxTool(ctx context.Context, req *CallSandboxToolRequest, opts ...http.CallOption) (rsp *CallSandboxToolResponse, err error)
 	CreateSandbox(ctx context.Context, req *CreateSandboxRequest, opts ...http.CallOption) (rsp *CreateSandboxResponse, err error)
@@ -585,6 +644,11 @@ type SandboxServiceHTTPClient interface {
 	ListSandboxTools(ctx context.Context, req *ListSandboxToolsRequest, opts ...http.CallOption) (rsp *ListSandboxToolsResponse, err error)
 	ListSandboxes(ctx context.Context, req *ListSandboxesRequest, opts ...http.CallOption) (rsp *ListSandboxesResponse, err error)
 	ListWarmPools(ctx context.Context, req *ListWarmPoolsRequest, opts ...http.CallOption) (rsp *ListWarmPoolsResponse, err error)
+	ResumeSandbox(ctx context.Context, req *ResumeSandboxRequest, opts ...http.CallOption) (rsp *ResumeSandboxResponse, err error)
+	// SuspendSandbox SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
+	// (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
+	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
+	SuspendSandbox(ctx context.Context, req *SuspendSandboxRequest, opts ...http.CallOption) (rsp *SuspendSandboxResponse, err error)
 	// SyncSandboxClaims SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
 	// CRD's observed status (status.conditions[Ready], status.sandbox.name). When
 	// a claim becomes Ready and the controller has allocated a sandbox, the
@@ -864,6 +928,41 @@ func (c *SandboxServiceHTTPClientImpl) ListWarmPools(ctx context.Context, in *Li
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *SandboxServiceHTTPClientImpl) ResumeSandbox(ctx context.Context, in *ResumeSandboxRequest, opts ...http.CallOption) (*ResumeSandboxResponse, error) {
+	var out ResumeSandboxResponse
+	pattern := "/v1/sandboxes/{id}:resume"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSandboxServiceResumeSandbox),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// SuspendSandbox SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
+// (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
+// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
+func (c *SandboxServiceHTTPClientImpl) SuspendSandbox(ctx context.Context, in *SuspendSandboxRequest, opts ...http.CallOption) (*SuspendSandboxResponse, error) {
+	var out SuspendSandboxResponse
+	pattern := "/v1/sandboxes/{id}:suspend"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationSandboxServiceSuspendSandbox),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

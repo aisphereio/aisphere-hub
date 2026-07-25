@@ -2287,6 +2287,14 @@
       },
       "type": "object"
     },
+    "v1ResumeSandboxResponse": {
+      "properties": {
+        "sandbox": {
+          "$ref": "#/definitions/v1Sandbox"
+        }
+      },
+      "type": "object"
+    },
     "v1ReviewPullRequestResponse": {
       "properties": {
         "review": {
@@ -2956,6 +2964,14 @@
       ],
       "type": "object"
     },
+    "v1SuspendSandboxResponse": {
+      "properties": {
+        "sandbox": {
+          "$ref": "#/definitions/v1Sandbox"
+        }
+      },
+      "type": "object"
+    },
     "v1SyncNamespacesResponse": {
       "properties": {
         "imported": {
@@ -3224,7 +3240,7 @@
   },
   "info": {
     "title": "Aisphere Hub API",
-    "version": "v1"
+    "version": "0.1.0"
   },
   "paths": {
     "/v1/audit/records": {
@@ -5480,6 +5496,81 @@
             }
           }
         },
+        "tags": [
+          "SandboxService"
+        ]
+      }
+    },
+    "/v1/sandboxes/{id}:resume": {
+      "post": {
+        "operationId": "SandboxService_ResumeSandbox",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "int64",
+            "in": "query",
+            "name": "expectedRevision",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResumeSandboxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SandboxService"
+        ]
+      }
+    },
+    "/v1/sandboxes/{id}:suspend": {
+      "post": {
+        "operationId": "SandboxService_SuspendSandbox",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "int64",
+            "in": "query",
+            "name": "expectedRevision",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SuspendSandboxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state\n(CRD spec.operatingMode -\u003e \"Suspended\" via SSA patch). The sandbox row\ntransitions lifecycle READY -\u003e SUSPENDED. ResumeSandbox reverses it.",
         "tags": [
           "SandboxService"
         ]

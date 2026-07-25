@@ -627,6 +627,110 @@ func (uc *SandboxUsecase) DeleteSandbox(ctx context.Context, principal authn.Pri
 	return deleted, nil
 }
 
+// SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state by
+// patching the CRD spec.operatingMode to "Suspended" (SSA). The Hub row
+// transitions lifecycle READY -> SUSPENDED. Authz: `manage` on k8s_sandbox.
+func (uc *SandboxUsecase) SuspendSandbox(ctx context.Context, principal authn.Principal, id string, expectedRevision int64) (*Sandbox, error) {
+	return uc.setSandboxOperatingMode(ctx, principal, id, expectedRevision, SandboxLifecycleReady, SandboxLifecycleSuspended, SandboxOperatingModeSuspended, "suspend")
+}
+
+// ResumeSandbox reverses SuspendSandbox: operatingMode -> "Running", lifecycle
+// SUSPENDED -> READY. Authz: `manage` on k8s_sandbox.
+func (uc *SandboxUsecase) ResumeSandbox(ctx context.Context, principal authn.Principal, id string, expectedRevision int64) (*Sandbox, error) {
+	return uc.setSandboxOperatingMode(ctx, principal, id, expectedRevision, SandboxLifecycleSuspended, SandboxLifecycleReady, SandboxOperatingModeRunning, "resume")
+}
+
+// setSandboxOperatingMode is the shared core of Suspend/Resume. It validates
+// the lifecycle transition, re-applies the Sandbox CRD with a new
+// spec.operatingMode (SSA patch — podTemplate is rebuilt from the Hub row so
+// the field owner does not drop it), and CAS-stamps the new lifecycle +
+// operating_mode. On remote-apply failure the DB lifecycle is left unchanged
+// (the sandbox is not broken, the patch is retriable).
+func (uc *SandboxUsecase) setSandboxOperatingMode(ctx context.Context, principal authn.Principal, id string, expectedRevision int64, fromLifecycle, toLifecycle, toMode, verb string) (*Sandbox, error) {
+	s, err := uc.sandboxes.GetSandbox(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if s.Lifecycle != fromLifecycle {
+		return nil, fmt.Errorf("%w: only %s sandboxes can be %sed (current: %s)", ErrClusterInvalidArgument, fromLifecycle, verb, s.Lifecycle)
+	}
+	// CAS pre-check: UpdateSandboxStatus does not guard expected_revision, so
+	// verify here before mutating (mirrors DeleteSandbox's CAS expectation).
+	if s.Revision != expectedRevision {
+		return nil, fmt.Errorf("%w: sandbox revision mismatch", ErrClusterRevisionConflict)
+	}
+	subject, err := canonicalSubject(principal)
+	if err != nil {
+		return nil, err
+	}
+	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
+		Subject:    subject,
+		Resource:   sandboxResource(s.ID),
+		Permission: "manage",
+		OrgID:      principal.OrgID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !dec.Allowed {
+		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no manage permission on sandbox")
+	}
+
+	// Rebuild the SandboxApplySpec so the SSA patch does not drop fields Hub
+	// owns. CreateSandbox only writes podTemplate (image+command) for
+	// template-created sandboxes; claim-allocated sandboxes have TemplateID=""
+	// and their podTemplate is owned by the controller, so Hub omits it (SSA
+	// leaves fields it does not own untouched). For template sandboxes, reload
+	// the image+command from the template exactly as CreateSandbox did.
+	applySpec := SandboxApplySpec{
+		Name:             s.KubernetesName,
+		OperatingMode:    toMode,
+		Labels:           s.Labels,
+		SkillAnnotations: sandboxSkillAnnotations(s.Skills),
+	}
+	if s.TemplateID != "" {
+		tmpl, terr := uc.sandboxes.GetSandboxTemplate(ctx, s.TemplateID)
+		if terr != nil {
+			return nil, fmt.Errorf("%w: referenced template not found: %v", ErrClusterInvalidArgument, terr)
+		}
+		applySpec.Image = tmpl.Image
+		if cmd := strings.TrimSpace(tmpl.ContainerCommand); cmd != "" {
+			applySpec.ContainerCommand = parseContainerCommand(cmd)
+		}
+	}
+
+	ns, err := uc.namespaces.GetNamespace(ctx, s.NamespaceID)
+	if err != nil {
+		return nil, err
+	}
+	cluster, err := uc.clusters.GetCluster(ctx, s.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	applySpec.Namespace = ns.KubeName
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	if err := uc.provider.ApplySandbox(ctx, s.ClusterID, locator, applySpec); err != nil {
+		// Remote patch failed — do not flip lifecycle; the sandbox is still in
+		// its original state and the caller can retry.
+		uc.log.WithContext(ctx).Warn("remote sandbox operating-mode patch failed; lifecycle unchanged",
+			logx.String("sandbox_id", id),
+			logx.String("kube_name", s.KubernetesName),
+			logx.String("verb", verb),
+			logx.String("to_mode", toMode),
+			logx.Err(err))
+		return nil, fmt.Errorf("%w: remote %s: %v", ErrClusterFailedPrecondition, verb, err)
+	}
+
+	updated, err := uc.sandboxes.UpdateSandboxStatus(ctx, id, toLifecycle, "", map[string]any{
+		"operating_mode": toMode,
+		"last_sync_at":   time.Now().UTC(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
 // SyncSandboxes reconciles DB rows with the remote Sandbox CRDs in a namespace
 // (design §11 sync): authz `operate` on the namespace, list remote sandboxes
 // from the cluster, diff against local rows, then upsert (import) new ones,
