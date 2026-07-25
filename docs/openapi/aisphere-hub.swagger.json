@@ -244,6 +244,14 @@
         "ownerType": {
           "type": "string"
         },
+        "skills": {
+          "description": "Inline skill declarations; merged with (and override) the template's skills.",
+          "items": {
+            "$ref": "#/definitions/v1SandboxSkillRef",
+            "type": "object"
+          },
+          "type": "array"
+        },
         "templateId": {
           "title": "Hub SandboxTemplate ID; creates from template if set",
           "type": "string"
@@ -308,6 +316,14 @@
         },
         "ownerType": {
           "type": "string"
+        },
+        "skills": {
+          "description": "Skills to declare on the template; inherited by sandboxes created from it.",
+          "items": {
+            "$ref": "#/definitions/v1SandboxSkillRef",
+            "type": "object"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -2400,6 +2416,14 @@
           "format": "int64",
           "type": "string"
         },
+        "skills": {
+          "description": "Skills to install into the sandbox. Resolved from the SandboxTemplate +\ninline CreateSandboxRequest skills at create time; the resolved snapshot\nis carried here and written to the Sandbox CRD annotation for the Runtime.",
+          "items": {
+            "$ref": "#/definitions/v1SandboxSkillRef",
+            "type": "object"
+          },
+          "type": "array"
+        },
         "templateId": {
           "type": "string"
         },
@@ -2536,6 +2560,20 @@
       },
       "type": "object"
     },
+    "v1SandboxSkillRef": {
+      "description": "SandboxSkillRef names a published skill release to install into a sandbox.\nThe future AISphere Runtime / sandbox sidecar reads these from the Sandbox\nCRD annotation (aisphere.io/skills) at pod boot and fetches each release via\nthe skillx SDK (git clone --depth 1 --branch \u003ctag\u003e). Hub only carries the\ndeclaration; it does not fetch skills itself (design §2.2: Hub = control\nplane, Runtime = execution plane).",
+      "properties": {
+        "name": {
+          "title": "skill name, e.g. \"ttt1\"",
+          "type": "string"
+        },
+        "version": {
+          "title": "SemVer, e.g. \"1.4.2\" or \"v1.4.2\" (canonicalized to \"v1.4.2\")",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "v1SandboxTemplate": {
       "description": "SandboxTemplate defines a reusable Pod template for Sandboxes. It maps to a\nK8s SandboxTemplate CRD (extensions.agents.x-k8s.io/v1beta1).",
       "properties": {
@@ -2595,6 +2633,14 @@
         "revision": {
           "format": "int64",
           "type": "string"
+        },
+        "skills": {
+          "description": "Skills declared on the template; inherited by Sandboxes created from it\nunless overridden inline in CreateSandboxRequest.",
+          "items": {
+            "$ref": "#/definitions/v1SandboxSkillRef",
+            "type": "object"
+          },
+          "type": "array"
         },
         "status": {
           "$ref": "#/definitions/v1SandboxTemplateStatus"
