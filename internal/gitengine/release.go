@@ -141,6 +141,13 @@ func (e *Engine) releaseForTag(ctx context.Context, repo *softgit.Repository, ta
 			release.CreateTime = publishedAt.UTC()
 		}
 		release.ReleaseNotes, release.SourceRef, release.PublisherID = parseReleaseMessage(parts[4])
+		// Direct `git tag` pushes (not via the Hub REST API) carry no
+		// AISphere-Source-Ref line, so sourceRef comes back empty. Default
+		// to the skill draft branch so the release still reports a source;
+		// almost every tag is cut from main.
+		if strings.TrimSpace(release.SourceRef) == "" {
+			release.SourceRef = "refs/heads/" + biz.SkillDefaultBranch
+		}
 	}
 	return release, nil
 }
