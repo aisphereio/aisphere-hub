@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "0ec0593243e0b6aec9af7459e830f125573b2839",
-  "ref": "feat/sandbox-skills",
-  "sha256": "10da9ca8bacd1b32b1156f869f14b268c5b28bbc7159a38a4a6d059c7263b41c",
+  "git_sha": "77e0d0efa14e0941d1a2b5451f70ceeff5fad866",
+  "ref": "feat/sandbox-suspend-resume-pr9",
+  "sha256": "879745e7a1e683dcc9f84bd26a81e41aa9705c9bcc49fe6a0afeb0c348af2d97",
   "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }

@@ -72,6 +72,20 @@ func SandboxServiceGatewayManifest() gatewayx.Manifest {
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
+				ID:       "sandbox.suspend.sandbox",
+				Method:   "POST",
+				Path:     "/v1/sandboxes/{id}:suspend",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/SuspendSandbox"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
+				ID:       "sandbox.resume.sandbox",
+				Method:   "POST",
+				Path:     "/v1/sandboxes/{id}:resume",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/ResumeSandbox"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
 				ID:       "sandbox.sync.sandboxes",
 				Method:   "POST",
 				Path:     "/v1/namespaces/{namespace_id}/sandboxes:sync",
@@ -270,6 +284,34 @@ func SandboxServiceGatewayBindDeleteSandbox(req gatewayx.DispatchRequest, match 
 	return out, nil
 }
 
+func SandboxServiceGatewayBindSuspendSandbox(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*SuspendSandboxRequest, error) {
+	out := &SuspendSandboxRequest{}
+	if v, ok := req.Body.(*SuspendSandboxRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(SuspendSandboxRequest); ok {
+		out = &v
+	}
+	if v := match.Params["id"]; v != "" {
+		out.Id = v
+	}
+	return out, nil
+}
+
+func SandboxServiceGatewayBindResumeSandbox(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*ResumeSandboxRequest, error) {
+	out := &ResumeSandboxRequest{}
+	if v, ok := req.Body.(*ResumeSandboxRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(ResumeSandboxRequest); ok {
+		out = &v
+	}
+	if v := match.Params["id"]; v != "" {
+		out.Id = v
+	}
+	return out, nil
+}
+
 func SandboxServiceGatewayBindSyncSandboxes(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*SyncSandboxesRequest, error) {
 	out := &SyncSandboxesRequest{}
 	if v, ok := req.Body.(*SyncSandboxesRequest); ok && v != nil {
@@ -453,6 +495,12 @@ func RegisterSandboxServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, c
 		return err
 	}
 	if err := registry.Register("/kubernetes.v1.SandboxService/DeleteSandbox", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindDeleteSandbox, client.DeleteSandbox)); err != nil {
+		return err
+	}
+	if err := registry.Register("/kubernetes.v1.SandboxService/SuspendSandbox", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindSuspendSandbox, client.SuspendSandbox)); err != nil {
+		return err
+	}
+	if err := registry.Register("/kubernetes.v1.SandboxService/ResumeSandbox", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindResumeSandbox, client.ResumeSandbox)); err != nil {
 		return err
 	}
 	if err := registry.Register("/kubernetes.v1.SandboxService/SyncSandboxes", gatewayx.GRPCUnaryInvoker(SandboxServiceGatewayBindSyncSandboxes, client.SyncSandboxes)); err != nil {

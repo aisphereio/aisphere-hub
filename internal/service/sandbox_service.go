@@ -136,6 +136,22 @@ func (s *SandboxService) DeleteSandbox(ctx context.Context, req *kubernetesv1.De
 	return &kubernetesv1.DeleteSandboxResponse{Sandbox: sandboxToProto(deleted)}, nil
 }
 
+func (s *SandboxService) SuspendSandbox(ctx context.Context, req *kubernetesv1.SuspendSandboxRequest) (*kubernetesv1.SuspendSandboxResponse, error) {
+	suspended, err := s.uc.SuspendSandbox(ctx, principalFromContext(ctx), req.GetId(), req.GetExpectedRevision())
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesv1.SuspendSandboxResponse{Sandbox: sandboxToProto(suspended)}, nil
+}
+
+func (s *SandboxService) ResumeSandbox(ctx context.Context, req *kubernetesv1.ResumeSandboxRequest) (*kubernetesv1.ResumeSandboxResponse, error) {
+	resumed, err := s.uc.ResumeSandbox(ctx, principalFromContext(ctx), req.GetId(), req.GetExpectedRevision())
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesv1.ResumeSandboxResponse{Sandbox: sandboxToProto(resumed)}, nil
+}
+
 func (s *SandboxService) SyncSandboxes(ctx context.Context, req *kubernetesv1.SyncSandboxesRequest) (*kubernetesv1.SyncSandboxesResponse, error) {
 	imported, updated, removed, err := s.uc.SyncSandboxes(ctx, principalFromContext(ctx), req.GetNamespaceId())
 	if err != nil {

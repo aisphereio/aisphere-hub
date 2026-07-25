@@ -27,6 +27,8 @@ const (
 	SandboxService_ListSandboxes_FullMethodName         = "/kubernetes.v1.SandboxService/ListSandboxes"
 	SandboxService_GetSandbox_FullMethodName            = "/kubernetes.v1.SandboxService/GetSandbox"
 	SandboxService_DeleteSandbox_FullMethodName         = "/kubernetes.v1.SandboxService/DeleteSandbox"
+	SandboxService_SuspendSandbox_FullMethodName        = "/kubernetes.v1.SandboxService/SuspendSandbox"
+	SandboxService_ResumeSandbox_FullMethodName         = "/kubernetes.v1.SandboxService/ResumeSandbox"
 	SandboxService_SyncSandboxes_FullMethodName         = "/kubernetes.v1.SandboxService/SyncSandboxes"
 	SandboxService_CreateWarmPool_FullMethodName        = "/kubernetes.v1.SandboxService/CreateWarmPool"
 	SandboxService_ListWarmPools_FullMethodName         = "/kubernetes.v1.SandboxService/ListWarmPools"
@@ -58,6 +60,11 @@ type SandboxServiceClient interface {
 	ListSandboxes(ctx context.Context, in *ListSandboxesRequest, opts ...grpc.CallOption) (*ListSandboxesResponse, error)
 	GetSandbox(ctx context.Context, in *GetSandboxRequest, opts ...grpc.CallOption) (*GetSandboxResponse, error)
 	DeleteSandbox(ctx context.Context, in *DeleteSandboxRequest, opts ...grpc.CallOption) (*DeleteSandboxResponse, error)
+	// SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
+	// (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
+	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
+	SuspendSandbox(ctx context.Context, in *SuspendSandboxRequest, opts ...grpc.CallOption) (*SuspendSandboxResponse, error)
+	ResumeSandbox(ctx context.Context, in *ResumeSandboxRequest, opts ...grpc.CallOption) (*ResumeSandboxResponse, error)
 	SyncSandboxes(ctx context.Context, in *SyncSandboxesRequest, opts ...grpc.CallOption) (*SyncSandboxesResponse, error)
 	CreateWarmPool(ctx context.Context, in *CreateWarmPoolRequest, opts ...grpc.CallOption) (*CreateWarmPoolResponse, error)
 	ListWarmPools(ctx context.Context, in *ListWarmPoolsRequest, opts ...grpc.CallOption) (*ListWarmPoolsResponse, error)
@@ -164,6 +171,26 @@ func (c *sandboxServiceClient) DeleteSandbox(ctx context.Context, in *DeleteSand
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteSandboxResponse)
 	err := c.cc.Invoke(ctx, SandboxService_DeleteSandbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sandboxServiceClient) SuspendSandbox(ctx context.Context, in *SuspendSandboxRequest, opts ...grpc.CallOption) (*SuspendSandboxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SuspendSandboxResponse)
+	err := c.cc.Invoke(ctx, SandboxService_SuspendSandbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sandboxServiceClient) ResumeSandbox(ctx context.Context, in *ResumeSandboxRequest, opts ...grpc.CallOption) (*ResumeSandboxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeSandboxResponse)
+	err := c.cc.Invoke(ctx, SandboxService_ResumeSandbox_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -298,6 +325,11 @@ type SandboxServiceServer interface {
 	ListSandboxes(context.Context, *ListSandboxesRequest) (*ListSandboxesResponse, error)
 	GetSandbox(context.Context, *GetSandboxRequest) (*GetSandboxResponse, error)
 	DeleteSandbox(context.Context, *DeleteSandboxRequest) (*DeleteSandboxResponse, error)
+	// SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
+	// (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
+	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
+	SuspendSandbox(context.Context, *SuspendSandboxRequest) (*SuspendSandboxResponse, error)
+	ResumeSandbox(context.Context, *ResumeSandboxRequest) (*ResumeSandboxResponse, error)
 	SyncSandboxes(context.Context, *SyncSandboxesRequest) (*SyncSandboxesResponse, error)
 	CreateWarmPool(context.Context, *CreateWarmPoolRequest) (*CreateWarmPoolResponse, error)
 	ListWarmPools(context.Context, *ListWarmPoolsRequest) (*ListWarmPoolsResponse, error)
@@ -353,6 +385,12 @@ func (UnimplementedSandboxServiceServer) GetSandbox(context.Context, *GetSandbox
 }
 func (UnimplementedSandboxServiceServer) DeleteSandbox(context.Context, *DeleteSandboxRequest) (*DeleteSandboxResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSandbox not implemented")
+}
+func (UnimplementedSandboxServiceServer) SuspendSandbox(context.Context, *SuspendSandboxRequest) (*SuspendSandboxResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SuspendSandbox not implemented")
+}
+func (UnimplementedSandboxServiceServer) ResumeSandbox(context.Context, *ResumeSandboxRequest) (*ResumeSandboxResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResumeSandbox not implemented")
 }
 func (UnimplementedSandboxServiceServer) SyncSandboxes(context.Context, *SyncSandboxesRequest) (*SyncSandboxesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SyncSandboxes not implemented")
@@ -548,6 +586,42 @@ func _SandboxService_DeleteSandbox_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SandboxServiceServer).DeleteSandbox(ctx, req.(*DeleteSandboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SandboxService_SuspendSandbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SuspendSandboxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SandboxServiceServer).SuspendSandbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SandboxService_SuspendSandbox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SandboxServiceServer).SuspendSandbox(ctx, req.(*SuspendSandboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SandboxService_ResumeSandbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeSandboxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SandboxServiceServer).ResumeSandbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SandboxService_ResumeSandbox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SandboxServiceServer).ResumeSandbox(ctx, req.(*ResumeSandboxRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -788,6 +862,14 @@ var SandboxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSandbox",
 			Handler:    _SandboxService_DeleteSandbox_Handler,
+		},
+		{
+			MethodName: "SuspendSandbox",
+			Handler:    _SandboxService_SuspendSandbox_Handler,
+		},
+		{
+			MethodName: "ResumeSandbox",
+			Handler:    _SandboxService_ResumeSandbox_Handler,
 		},
 		{
 			MethodName: "SyncSandboxes",

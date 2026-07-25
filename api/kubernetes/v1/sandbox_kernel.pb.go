@@ -140,6 +140,28 @@ var SandboxServiceKernelAuthzRules = authz.Rules{
 		AuditEvent: "hub.sandbox.delete",
 		AuditRisk:  "high",
 	},
+	"/kubernetes.v1.SandboxService/SuspendSandbox": {
+		Service:    "kubernetes.v1.SandboxService",
+		Method:     "SuspendSandbox",
+		FullMethod: "/kubernetes.v1.SandboxService/SuspendSandbox",
+		Action:     "manage",
+		Resource:   "k8s_sandbox:{id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.sandbox.suspend",
+		AuditRisk:  "medium",
+	},
+	"/kubernetes.v1.SandboxService/ResumeSandbox": {
+		Service:    "kubernetes.v1.SandboxService",
+		Method:     "ResumeSandbox",
+		FullMethod: "/kubernetes.v1.SandboxService/ResumeSandbox",
+		Action:     "manage",
+		Resource:   "k8s_sandbox:{id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.sandbox.resume",
+		AuditRisk:  "medium",
+	},
 	"/kubernetes.v1.SandboxService/SyncSandboxes": {
 		Service:    "kubernetes.v1.SandboxService",
 		Method:     "SyncSandboxes",
@@ -388,6 +410,36 @@ func SandboxServiceKernelRequestInfoResolver(ctx context.Context, operation stri
 		info.Labels["audit_event"] = "hub.sandbox.delete"
 		info.Labels["audit_risk"] = "high"
 		return info.Normalize(), true, nil
+	case "/kubernetes.v1.SandboxService/SuspendSandbox":
+		info := requestx.Info{
+			Service:       "kubernetes.v1.SandboxService",
+			Method:        "SuspendSandbox",
+			Operation:     "/kubernetes.v1.SandboxService/SuspendSandbox",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "manage",
+			Resource:      "k8s_sandbox:{id}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.sandbox.suspend"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
+	case "/kubernetes.v1.SandboxService/ResumeSandbox":
+		info := requestx.Info{
+			Service:       "kubernetes.v1.SandboxService",
+			Method:        "ResumeSandbox",
+			Operation:     "/kubernetes.v1.SandboxService/ResumeSandbox",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "manage",
+			Resource:      "k8s_sandbox:{id}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.sandbox.resume"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
 	case "/kubernetes.v1.SandboxService/SyncSandboxes":
 		info := requestx.Info{
 			Service:       "kubernetes.v1.SandboxService",
@@ -599,6 +651,10 @@ func _SandboxServiceKernelNormalizeOperation(operation string) string {
 		return "/kubernetes.v1.SandboxService/GetSandbox"
 	case "DeleteSandbox", "kubernetes.v1.SandboxService/DeleteSandbox":
 		return "/kubernetes.v1.SandboxService/DeleteSandbox"
+	case "SuspendSandbox", "kubernetes.v1.SandboxService/SuspendSandbox":
+		return "/kubernetes.v1.SandboxService/SuspendSandbox"
+	case "ResumeSandbox", "kubernetes.v1.SandboxService/ResumeSandbox":
+		return "/kubernetes.v1.SandboxService/ResumeSandbox"
 	case "SyncSandboxes", "kubernetes.v1.SandboxService/SyncSandboxes":
 		return "/kubernetes.v1.SandboxService/SyncSandboxes"
 	case "CreateWarmPool", "kubernetes.v1.SandboxService/CreateWarmPool":
