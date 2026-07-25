@@ -122,10 +122,10 @@ service SandboxService {
   }
 
   rpc DeleteWarmPool(DeleteWarmPoolRequest) returns (DeleteWarmPoolResponse) {
-    option (google.api.http) = { delete: "/v1/warm-pools/{id}" };
+    option (google.api.http) = { delete: "/v1/namespaces/{namespace_id}/warm-pools/{id}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "hub.warm_pool.delete" risk: "high" }
     };
   }
@@ -151,10 +151,10 @@ service SandboxService {
   }
 
   rpc DeleteSandboxClaim(DeleteSandboxClaimRequest) returns (DeleteSandboxClaimResponse) {
-    option (google.api.http) = { delete: "/v1/sandbox-claims/{id}" };
+    option (google.api.http) = { delete: "/v1/namespaces/{namespace_id}/sandbox-claims/{id}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "hub.sandbox_claim.delete" risk: "high" }
     };
   }
@@ -470,6 +470,10 @@ message ListWarmPoolsResponse {
 message DeleteWarmPoolRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
   int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  // namespace_id is bound from the URL path segment {namespace_id} and is used
+  // for routing + authz. Kept at field 3 so fields 1/2 stay wire-compatible
+  // with the previous contract (passes buf breaking-check).
+  string namespace_id = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteWarmPoolResponse {
@@ -504,6 +508,10 @@ message ListSandboxClaimsResponse {
 message DeleteSandboxClaimRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
   int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  // namespace_id is bound from the URL path segment {namespace_id} and is used
+  // for routing + authz. Kept at field 3 so fields 1/2 stay wire-compatible
+  // with the previous contract (passes buf breaking-check).
+  string namespace_id = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteSandboxClaimResponse {

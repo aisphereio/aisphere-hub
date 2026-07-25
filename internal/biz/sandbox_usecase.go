@@ -891,11 +891,16 @@ func (uc *SandboxUsecase) ListWarmPools(ctx context.Context, principal authn.Pri
 }
 
 // DeleteWarmPool removes a warm pool: authz `operate` on the namespace,
-// best-effort remote CRD delete, then CAS soft-delete the row.
-func (uc *SandboxUsecase) DeleteWarmPool(ctx context.Context, principal authn.Principal, id string, expectedRevision int64) (*WarmPool, error) {
+// best-effort remote CRD delete, then CAS soft-delete the row. The
+// namespaceID from the request path is validated against the row's own
+// namespace to prevent cross-namespace deletion via path tampering.
+func (uc *SandboxUsecase) DeleteWarmPool(ctx context.Context, principal authn.Principal, namespaceID, id string, expectedRevision int64) (*WarmPool, error) {
 	w, err := uc.sandboxes.GetWarmPool(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if w.NamespaceID != namespaceID {
+		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: warm pool does not belong to the requested namespace")
 	}
 	subject, err := canonicalSubject(principal)
 	if err != nil {
@@ -1068,11 +1073,16 @@ func (uc *SandboxUsecase) ListSandboxClaims(ctx context.Context, principal authn
 }
 
 // DeleteSandboxClaim removes a claim: authz `operate` on the namespace,
-// best-effort remote CRD delete, then CAS soft-delete the row.
-func (uc *SandboxUsecase) DeleteSandboxClaim(ctx context.Context, principal authn.Principal, id string, expectedRevision int64) (*SandboxClaim, error) {
+// best-effort remote CRD delete, then CAS soft-delete the row. The
+// namespaceID from the request path is validated against the row's own
+// namespace to prevent cross-namespace deletion via path tampering.
+func (uc *SandboxUsecase) DeleteSandboxClaim(ctx context.Context, principal authn.Principal, namespaceID, id string, expectedRevision int64) (*SandboxClaim, error) {
 	c, err := uc.sandboxes.GetSandboxClaim(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if c.NamespaceID != namespaceID {
+		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: sandbox claim does not belong to the requested namespace")
 	}
 	subject, err := canonicalSubject(principal)
 	if err != nil {
@@ -1181,20 +1191,16 @@ func (uc *SandboxUsecase) CallSandboxTool(ctx context.Context, principal authn.P
 		return false, "", "", fmt.Errorf("%w: unknown tool %q", ErrClusterInvalidArgument, tool)
 	}
 
-	// V1 stub: acknowledge the call. Real exec (workspace.* via K8s exec,
-	// browser.open via the sandbox browser sidecar) is implemented later.
-	resp := map[string]any{
-		"tool":     tool,
-		"status":   "accepted",
-		"trace_id": traceID,
-		"message":  "tool execution not yet implemented; request accepted",
-	}
-	b, _ := json.Marshal(resp)
-	uc.log.WithContext(ctx).Info("sandbox tool call (stub)",
-		logx.String("sandbox_id", id),
-		logx.String("tool", tool),
-		logx.String("trace_id", traceID))
-	return true, string(b), "", nil
+	// Tool execution is not yet wired to a runtime executor (design §11,
+	// sandbox-development-plan.md PR2). Return an explicit Unavailable error
+	// instead of a false "accepted" success so callers (and the UI) cannot
+	// mistake the stub for a real result. ListSandboxTools still works for
+	// surfacing the tool protocol/schema. This becomes a real exec call once
+	// the Runtime Tool Gateway lands (PR 13/14).
+	return false, "", "", errorx.Unavailable(
+		errorx.Code("SANDBOX_TOOL_EXECUTION_NOT_AVAILABLE"),
+		"sandbox tool execution is not yet available; the runtime executor is not connected",
+	)
 }
 
 // parseContainerCommand decodes a SandboxTemplate.ContainerCommand value into

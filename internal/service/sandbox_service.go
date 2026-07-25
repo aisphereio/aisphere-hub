@@ -177,7 +177,7 @@ func (s *SandboxService) ListWarmPools(ctx context.Context, req *kubernetesv1.Li
 }
 
 func (s *SandboxService) DeleteWarmPool(ctx context.Context, req *kubernetesv1.DeleteWarmPoolRequest) (*kubernetesv1.DeleteWarmPoolResponse, error) {
-	deleted, err := s.uc.DeleteWarmPool(ctx, principalFromContext(ctx), req.GetId(), req.GetExpectedRevision())
+	deleted, err := s.uc.DeleteWarmPool(ctx, principalFromContext(ctx), req.GetNamespaceId(), req.GetId(), req.GetExpectedRevision())
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (s *SandboxService) ListSandboxClaims(ctx context.Context, req *kubernetesv
 }
 
 func (s *SandboxService) DeleteSandboxClaim(ctx context.Context, req *kubernetesv1.DeleteSandboxClaimRequest) (*kubernetesv1.DeleteSandboxClaimResponse, error) {
-	deleted, err := s.uc.DeleteSandboxClaim(ctx, principalFromContext(ctx), req.GetId(), req.GetExpectedRevision())
+	deleted, err := s.uc.DeleteSandboxClaim(ctx, principalFromContext(ctx), req.GetNamespaceId(), req.GetId(), req.GetExpectedRevision())
 	if err != nil {
 		return nil, err
 	}
