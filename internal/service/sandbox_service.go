@@ -233,6 +233,14 @@ func (s *SandboxService) DeleteSandboxClaim(ctx context.Context, req *kubernetes
 	return &kubernetesv1.DeleteSandboxClaimResponse{Claim: sandboxClaimToProto(deleted)}, nil
 }
 
+func (s *SandboxService) SyncSandboxClaims(ctx context.Context, req *kubernetesv1.SyncSandboxClaimsRequest) (*kubernetesv1.SyncSandboxClaimsResponse, error) {
+	updated, removed, linked, err := s.uc.SyncSandboxClaims(ctx, principalFromContext(ctx), req.GetNamespaceId())
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesv1.SyncSandboxClaimsResponse{Updated: int32(updated), Removed: int32(removed), SandboxesLinked: int32(linked)}, nil
+}
+
 // ---- Sandbox tool invocation ----
 
 func (s *SandboxService) ListSandboxTools(ctx context.Context, req *kubernetesv1.ListSandboxToolsRequest) (*kubernetesv1.ListSandboxToolsResponse, error) {

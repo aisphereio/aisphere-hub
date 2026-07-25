@@ -172,6 +172,22 @@ service SandboxService {
     };
   }
 
+  // SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
+  // CRD's observed status (status.conditions[Ready], status.sandbox.name). When
+  // a claim becomes Ready and the controller has allocated a sandbox, the
+  // sandbox name/podIP are mirrored onto the claim and a Hub Sandbox row is
+  // created (template_id=NULL, warm_pool_id+claim_id set) so the delivered
+  // sandbox is operable from Hub. Mirrors SyncSandboxes/SyncWarmPools but with
+  // the extra sandbox-linkage step.
+  rpc SyncSandboxClaims(SyncSandboxClaimsRequest) returns (SyncSandboxClaimsResponse) {
+    option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/sandbox-claims:sync" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox_claim.sync" risk: "medium" }
+    };
+  }
+
   // ---- Sandbox operations (tool invocation) ----
 
   rpc ListSandboxTools(ListSandboxToolsRequest) returns (ListSandboxToolsResponse) {
@@ -538,6 +554,18 @@ message DeleteSandboxClaimRequest {
 
 message DeleteSandboxClaimResponse {
   SandboxClaim claim = 1;
+}
+
+message SyncSandboxClaimsRequest {
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SyncSandboxClaimsResponse {
+  int32 updated = 1;
+  int32 removed = 2;
+  // sandboxes_linked counts Hub Sandbox rows created or linked to a claim
+  // during this sync (i.e. newly delivered sandboxes made operable from Hub).
+  int32 sandboxes_linked = 3;
 }
 
 // ---- Sandbox tool invocation messages ----

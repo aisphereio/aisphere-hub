@@ -35,6 +35,7 @@ const (
 	SandboxService_CreateSandboxClaim_FullMethodName    = "/kubernetes.v1.SandboxService/CreateSandboxClaim"
 	SandboxService_ListSandboxClaims_FullMethodName     = "/kubernetes.v1.SandboxService/ListSandboxClaims"
 	SandboxService_DeleteSandboxClaim_FullMethodName    = "/kubernetes.v1.SandboxService/DeleteSandboxClaim"
+	SandboxService_SyncSandboxClaims_FullMethodName     = "/kubernetes.v1.SandboxService/SyncSandboxClaims"
 	SandboxService_ListSandboxTools_FullMethodName      = "/kubernetes.v1.SandboxService/ListSandboxTools"
 	SandboxService_CallSandboxTool_FullMethodName       = "/kubernetes.v1.SandboxService/CallSandboxTool"
 )
@@ -69,6 +70,14 @@ type SandboxServiceClient interface {
 	CreateSandboxClaim(ctx context.Context, in *CreateSandboxClaimRequest, opts ...grpc.CallOption) (*CreateSandboxClaimResponse, error)
 	ListSandboxClaims(ctx context.Context, in *ListSandboxClaimsRequest, opts ...grpc.CallOption) (*ListSandboxClaimsResponse, error)
 	DeleteSandboxClaim(ctx context.Context, in *DeleteSandboxClaimRequest, opts ...grpc.CallOption) (*DeleteSandboxClaimResponse, error)
+	// SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
+	// CRD's observed status (status.conditions[Ready], status.sandbox.name). When
+	// a claim becomes Ready and the controller has allocated a sandbox, the
+	// sandbox name/podIP are mirrored onto the claim and a Hub Sandbox row is
+	// created (template_id=NULL, warm_pool_id+claim_id set) so the delivered
+	// sandbox is operable from Hub. Mirrors SyncSandboxes/SyncWarmPools but with
+	// the extra sandbox-linkage step.
+	SyncSandboxClaims(ctx context.Context, in *SyncSandboxClaimsRequest, opts ...grpc.CallOption) (*SyncSandboxClaimsResponse, error)
 	ListSandboxTools(ctx context.Context, in *ListSandboxToolsRequest, opts ...grpc.CallOption) (*ListSandboxToolsResponse, error)
 	CallSandboxTool(ctx context.Context, in *CallSandboxToolRequest, opts ...grpc.CallOption) (*CallSandboxToolResponse, error)
 }
@@ -241,6 +250,16 @@ func (c *sandboxServiceClient) DeleteSandboxClaim(ctx context.Context, in *Delet
 	return out, nil
 }
 
+func (c *sandboxServiceClient) SyncSandboxClaims(ctx context.Context, in *SyncSandboxClaimsRequest, opts ...grpc.CallOption) (*SyncSandboxClaimsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SyncSandboxClaimsResponse)
+	err := c.cc.Invoke(ctx, SandboxService_SyncSandboxClaims_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sandboxServiceClient) ListSandboxTools(ctx context.Context, in *ListSandboxToolsRequest, opts ...grpc.CallOption) (*ListSandboxToolsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSandboxToolsResponse)
@@ -291,6 +310,14 @@ type SandboxServiceServer interface {
 	CreateSandboxClaim(context.Context, *CreateSandboxClaimRequest) (*CreateSandboxClaimResponse, error)
 	ListSandboxClaims(context.Context, *ListSandboxClaimsRequest) (*ListSandboxClaimsResponse, error)
 	DeleteSandboxClaim(context.Context, *DeleteSandboxClaimRequest) (*DeleteSandboxClaimResponse, error)
+	// SyncSandboxClaims reconciles Hub-side SandboxClaim rows with the installed
+	// CRD's observed status (status.conditions[Ready], status.sandbox.name). When
+	// a claim becomes Ready and the controller has allocated a sandbox, the
+	// sandbox name/podIP are mirrored onto the claim and a Hub Sandbox row is
+	// created (template_id=NULL, warm_pool_id+claim_id set) so the delivered
+	// sandbox is operable from Hub. Mirrors SyncSandboxes/SyncWarmPools but with
+	// the extra sandbox-linkage step.
+	SyncSandboxClaims(context.Context, *SyncSandboxClaimsRequest) (*SyncSandboxClaimsResponse, error)
 	ListSandboxTools(context.Context, *ListSandboxToolsRequest) (*ListSandboxToolsResponse, error)
 	CallSandboxTool(context.Context, *CallSandboxToolRequest) (*CallSandboxToolResponse, error)
 	mustEmbedUnimplementedSandboxServiceServer()
@@ -350,6 +377,9 @@ func (UnimplementedSandboxServiceServer) ListSandboxClaims(context.Context, *Lis
 }
 func (UnimplementedSandboxServiceServer) DeleteSandboxClaim(context.Context, *DeleteSandboxClaimRequest) (*DeleteSandboxClaimResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSandboxClaim not implemented")
+}
+func (UnimplementedSandboxServiceServer) SyncSandboxClaims(context.Context, *SyncSandboxClaimsRequest) (*SyncSandboxClaimsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SyncSandboxClaims not implemented")
 }
 func (UnimplementedSandboxServiceServer) ListSandboxTools(context.Context, *ListSandboxToolsRequest) (*ListSandboxToolsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSandboxTools not implemented")
@@ -666,6 +696,24 @@ func _SandboxService_DeleteSandboxClaim_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SandboxService_SyncSandboxClaims_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncSandboxClaimsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SandboxServiceServer).SyncSandboxClaims(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SandboxService_SyncSandboxClaims_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SandboxServiceServer).SyncSandboxClaims(ctx, req.(*SyncSandboxClaimsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SandboxService_ListSandboxTools_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSandboxToolsRequest)
 	if err := dec(in); err != nil {
@@ -772,6 +820,10 @@ var SandboxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSandboxClaim",
 			Handler:    _SandboxService_DeleteSandboxClaim_Handler,
+		},
+		{
+			MethodName: "SyncSandboxClaims",
+			Handler:    _SandboxService_SyncSandboxClaims_Handler,
 		},
 		{
 			MethodName: "ListSandboxTools",
