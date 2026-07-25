@@ -860,13 +860,142 @@ func (uc *SandboxUsecase) CreateWarmPool(ctx context.Context, principal authn.Pr
 		return created, nil
 	}
 
-	ready, err := uc.sandboxes.UpdateWarmPoolStatus(ctx, created.ID, WarmPoolStatusReady, map[string]any{
-		"health_message": "",
+	// Apply only means the API server accepted the CRD; Ready must be driven by
+	// status.readyReplicas == replicas via SyncWarmPools (or a future reconciler).
+	// Keep status=CREATING (set above) and return the row as-is.
+	return created, nil
+}
+
+// SyncWarmPools reconciles Hub-side WarmPool rows with the observed CRD status
+// (status.readyReplicas). It mirrors SyncSandboxes' shape (List CRD -> diff by
+// KubernetesName -> update/remove) but:
+//   - does NOT import remote-only pools (WarmPools are explicit infra, created
+//     via Hub; a drift here is logged, not auto-imported);
+//   - drives status from readyReplicas: READY when ready==replicas, CREATING
+//     while warming up. A row already DEGRADED from a failed Apply is only
+//     promoted to READY once the pool is actually ready.
+//
+// Authz: `operate` on the namespace (operator-tier reconciliation, mirroring
+// SyncSandboxes and WarmPool delete).
+func (uc *SandboxUsecase) SyncWarmPools(ctx context.Context, principal authn.Principal, namespaceID string) (updated, removed int, err error) {
+	subject, err := canonicalSubject(principal)
+	if err != nil {
+		return 0, 0, err
+	}
+	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
+		Subject:    subject,
+		Resource:   namespaceResource(namespaceID),
+		Permission: "operate",
+		OrgID:      principal.OrgID,
 	})
 	if err != nil {
-		return created, nil
+		return 0, 0, err
 	}
-	return ready, nil
+	if !dec.Allowed {
+		return 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
+	}
+
+	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, err
+	}
+	cluster, err := uc.clusters.GetCluster(ctx, ns.ClusterID)
+	if err != nil {
+		return 0, 0, err
+	}
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	remote, err := uc.provider.ListWarmPools(ctx, ns.ClusterID, locator, ns.KubeName)
+	if err != nil {
+		return 0, 0, err
+	}
+	local, err := uc.sandboxes.ListWarmPoolsByNamespace(ctx, namespaceID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	localByName := make(map[string]*WarmPool, len(local))
+	for _, w := range local {
+		localByName[w.KubernetesName] = w
+	}
+	remoteByName := make(map[string]bool, len(remote))
+	now := time.Now().UTC()
+
+	for _, r := range remote {
+		remoteByName[r.Name] = true
+		existing, ok := localByName[r.Name]
+		if !ok {
+			// Remote-only pool: do not auto-import. WarmPools are explicit Hub
+			// infra; surface the drift for an operator to investigate.
+			uc.log.WithContext(ctx).Warn("sync warm pools: remote pool has no Hub row; skipping import",
+				logx.String("kube_name", r.Name),
+				logx.String("namespace", ns.KubeName),
+				logx.String("template_ref", r.TemplateRef))
+			continue
+		}
+
+		// Drive status from observed readyReplicas. Apply success only means
+		// the API server accepted the CRD; Ready is readyReplicas == replicas.
+		var status, health string
+		switch {
+		case r.Replicas > 0 && r.ReadyReplicas >= r.Replicas:
+			status = WarmPoolStatusReady
+			health = ""
+		case r.ReadyReplicas > 0:
+			status = WarmPoolStatusCreating
+			health = fmt.Sprintf("warming up: %d/%d ready replicas", r.ReadyReplicas, r.Replicas)
+		default:
+			// 0 ready (or replicas==0). Keep CREATING; the controller has not
+			// surfaced any ready pod yet. Do not overwrite a pre-existing
+			// DEGRADED with CREATING unless we are promoting to READY above.
+			if existing.Status == WarmPoolStatusDegraded {
+				status = WarmPoolStatusDegraded
+				health = existing.HealthMessage
+			} else {
+				status = WarmPoolStatusCreating
+				health = "no ready replicas yet"
+			}
+		}
+
+		fields := map[string]any{
+			"kubernetes_uid":   r.UID,
+			"resource_version": r.ResourceVersion,
+			"replicas":         r.Replicas,
+			"ready_replicas":   r.ReadyReplicas,
+			"health_message":   health,
+			"last_sync_at":     now,
+		}
+		if _, e := uc.sandboxes.UpdateWarmPoolStatus(ctx, existing.ID, status, fields); e != nil {
+			uc.log.WithContext(ctx).Warn("sync warm pools: update failed",
+				logx.String("warm_pool_id", existing.ID),
+				logx.String("kube_name", r.Name),
+				logx.Err(e))
+			continue
+		}
+		updated++
+	}
+
+	// Remove local pools no longer present remotely. Skip rows that are
+	// mid-flight (CREATING) or already DELETED so we never clobber an
+	// in-progress create (the CRD may not have been listed yet) or a finalized
+	// delete. WarmPools carry no per-resource SpiceDB object, so there is no
+	// relationship to revoke.
+	for name, w := range localByName {
+		if remoteByName[name] {
+			continue
+		}
+		if w.Status == WarmPoolStatusCreating || w.Status == WarmPoolStatusDeleted {
+			continue
+		}
+		if _, derr := uc.sandboxes.DeleteWarmPool(ctx, w.ID, w.Revision); derr != nil {
+			uc.log.WithContext(ctx).Warn("sync warm pools: remove failed",
+				logx.String("warm_pool_id", w.ID),
+				logx.String("kube_name", name),
+				logx.Err(derr))
+			continue
+		}
+		removed++
+	}
+	return updated, removed, nil
 }
 
 // ListWarmPools lists warm pools in a namespace, gated by `use` on the namespace.

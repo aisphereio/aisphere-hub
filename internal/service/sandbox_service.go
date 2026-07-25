@@ -184,6 +184,14 @@ func (s *SandboxService) DeleteWarmPool(ctx context.Context, req *kubernetesv1.D
 	return &kubernetesv1.DeleteWarmPoolResponse{WarmPool: warmPoolToProto(deleted)}, nil
 }
 
+func (s *SandboxService) SyncWarmPools(ctx context.Context, req *kubernetesv1.SyncWarmPoolsRequest) (*kubernetesv1.SyncWarmPoolsResponse, error) {
+	updated, removed, err := s.uc.SyncWarmPools(ctx, principalFromContext(ctx), req.GetNamespaceId())
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesv1.SyncWarmPoolsResponse{Updated: int32(updated), Removed: int32(removed)}, nil
+}
+
 // ---- SandboxClaim CRUD ----
 
 func (s *SandboxService) CreateSandboxClaim(ctx context.Context, req *kubernetesv1.CreateSandboxClaimRequest) (*kubernetesv1.CreateSandboxClaimResponse, error) {
