@@ -468,9 +468,12 @@ message ListWarmPoolsResponse {
 }
 
 message DeleteWarmPoolRequest {
-  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
-  int64 expected_revision = 3 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  // namespace_id is bound from the URL path segment {namespace_id} and is used
+  // for routing + authz. Kept at field 3 so fields 1/2 stay wire-compatible
+  // with the previous contract (passes buf breaking-check).
+  string namespace_id = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteWarmPoolResponse {
@@ -503,9 +506,12 @@ message ListSandboxClaimsResponse {
 }
 
 message DeleteSandboxClaimRequest {
-  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
-  int64 expected_revision = 3 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  // namespace_id is bound from the URL path segment {namespace_id} and is used
+  // for routing + authz. Kept at field 3 so fields 1/2 stay wire-compatible
+  // with the previous contract (passes buf breaking-check).
+  string namespace_id = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteSandboxClaimResponse {

@@ -2,7 +2,7 @@
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
   "git_sha": "5f2a7c677ee2c4e2ff20a1bef9e86444440e0965",
   "ref": "fix/sandbox-mvp-pr1-4",
-  "sha256": "9b2fbd863318d1f28dc4d0cee8ab0463b9f73f59b5c56602f9662a22e7e4d2e4",
+  "sha256": "839ad0e4f39804822c016c6c428295fdd2cfb6246161ac0fc87d44ea1bffe26d",
   "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }

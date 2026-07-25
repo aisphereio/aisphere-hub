@@ -2450,11 +2450,14 @@ func (x *ListWarmPoolsResponse) GetNextPageToken() string {
 
 type DeleteWarmPoolRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId      string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	Id               string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	ExpectedRevision int64                  `protobuf:"varint,3,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ExpectedRevision int64                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	// namespace_id is bound from the URL path segment {namespace_id} and is used
+	// for routing + authz. Kept at field 3 so fields 1/2 stay wire-compatible
+	// with the previous contract (passes buf breaking-check).
+	NamespaceId   string `protobuf:"bytes,3,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteWarmPoolRequest) Reset() {
@@ -2487,13 +2490,6 @@ func (*DeleteWarmPoolRequest) Descriptor() ([]byte, []int) {
 	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{27}
 }
 
-func (x *DeleteWarmPoolRequest) GetNamespaceId() string {
-	if x != nil {
-		return x.NamespaceId
-	}
-	return ""
-}
-
 func (x *DeleteWarmPoolRequest) GetId() string {
 	if x != nil {
 		return x.Id
@@ -2506,6 +2502,13 @@ func (x *DeleteWarmPoolRequest) GetExpectedRevision() int64 {
 		return x.ExpectedRevision
 	}
 	return 0
+}
+
+func (x *DeleteWarmPoolRequest) GetNamespaceId() string {
+	if x != nil {
+		return x.NamespaceId
+	}
+	return ""
 }
 
 type DeleteWarmPoolResponse struct {
@@ -2786,11 +2789,14 @@ func (x *ListSandboxClaimsResponse) GetNextPageToken() string {
 
 type DeleteSandboxClaimRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId      string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	Id               string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	ExpectedRevision int64                  `protobuf:"varint,3,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ExpectedRevision int64                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	// namespace_id is bound from the URL path segment {namespace_id} and is used
+	// for routing + authz. Kept at field 3 so fields 1/2 stay wire-compatible
+	// with the previous contract (passes buf breaking-check).
+	NamespaceId   string `protobuf:"bytes,3,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteSandboxClaimRequest) Reset() {
@@ -2823,13 +2829,6 @@ func (*DeleteSandboxClaimRequest) Descriptor() ([]byte, []int) {
 	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{33}
 }
 
-func (x *DeleteSandboxClaimRequest) GetNamespaceId() string {
-	if x != nil {
-		return x.NamespaceId
-	}
-	return ""
-}
-
 func (x *DeleteSandboxClaimRequest) GetId() string {
 	if x != nil {
 		return x.Id
@@ -2842,6 +2841,13 @@ func (x *DeleteSandboxClaimRequest) GetExpectedRevision() int64 {
 		return x.ExpectedRevision
 	}
 	return 0
+}
+
+func (x *DeleteSandboxClaimRequest) GetNamespaceId() string {
+	if x != nil {
+		return x.NamespaceId
+	}
+	return ""
 }
 
 type DeleteSandboxClaimResponse struct {
@@ -3398,10 +3404,10 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\n" +
 	"warm_pools\x18\x01 \x03(\v2\x17.kubernetes.v1.WarmPoolR\twarmPools\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x86\x01\n" +
-	"\x15DeleteWarmPoolRequest\x12&\n" +
-	"\fnamespace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vnamespaceId\x12\x13\n" +
-	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
-	"\x11expected_revision\x18\x03 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"N\n" +
+	"\x15DeleteWarmPoolRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
+	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\x12&\n" +
+	"\fnamespace_id\x18\x03 \x01(\tB\x03\xe0A\x02R\vnamespaceId\"N\n" +
 	"\x16DeleteWarmPoolResponse\x124\n" +
 	"\twarm_pool\x18\x01 \x01(\v2\x17.kubernetes.v1.WarmPoolR\bwarmPool\"\xbd\x01\n" +
 	"\x19CreateSandboxClaimRequest\x12&\n" +
@@ -3422,10 +3428,10 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x19ListSandboxClaimsResponse\x123\n" +
 	"\x06claims\x18\x01 \x03(\v2\x1b.kubernetes.v1.SandboxClaimR\x06claims\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x8a\x01\n" +
-	"\x19DeleteSandboxClaimRequest\x12&\n" +
-	"\fnamespace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vnamespaceId\x12\x13\n" +
-	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
-	"\x11expected_revision\x18\x03 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"O\n" +
+	"\x19DeleteSandboxClaimRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
+	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\x12&\n" +
+	"\fnamespace_id\x18\x03 \x01(\tB\x03\xe0A\x02R\vnamespaceId\"O\n" +
 	"\x1aDeleteSandboxClaimResponse\x121\n" +
 	"\x05claim\x18\x01 \x01(\v2\x1b.kubernetes.v1.SandboxClaimR\x05claim\".\n" +
 	"\x17ListSandboxToolsRequest\x12\x13\n" +
