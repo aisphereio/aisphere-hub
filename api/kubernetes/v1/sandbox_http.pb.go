@@ -57,10 +57,10 @@ type SandboxServiceHTTPServer interface {
 
 func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServer) {
 	r := s.Route("/")
-	r.Handle("DELETE", "/v1/sandbox-claims/{id}", _SandboxService_DeleteSandboxClaim0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/v1/sandboxes/{id}", _SandboxService_DeleteSandbox0_HTTP_Handler(srv))
-	r.Handle("DELETE", "/v1/warm-pools/{id}", _SandboxService_DeleteWarmPool0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/v1/clusters/{cluster_id}/sandbox-templates/{id}", _SandboxService_DeleteSandboxTemplate0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/v1/namespaces/{namespace_id}/sandbox-claims/{id}", _SandboxService_DeleteSandboxClaim0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/v1/namespaces/{namespace_id}/warm-pools/{id}", _SandboxService_DeleteWarmPool0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/clusters/{cluster_id}/sandbox-templates", _SandboxService_ListSandboxTemplates0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/namespaces/{namespace_id}/sandbox-claims", _SandboxService_ListSandboxClaims0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/namespaces/{namespace_id}/sandboxes", _SandboxService_ListSandboxes0_HTTP_Handler(srv))
@@ -74,31 +74,6 @@ func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServ
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes:sync", _SandboxService_SyncSandboxes0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools", _SandboxService_CreateWarmPool0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/sandboxes/{id}/tools:call", _SandboxService_CallSandboxTool0_HTTP_Handler(srv))
-}
-
-func _SandboxService_DeleteSandboxClaim0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in DeleteSandboxClaimRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		if err := http.ValidateRequest(ctx, &in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationSandboxServiceDeleteSandboxClaim)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteSandboxClaim(ctx, req.(*DeleteSandboxClaimRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*DeleteSandboxClaimResponse)
-		return ctx.Result(200, reply)
-	}
 }
 
 func _SandboxService_DeleteSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
@@ -126,31 +101,6 @@ func _SandboxService_DeleteSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) f
 	}
 }
 
-func _SandboxService_DeleteWarmPool0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in DeleteWarmPoolRequest
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		if err := http.ValidateRequest(ctx, &in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationSandboxServiceDeleteWarmPool)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteWarmPool(ctx, req.(*DeleteWarmPoolRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*DeleteWarmPoolResponse)
-		return ctx.Result(200, reply)
-	}
-}
-
 func _SandboxService_DeleteSandboxTemplate0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in DeleteSandboxTemplateRequest
@@ -172,6 +122,56 @@ func _SandboxService_DeleteSandboxTemplate0_HTTP_Handler(srv SandboxServiceHTTPS
 			return err
 		}
 		reply := out.(*DeleteSandboxTemplateResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _SandboxService_DeleteSandboxClaim0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteSandboxClaimRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceDeleteSandboxClaim)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteSandboxClaim(ctx, req.(*DeleteSandboxClaimRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteSandboxClaimResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _SandboxService_DeleteWarmPool0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteWarmPoolRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceDeleteWarmPool)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteWarmPool(ctx, req.(*DeleteWarmPoolRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteWarmPoolResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -632,7 +632,7 @@ func (c *SandboxServiceHTTPClientImpl) DeleteSandbox(ctx context.Context, in *De
 
 func (c *SandboxServiceHTTPClientImpl) DeleteSandboxClaim(ctx context.Context, in *DeleteSandboxClaimRequest, opts ...http.CallOption) (*DeleteSandboxClaimResponse, error) {
 	var out DeleteSandboxClaimResponse
-	pattern := "/v1/sandbox-claims/{id}"
+	pattern := "/v1/namespaces/{namespace_id}/sandbox-claims/{id}"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
@@ -664,7 +664,7 @@ func (c *SandboxServiceHTTPClientImpl) DeleteSandboxTemplate(ctx context.Context
 
 func (c *SandboxServiceHTTPClientImpl) DeleteWarmPool(ctx context.Context, in *DeleteWarmPoolRequest, opts ...http.CallOption) (*DeleteWarmPoolResponse, error) {
 	var out DeleteWarmPoolResponse
-	pattern := "/v1/warm-pools/{id}"
+	pattern := "/v1/namespaces/{namespace_id}/warm-pools/{id}"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),

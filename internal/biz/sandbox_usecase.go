@@ -891,11 +891,16 @@ func (uc *SandboxUsecase) ListWarmPools(ctx context.Context, principal authn.Pri
 }
 
 // DeleteWarmPool removes a warm pool: authz `operate` on the namespace,
-// best-effort remote CRD delete, then CAS soft-delete the row.
-func (uc *SandboxUsecase) DeleteWarmPool(ctx context.Context, principal authn.Principal, id string, expectedRevision int64) (*WarmPool, error) {
+// best-effort remote CRD delete, then CAS soft-delete the row. The
+// namespaceID from the request path is validated against the row's own
+// namespace to prevent cross-namespace deletion via path tampering.
+func (uc *SandboxUsecase) DeleteWarmPool(ctx context.Context, principal authn.Principal, namespaceID, id string, expectedRevision int64) (*WarmPool, error) {
 	w, err := uc.sandboxes.GetWarmPool(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if w.NamespaceID != namespaceID {
+		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: warm pool does not belong to the requested namespace")
 	}
 	subject, err := canonicalSubject(principal)
 	if err != nil {
@@ -1068,11 +1073,16 @@ func (uc *SandboxUsecase) ListSandboxClaims(ctx context.Context, principal authn
 }
 
 // DeleteSandboxClaim removes a claim: authz `operate` on the namespace,
-// best-effort remote CRD delete, then CAS soft-delete the row.
-func (uc *SandboxUsecase) DeleteSandboxClaim(ctx context.Context, principal authn.Principal, id string, expectedRevision int64) (*SandboxClaim, error) {
+// best-effort remote CRD delete, then CAS soft-delete the row. The
+// namespaceID from the request path is validated against the row's own
+// namespace to prevent cross-namespace deletion via path tampering.
+func (uc *SandboxUsecase) DeleteSandboxClaim(ctx context.Context, principal authn.Principal, namespaceID, id string, expectedRevision int64) (*SandboxClaim, error) {
 	c, err := uc.sandboxes.GetSandboxClaim(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if c.NamespaceID != namespaceID {
+		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: sandbox claim does not belong to the requested namespace")
 	}
 	subject, err := canonicalSubject(principal)
 	if err != nil {

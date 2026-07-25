@@ -4925,6 +4925,49 @@
         ]
       }
     },
+    "/v1/namespaces/{namespaceId}/sandbox-claims/{id}": {
+      "delete": {
+        "operationId": "SandboxService_DeleteSandboxClaim",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "namespaceId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "int64",
+            "in": "query",
+            "name": "expectedRevision",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSandboxClaimResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "SandboxService"
+        ]
+      }
+    },
     "/v1/namespaces/{namespaceId}/sandboxes": {
       "get": {
         "operationId": "SandboxService_ListSandboxes",
@@ -5113,10 +5156,16 @@
         ]
       }
     },
-    "/v1/sandbox-claims/{id}": {
+    "/v1/namespaces/{namespaceId}/warm-pools/{id}": {
       "delete": {
-        "operationId": "SandboxService_DeleteSandboxClaim",
+        "operationId": "SandboxService_DeleteWarmPool",
         "parameters": [
+          {
+            "in": "path",
+            "name": "namespaceId",
+            "required": true,
+            "type": "string"
+          },
           {
             "in": "path",
             "name": "id",
@@ -5135,7 +5184,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1DeleteSandboxClaimResponse"
+              "$ref": "#/definitions/v1DeleteWarmPoolResponse"
             }
           },
           "default": {
@@ -6477,43 +6526,6 @@
         },
         "tags": [
           "SkillService"
-        ]
-      }
-    },
-    "/v1/warm-pools/{id}": {
-      "delete": {
-        "operationId": "SandboxService_DeleteWarmPool",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "format": "int64",
-            "in": "query",
-            "name": "expectedRevision",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteWarmPoolResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/KernelErrorResponse"
-            }
-          }
-        },
-        "tags": [
-          "SandboxService"
         ]
       }
     }

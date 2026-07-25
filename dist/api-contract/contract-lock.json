@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "281ef34fc1601560e2ec0902344672fc1d91038f",
-  "ref": "feat/skill-version-management-v2",
-  "sha256": "68d96c4cdf98bcc82735828168fe48e9a5516049b10ea761c2b938a2b686640d",
-  "kernel_version": "v0.4.18",
+  "git_sha": "2e423e0d05cf4a4fb498a232305fc5ca13a05f56",
+  "ref": "fix/sandbox-mvp-pr1-4",
+  "sha256": "9b2fbd863318d1f28dc4d0cee8ab0463b9f73f59b5c56602f9662a22e7e4d2e4",
+  "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }

@@ -2450,8 +2450,9 @@ func (x *ListWarmPoolsResponse) GetNextPageToken() string {
 
 type DeleteWarmPoolRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ExpectedRevision int64                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	NamespaceId      string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	Id               string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	ExpectedRevision int64                  `protobuf:"varint,3,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2484,6 +2485,13 @@ func (x *DeleteWarmPoolRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DeleteWarmPoolRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWarmPoolRequest) Descriptor() ([]byte, []int) {
 	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *DeleteWarmPoolRequest) GetNamespaceId() string {
+	if x != nil {
+		return x.NamespaceId
+	}
+	return ""
 }
 
 func (x *DeleteWarmPoolRequest) GetId() string {
@@ -2778,8 +2786,9 @@ func (x *ListSandboxClaimsResponse) GetNextPageToken() string {
 
 type DeleteSandboxClaimRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ExpectedRevision int64                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	NamespaceId      string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	Id               string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	ExpectedRevision int64                  `protobuf:"varint,3,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2812,6 +2821,13 @@ func (x *DeleteSandboxClaimRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DeleteSandboxClaimRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSandboxClaimRequest) Descriptor() ([]byte, []int) {
 	return file_kubernetes_v1_sandbox_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *DeleteSandboxClaimRequest) GetNamespaceId() string {
+	if x != nil {
+		return x.NamespaceId
+	}
+	return ""
 }
 
 func (x *DeleteSandboxClaimRequest) GetId() string {
@@ -3381,10 +3397,11 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x15ListWarmPoolsResponse\x126\n" +
 	"\n" +
 	"warm_pools\x18\x01 \x03(\v2\x17.kubernetes.v1.WarmPoolR\twarmPools\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"^\n" +
-	"\x15DeleteWarmPoolRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
-	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"N\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x86\x01\n" +
+	"\x15DeleteWarmPoolRequest\x12&\n" +
+	"\fnamespace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vnamespaceId\x12\x13\n" +
+	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
+	"\x11expected_revision\x18\x03 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"N\n" +
 	"\x16DeleteWarmPoolResponse\x124\n" +
 	"\twarm_pool\x18\x01 \x01(\v2\x17.kubernetes.v1.WarmPoolR\bwarmPool\"\xbd\x01\n" +
 	"\x19CreateSandboxClaimRequest\x12&\n" +
@@ -3404,10 +3421,11 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"x\n" +
 	"\x19ListSandboxClaimsResponse\x123\n" +
 	"\x06claims\x18\x01 \x03(\v2\x1b.kubernetes.v1.SandboxClaimR\x06claims\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"b\n" +
-	"\x19DeleteSandboxClaimRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
-	"\x11expected_revision\x18\x02 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"O\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x8a\x01\n" +
+	"\x19DeleteSandboxClaimRequest\x12&\n" +
+	"\fnamespace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vnamespaceId\x12\x13\n" +
+	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x120\n" +
+	"\x11expected_revision\x18\x03 \x01(\x03B\x03\xe0A\x02R\x10expectedRevision\"O\n" +
 	"\x1aDeleteSandboxClaimResponse\x121\n" +
 	"\x05claim\x18\x01 \x01(\v2\x1b.kubernetes.v1.SandboxClaimR\x05claim\".\n" +
 	"\x17ListSandboxToolsRequest\x12\x13\n" +
@@ -3463,7 +3481,7 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x1cSANDBOX_CLAIM_STATUS_PENDING\x10\x01\x12\x1e\n" +
 	"\x1aSANDBOX_CLAIM_STATUS_READY\x10\x02\x12\x1f\n" +
 	"\x1bSANDBOX_CLAIM_STATUS_FAILED\x10\x03\x12 \n" +
-	"\x1cSANDBOX_CLAIM_STATUS_DELETED\x10\x042\xe5\x1f\n" +
+	"\x1cSANDBOX_CLAIM_STATUS_DELETED\x10\x042\xb5 \n" +
 	"\x0eSandboxService\x12\x96\x02\n" +
 	"\x15CreateSandboxTemplate\x12+.kubernetes.v1.CreateSandboxTemplateRequest\x1a,.kubernetes.v1.CreateSandboxTemplateResponse\"\xa1\x01\x92\xf4\x18]\b\x03\x122\n" +
 	"\aoperate\x12\x18k8s_cluster:{cluster_id}\x1a\vhub-service \x01\x1a%\b\x01\x12\x1bhub.sandbox_template.create\x1a\x04high\x82\xd3\xe4\x93\x02::\x01*b\btemplate\"+/v1/clusters/{cluster_id}/sandbox-templates\x12\x80\x02\n" +
@@ -3487,15 +3505,15 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\x0eCreateWarmPool\x12$.kubernetes.v1.CreateWarmPoolRequest\x1a%.kubernetes.v1.CreateWarmPoolResponse\"\x98\x01\x92\xf4\x18V\b\x03\x122\n" +
 	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x14hub.warm_pool.create\x1a\x04high\x82\xd3\xe4\x93\x028:\x01*b\twarm_pool\"(/v1/namespaces/{namespace_id}/warm-pools\x12\xe4\x01\n" +
 	"\rListWarmPools\x12#.kubernetes.v1.ListWarmPoolsRequest\x1a$.kubernetes.v1.ListWarmPoolsResponse\"\x87\x01\x92\xf4\x18S\b\x03\x122\n" +
-	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1b\b\x01\x12\x12hub.warm_pool.list\x1a\x03low\x82\xd3\xe4\x93\x02*\x12(/v1/namespaces/{namespace_id}/warm-pools\x12\xcb\x01\n" +
-	"\x0eDeleteWarmPool\x12$.kubernetes.v1.DeleteWarmPoolRequest\x1a%.kubernetes.v1.DeleteWarmPoolResponse\"l\x92\xf4\x18M\b\x03\x12)\n" +
-	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x14hub.warm_pool.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x15*\x13/v1/warm-pools/{id}\x12\x88\x02\n" +
+	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1b\b\x01\x12\x12hub.warm_pool.list\x1a\x03low\x82\xd3\xe4\x93\x02*\x12(/v1/namespaces/{namespace_id}/warm-pools\x12\xf3\x01\n" +
+	"\x0eDeleteWarmPool\x12$.kubernetes.v1.DeleteWarmPoolRequest\x1a%.kubernetes.v1.DeleteWarmPoolResponse\"\x93\x01\x92\xf4\x18Z\b\x03\x126\n" +
+	"\aoperate\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x14hub.warm_pool.delete\x1a\x04high\x82\xd3\xe4\x93\x02/*-/v1/namespaces/{namespace_id}/warm-pools/{id}\x12\x88\x02\n" +
 	"\x12CreateSandboxClaim\x12(.kubernetes.v1.CreateSandboxClaimRequest\x1a).kubernetes.v1.CreateSandboxClaimResponse\"\x9c\x01\x92\xf4\x18Z\b\x03\x122\n" +
 	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x18hub.sandbox_claim.create\x1a\x04high\x82\xd3\xe4\x93\x028:\x01*b\x05claim\",/v1/namespaces/{namespace_id}/sandbox-claims\x12\xf8\x01\n" +
 	"\x11ListSandboxClaims\x12'.kubernetes.v1.ListSandboxClaimsRequest\x1a(.kubernetes.v1.ListSandboxClaimsResponse\"\x8f\x01\x92\xf4\x18W\b\x03\x122\n" +
-	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x16hub.sandbox_claim.list\x1a\x03low\x82\xd3\xe4\x93\x02.\x12,/v1/namespaces/{namespace_id}/sandbox-claims\x12\xdf\x01\n" +
-	"\x12DeleteSandboxClaim\x12(.kubernetes.v1.DeleteSandboxClaimRequest\x1a).kubernetes.v1.DeleteSandboxClaimResponse\"t\x92\xf4\x18Q\b\x03\x12)\n" +
-	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x18hub.sandbox_claim.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x19*\x17/v1/sandbox-claims/{id}\x12\xd4\x01\n" +
+	"\x03use\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x16hub.sandbox_claim.list\x1a\x03low\x82\xd3\xe4\x93\x02.\x12,/v1/namespaces/{namespace_id}/sandbox-claims\x12\x87\x02\n" +
+	"\x12DeleteSandboxClaim\x12(.kubernetes.v1.DeleteSandboxClaimRequest\x1a).kubernetes.v1.DeleteSandboxClaimResponse\"\x9b\x01\x92\xf4\x18^\b\x03\x126\n" +
+	"\aoperate\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\"\b\x01\x12\x18hub.sandbox_claim.delete\x1a\x04high\x82\xd3\xe4\x93\x023*1/v1/namespaces/{namespace_id}/sandbox-claims/{id}\x12\xd4\x01\n" +
 	"\x10ListSandboxTools\x12&.kubernetes.v1.ListSandboxToolsRequest\x1a'.kubernetes.v1.ListSandboxToolsResponse\"o\x92\xf4\x18K\b\x03\x12&\n" +
 	"\x03use\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x16hub.sandbox.tools.list\x1a\x03low\x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/sandboxes/{id}/tools\x12\xdb\x01\n" +
 	"\x0fCallSandboxTool\x12%.kubernetes.v1.CallSandboxToolRequest\x1a&.kubernetes.v1.CallSandboxToolResponse\"y\x92\xf4\x18M\b\x03\x12&\n" +

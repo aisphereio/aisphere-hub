@@ -122,10 +122,10 @@ service SandboxService {
   }
 
   rpc DeleteWarmPool(DeleteWarmPoolRequest) returns (DeleteWarmPoolResponse) {
-    option (google.api.http) = { delete: "/v1/warm-pools/{id}" };
+    option (google.api.http) = { delete: "/v1/namespaces/{namespace_id}/warm-pools/{id}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "hub.warm_pool.delete" risk: "high" }
     };
   }
@@ -151,10 +151,10 @@ service SandboxService {
   }
 
   rpc DeleteSandboxClaim(DeleteSandboxClaimRequest) returns (DeleteSandboxClaimResponse) {
-    option (google.api.http) = { delete: "/v1/sandbox-claims/{id}" };
+    option (google.api.http) = { delete: "/v1/namespaces/{namespace_id}/sandbox-claims/{id}" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
-      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      authz: { action: "operate" resource: "k8s_namespace:{namespace_id}" audience: "hub-service" mode: CHECK_ONLY }
       audit: { enabled: true event: "hub.sandbox_claim.delete" risk: "high" }
     };
   }
@@ -468,8 +468,9 @@ message ListWarmPoolsResponse {
 }
 
 message DeleteWarmPoolRequest {
-  string id = 1 [(google.api.field_behavior) = REQUIRED];
-  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteWarmPoolResponse {
@@ -502,8 +503,9 @@ message ListSandboxClaimsResponse {
 }
 
 message DeleteSandboxClaimRequest {
-  string id = 1 [(google.api.field_behavior) = REQUIRED];
-  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  string namespace_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteSandboxClaimResponse {
