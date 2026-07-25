@@ -3240,7 +3240,7 @@
   },
   "info": {
     "title": "Aisphere Hub API",
-    "version": "0.1.0"
+    "version": "v1"
   },
   "paths": {
     "/v1/audit/records": {
