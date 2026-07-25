@@ -670,6 +670,19 @@ type NamespaceRepository interface {
 	// ListSharesBySyncStatus returns shares with a given sync_status for the
 	// reconciler.
 	ListSharesBySyncStatus(ctx context.Context, syncStatus string, limit int) ([]*NamespaceShare, error)
+
+	// ListNamespacesForReconcile returns non-deleted, remotely-created
+	// (kubernetes_uid != "") namespaces in lifecycle READY, ordered by
+	// last_sync_at ASC (least-recently-synced first) for the SandboxReconciler's
+	// fair round-robin. Postgres sorts NULL last under ASC, so namespaces that
+	// have never been synced surface once the caught-up tail is processed.
+	// Bounded by limit.
+	ListNamespacesForReconcile(ctx context.Context, limit int) ([]*Namespace, error)
+
+	// TouchNamespaceSync stamps last_sync_at without a CAS or status transition;
+	// it is a progress marker for the reconciler's fair round-robin so a failing
+	// namespace does not monopolize the scheduler.
+	TouchNamespaceSync(ctx context.Context, id string, at time.Time) error
 }
 
 // SandboxRepository is the persistence interface for Agent Sandbox control-

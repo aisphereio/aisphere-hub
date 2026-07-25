@@ -643,7 +643,15 @@ func (uc *SandboxUsecase) SyncSandboxes(ctx context.Context, principal authn.Pri
 	if !dec.Allowed {
 		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
 	}
+	return uc.syncSandboxesCore(ctx, namespaceID)
+}
 
+// syncSandboxesCore is the principal-free core of SyncSandboxes: load the
+// namespace/cluster, list remote Sandbox CRDs, diff against local rows, import
+// new ones (inheriting the namespace owner), update changed ones, and remove
+// local ones no longer present remotely. Extracted for the SandboxReconciler
+// (background workers run with system-level trust, mirroring VisibilityReconciler).
+func (uc *SandboxUsecase) syncSandboxesCore(ctx context.Context, namespaceID string) (imported, updated, removed int, err error) {
 	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
 	if err != nil {
 		return 0, 0, 0, err
@@ -894,7 +902,15 @@ func (uc *SandboxUsecase) SyncWarmPools(ctx context.Context, principal authn.Pri
 	if !dec.Allowed {
 		return 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
 	}
+	return uc.syncWarmPoolsCore(ctx, namespaceID)
+}
 
+// syncWarmPoolsCore is the principal-free core of SyncWarmPools: load the
+// namespace/cluster, list remote WarmPool CRDs, and drive Hub-side status from
+// observed readyReplicas. Extracted so the background SandboxReconciler can
+// converge namespaces without re-running authz (background workers run with
+// system-level trust, mirroring VisibilityReconciler).
+func (uc *SandboxUsecase) syncWarmPoolsCore(ctx context.Context, namespaceID string) (updated, removed int, err error) {
 	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
 	if err != nil {
 		return 0, 0, err
@@ -1205,7 +1221,16 @@ func (uc *SandboxUsecase) SyncSandboxClaims(ctx context.Context, principal authn
 	if !dec.Allowed {
 		return 0, 0, 0, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no operate permission on namespace")
 	}
+	return uc.syncSandboxClaimsCore(ctx, namespaceID)
+}
 
+// syncSandboxClaimsCore is the principal-free core of SyncSandboxClaims: load
+// the namespace/cluster, list remote SandboxClaim CRDs, drive claim status from
+// the Ready condition + allocated sandbox name, and ensure a Hub Sandbox row
+// exists for each delivered sandbox (back-linked to the claim). Extracted for
+// the SandboxReconciler (background workers run with system-level trust,
+// mirroring VisibilityReconciler).
+func (uc *SandboxUsecase) syncSandboxClaimsCore(ctx context.Context, namespaceID string) (updated, removed, sandboxesLinked int, err error) {
 	ns, err := uc.namespaces.GetNamespace(ctx, namespaceID)
 	if err != nil {
 		return 0, 0, 0, err

@@ -80,8 +80,13 @@ func wireKubernetesRuntime(
 	if sp, ok := resources.KubernetesClientPool.(biz.SandboxProvider); ok {
 		sandboxProvider = sp
 	}
+	// sandboxUC is hoisted out of the provider guard so the scheduler block
+	// below can register a background reconciler against it. It stays nil when
+	// no sandbox provider is wired (K8s disabled), and the reconciler is then
+	// skipped.
+	var sandboxUC *biz.SandboxUsecase
 	if sandboxProvider != nil {
-		sandboxUC := biz.NewSandboxUsecase(
+		sandboxUC = biz.NewSandboxUsecase(
 			sandboxRepo,
 			namespaceRepo,
 			clusterRepo,
@@ -164,6 +169,30 @@ func wireKubernetesRuntime(
 		}); err != nil {
 			_ = closeLocker()
 			return nil, fmt.Errorf("register credential cleanup: %w", err)
+		}
+
+		// Sandbox reconciler (plan PR8): converge SandboxClaim → WarmPool →
+		// Sandbox state from observed CRD status every Interval so a freshly
+		// created WarmPool/Claim reaches READY without an operator clicking the
+		// manual "sync" button. Skipped when no sandbox provider is wired.
+		if sandboxUC != nil {
+			sandboxReconciler := biz.NewSandboxReconciler(sandboxUC, namespaceRepo, logger, bc.Kubernetes.Reconcile.MaxScan)
+			if err := scheduler.Register(taskx.Job{
+				Name:       "k8s-sandbox-reconciler",
+				Schedule:   taskx.Every(interval),
+				Handler:    sandboxReconciler.Run,
+				RunOnStart: true,
+				Timeout:    3 * time.Minute,
+				Retry:      retry,
+				Lease: taskx.LeaseOptions{
+					Enabled: leaseEnabled,
+					Key:     "k8s-sandbox-reconciler",
+					TTL:     leaseTTL,
+				},
+			}); err != nil {
+				_ = closeLocker()
+				return nil, fmt.Errorf("register sandbox reconciler: %w", err)
+			}
 		}
 
 		runtime.scheduler = scheduler
