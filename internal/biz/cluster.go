@@ -331,6 +331,16 @@ type NamespaceShare struct {
 // CRD types never leak into these interfaces — the data layer translates them
 // to/from unstructured.Unstructured internally.
 
+// SandboxSkillRef names a published skill release to install into a sandbox.
+// Hub carries the declaration (on SandboxTemplate / Sandbox) and writes it to
+// the Sandbox CRD annotation aisphere.io/skills; the future Runtime / sidecar
+// reads that annotation and fetches each release (design §2.2: Hub = control
+// plane, Runtime = execution plane).
+type SandboxSkillRef struct {
+	Name    string // skill name, e.g. "ttt1"
+	Version string // SemVer, e.g. "1.4.2" or "v1.4.2"
+}
+
 // SandboxTemplateApplySpec is the biz-layer view of a SandboxTemplate CRD to
 // SSA-apply on a remote cluster. The data layer builds an
 // extensions.agents.x-k8s.io/v1beta1 SandboxTemplate from this.
@@ -367,6 +377,10 @@ type SandboxApplySpec struct {
 	ContainerCommand []string         // container command argv (optional)
 	OperatingMode   string            // "Running" or "Suspended" (default Running)
 	Labels          map[string]string // AISphere-managed labels
+	// SkillAnnotations carries the resolved skill declarations as CRD
+	// metadata.annotations (key "aisphere.io/skills" → JSON array of
+	// {name,version}). Nil/empty means no annotation is written.
+	SkillAnnotations map[string]string
 }
 
 // SandboxSyncResult is returned by ListSandboxes for each remote Sandbox CRD.
@@ -463,6 +477,7 @@ type SandboxTemplate struct {
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 	Revision            int64
+	Skills              []SandboxSkillRef // skills declared on the template
 }
 
 // Sandbox is the biz-layer view of a k8s_sandboxes row.
@@ -496,6 +511,7 @@ type Sandbox struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	Revision        int64
+	Skills          []SandboxSkillRef // resolved skill declarations (template + inline)
 }
 
 // WarmPool is the biz-layer view of a k8s_sandbox_warm_pools row.
