@@ -96,7 +96,7 @@ service SandboxService {
   // (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
   // transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
   rpc SuspendSandbox(SuspendSandboxRequest) returns (SuspendSandboxResponse) {
-    option (google.api.http) = { post: "/v1/sandboxes/{id}:suspend" };
+    option (google.api.http) = { post: "/v1/sandboxes/{id}/suspend" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
       authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
@@ -105,7 +105,7 @@ service SandboxService {
   }
 
   rpc ResumeSandbox(ResumeSandboxRequest) returns (ResumeSandboxResponse) {
-    option (google.api.http) = { post: "/v1/sandboxes/{id}:resume" };
+    option (google.api.http) = { post: "/v1/sandboxes/{id}/resume" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
       authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }

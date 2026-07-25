@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "77e0d0efa14e0941d1a2b5451f70ceeff5fad866",
-  "ref": "feat/sandbox-suspend-resume-pr9",
-  "sha256": "879745e7a1e683dcc9f84bd26a81e41aa9705c9bcc49fe6a0afeb0c348af2d97",
+  "git_sha": "2c6a36659fddf565511f1eda2f7e70fe1013aeae",
+  "ref": "fix/sandbox-suspend-resume-route-pr9",
+  "sha256": "01d73cbf79a4d75ba3e325534eef4db388d14d26bfe2305f6a374b4556b27169",
   "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }

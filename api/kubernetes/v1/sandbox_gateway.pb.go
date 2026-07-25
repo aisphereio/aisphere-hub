@@ -74,14 +74,14 @@ func SandboxServiceGatewayManifest() gatewayx.Manifest {
 			{
 				ID:       "sandbox.suspend.sandbox",
 				Method:   "POST",
-				Path:     "/v1/sandboxes/{id}:suspend",
+				Path:     "/v1/sandboxes/{id}/suspend",
 				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/SuspendSandbox"},
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
 				ID:       "sandbox.resume.sandbox",
 				Method:   "POST",
-				Path:     "/v1/sandboxes/{id}:resume",
+				Path:     "/v1/sandboxes/{id}/resume",
 				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/kubernetes.v1.SandboxService/ResumeSandbox"},
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},

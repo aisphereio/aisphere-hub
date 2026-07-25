@@ -4027,9 +4027,9 @@ const file_kubernetes_v1_sandbox_proto_rawDesc = "" +
 	"\rDeleteSandbox\x12#.kubernetes.v1.DeleteSandboxRequest\x1a$.kubernetes.v1.DeleteSandboxResponse\"i\x92\xf4\x18K\b\x03\x12)\n" +
 	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x12hub.sandbox.delete\x1a\x04high\x82\xd3\xe4\x93\x02\x14*\x12/v1/sandboxes/{id}\x12\xd3\x01\n" +
 	"\x0eSuspendSandbox\x12$.kubernetes.v1.SuspendSandboxRequest\x1a%.kubernetes.v1.SuspendSandboxResponse\"t\x92\xf4\x18N\b\x03\x12)\n" +
-	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x13hub.sandbox.suspend\x1a\x06medium\x82\xd3\xe4\x93\x02\x1c\"\x1a/v1/sandboxes/{id}:suspend\x12\xce\x01\n" +
+	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1f\b\x01\x12\x13hub.sandbox.suspend\x1a\x06medium\x82\xd3\xe4\x93\x02\x1c\"\x1a/v1/sandboxes/{id}/suspend\x12\xce\x01\n" +
 	"\rResumeSandbox\x12#.kubernetes.v1.ResumeSandboxRequest\x1a$.kubernetes.v1.ResumeSandboxResponse\"r\x92\xf4\x18M\b\x03\x12)\n" +
-	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x12hub.sandbox.resume\x1a\x06medium\x82\xd3\xe4\x93\x02\x1b\"\x19/v1/sandboxes/{id}:resume\x12\xed\x01\n" +
+	"\x06manage\x12\x10k8s_sandbox:{id}\x1a\vhub-service \x01\x1a\x1e\b\x01\x12\x12hub.sandbox.resume\x1a\x06medium\x82\xd3\xe4\x93\x02\x1b\"\x19/v1/sandboxes/{id}/resume\x12\xed\x01\n" +
 	"\rSyncSandboxes\x12#.kubernetes.v1.SyncSandboxesRequest\x1a$.kubernetes.v1.SyncSandboxesResponse\"\x90\x01\x92\xf4\x18X\b\x03\x126\n" +
 	"\aoperate\x12\x1ck8s_namespace:{namespace_id}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x10hub.sandbox.sync\x1a\x06medium\x82\xd3\xe4\x93\x02.\",/v1/namespaces/{namespace_id}/sandboxes:sync\x12\xf8\x01\n" +
 	"\x0eCreateWarmPool\x12$.kubernetes.v1.CreateWarmPoolRequest\x1a%.kubernetes.v1.CreateWarmPoolResponse\"\x98\x01\x92\xf4\x18V\b\x03\x122\n" +
