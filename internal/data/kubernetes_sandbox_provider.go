@@ -162,9 +162,10 @@ func (p *k8sClientPool) ApplySandbox(ctx context.Context, clusterID string, loca
 		"apiVersion": "agents.x-k8s.io/v1beta1",
 		"kind":       "Sandbox",
 		"metadata": map[string]interface{}{
-			"name":      spec.Name,
-			"namespace": spec.Namespace,
-			"labels":    spec.Labels,
+			"name":        spec.Name,
+			"namespace":   spec.Namespace,
+			"labels":      spec.Labels,
+			"annotations": spec.SkillAnnotations,
 		},
 		"spec": specFields,
 	}}
