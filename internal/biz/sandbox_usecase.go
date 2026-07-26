@@ -458,6 +458,13 @@ func (uc *SandboxUsecase) CreateSandbox(ctx context.Context, principal authn.Pri
 	}
 	s.Lifecycle = SandboxLifecycleCreating
 	s.Revision = 1
+	// Stamp a Hub-managed label selecting this sandbox's pod (propagated to the
+	// pod by the operator) so SetSandboxNetworkMode's CiliumNetworkPolicy
+	// endpointSelector can target exactly this sandbox.
+	if s.Labels == nil {
+		s.Labels = map[string]string{}
+	}
+	s.Labels["aisphere.io/sandbox-id"] = s.ID
 
 	// Step 5: INSERT row.
 	created, err := uc.sandboxes.CreateSandbox(ctx, s)
@@ -724,6 +731,70 @@ func (uc *SandboxUsecase) setSandboxOperatingMode(ctx context.Context, principal
 	updated, err := uc.sandboxes.UpdateSandboxStatus(ctx, id, toLifecycle, "", map[string]any{
 		"operating_mode": toMode,
 		"last_sync_at":   time.Now().UTC(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+// SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a
+// CiliumNetworkPolicy egressDeny (Cilium's deny rules override the operator's
+// per-template allow policy, which standard NetworkPolicy cannot — Cilium
+// unions allow rules); ONLINE removes it. The Hub row's network_mode is
+// stamped to match. Authz: `manage` on k8s_sandbox.
+func (uc *SandboxUsecase) SetSandboxNetworkMode(ctx context.Context, principal authn.Principal, id string, expectedRevision int64, mode string) (*Sandbox, error) {
+	if mode != SandboxNetworkModeOffline && mode != SandboxNetworkModeOnline {
+		return nil, fmt.Errorf("%w: network_mode must be OFFLINE or ONLINE", ErrClusterInvalidArgument)
+	}
+	s, err := uc.sandboxes.GetSandbox(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if s.Lifecycle == SandboxLifecycleDeleted || s.Lifecycle == SandboxLifecycleTerminating {
+		return nil, fmt.Errorf("%w: cannot change network mode on %s sandbox", ErrClusterInvalidArgument, s.Lifecycle)
+	}
+	if s.Revision != expectedRevision {
+		return nil, fmt.Errorf("%w: sandbox revision mismatch", ErrClusterRevisionConflict)
+	}
+	subject, err := canonicalSubject(principal)
+	if err != nil {
+		return nil, err
+	}
+	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
+		Subject:    subject,
+		Resource:   sandboxResource(s.ID),
+		Permission: "manage",
+		OrgID:      principal.OrgID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !dec.Allowed {
+		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no manage permission on sandbox")
+	}
+
+	ns, err := uc.namespaces.GetNamespace(ctx, s.NamespaceID)
+	if err != nil {
+		return nil, err
+	}
+	cluster, err := uc.clusters.GetCluster(ctx, s.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	locator := CredentialLocator{ClusterID: cluster.ID, CredentialRef: cluster.CredentialRef, CredentialRevision: cluster.CredentialRevision}
+	if err := uc.provider.ApplySandboxEgressPolicy(ctx, s.ClusterID, locator, ns.KubeName, s.KubernetesName, s.ID, mode); err != nil {
+		uc.log.WithContext(ctx).Warn("remote sandbox egress policy apply failed; network_mode unchanged",
+			logx.String("sandbox_id", id),
+			logx.String("kube_name", s.KubernetesName),
+			logx.String("mode", mode),
+			logx.Err(err))
+		return nil, fmt.Errorf("%w: set network mode: %v", ErrClusterFailedPrecondition, err)
+	}
+
+	updated, err := uc.sandboxes.UpdateSandboxStatus(ctx, id, s.Lifecycle, "", map[string]any{
+		"network_mode":  mode,
+		"last_sync_at":  time.Now().UTC(),
 	})
 	if err != nil {
 		return nil, err

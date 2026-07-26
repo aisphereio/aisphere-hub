@@ -29,6 +29,7 @@ const (
 	SandboxService_DeleteSandbox_FullMethodName         = "/kubernetes.v1.SandboxService/DeleteSandbox"
 	SandboxService_SuspendSandbox_FullMethodName        = "/kubernetes.v1.SandboxService/SuspendSandbox"
 	SandboxService_ResumeSandbox_FullMethodName         = "/kubernetes.v1.SandboxService/ResumeSandbox"
+	SandboxService_SetSandboxNetworkMode_FullMethodName = "/kubernetes.v1.SandboxService/SetSandboxNetworkMode"
 	SandboxService_SyncSandboxes_FullMethodName         = "/kubernetes.v1.SandboxService/SyncSandboxes"
 	SandboxService_CreateWarmPool_FullMethodName        = "/kubernetes.v1.SandboxService/CreateWarmPool"
 	SandboxService_ListWarmPools_FullMethodName         = "/kubernetes.v1.SandboxService/ListWarmPools"
@@ -65,6 +66,11 @@ type SandboxServiceClient interface {
 	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
 	SuspendSandbox(ctx context.Context, in *SuspendSandboxRequest, opts ...grpc.CallOption) (*SuspendSandboxResponse, error)
 	ResumeSandbox(ctx context.Context, in *ResumeSandboxRequest, opts ...grpc.CallOption) (*ResumeSandboxResponse, error)
+	// SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a
+	// CiliumNetworkPolicy egressDeny (overrides the operator's per-template allow
+	// policy, which standard NetworkPolicy cannot — Cilium unions allow rules);
+	// ONLINE removes it. The Hub row's network_mode is stamped to match.
+	SetSandboxNetworkMode(ctx context.Context, in *SetSandboxNetworkModeRequest, opts ...grpc.CallOption) (*SetSandboxNetworkModeResponse, error)
 	SyncSandboxes(ctx context.Context, in *SyncSandboxesRequest, opts ...grpc.CallOption) (*SyncSandboxesResponse, error)
 	CreateWarmPool(ctx context.Context, in *CreateWarmPoolRequest, opts ...grpc.CallOption) (*CreateWarmPoolResponse, error)
 	ListWarmPools(ctx context.Context, in *ListWarmPoolsRequest, opts ...grpc.CallOption) (*ListWarmPoolsResponse, error)
@@ -191,6 +197,16 @@ func (c *sandboxServiceClient) ResumeSandbox(ctx context.Context, in *ResumeSand
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResumeSandboxResponse)
 	err := c.cc.Invoke(ctx, SandboxService_ResumeSandbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sandboxServiceClient) SetSandboxNetworkMode(ctx context.Context, in *SetSandboxNetworkModeRequest, opts ...grpc.CallOption) (*SetSandboxNetworkModeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetSandboxNetworkModeResponse)
+	err := c.cc.Invoke(ctx, SandboxService_SetSandboxNetworkMode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -330,6 +346,11 @@ type SandboxServiceServer interface {
 	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
 	SuspendSandbox(context.Context, *SuspendSandboxRequest) (*SuspendSandboxResponse, error)
 	ResumeSandbox(context.Context, *ResumeSandboxRequest) (*ResumeSandboxResponse, error)
+	// SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a
+	// CiliumNetworkPolicy egressDeny (overrides the operator's per-template allow
+	// policy, which standard NetworkPolicy cannot — Cilium unions allow rules);
+	// ONLINE removes it. The Hub row's network_mode is stamped to match.
+	SetSandboxNetworkMode(context.Context, *SetSandboxNetworkModeRequest) (*SetSandboxNetworkModeResponse, error)
 	SyncSandboxes(context.Context, *SyncSandboxesRequest) (*SyncSandboxesResponse, error)
 	CreateWarmPool(context.Context, *CreateWarmPoolRequest) (*CreateWarmPoolResponse, error)
 	ListWarmPools(context.Context, *ListWarmPoolsRequest) (*ListWarmPoolsResponse, error)
@@ -391,6 +412,9 @@ func (UnimplementedSandboxServiceServer) SuspendSandbox(context.Context, *Suspen
 }
 func (UnimplementedSandboxServiceServer) ResumeSandbox(context.Context, *ResumeSandboxRequest) (*ResumeSandboxResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResumeSandbox not implemented")
+}
+func (UnimplementedSandboxServiceServer) SetSandboxNetworkMode(context.Context, *SetSandboxNetworkModeRequest) (*SetSandboxNetworkModeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetSandboxNetworkMode not implemented")
 }
 func (UnimplementedSandboxServiceServer) SyncSandboxes(context.Context, *SyncSandboxesRequest) (*SyncSandboxesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SyncSandboxes not implemented")
@@ -622,6 +646,24 @@ func _SandboxService_ResumeSandbox_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SandboxServiceServer).ResumeSandbox(ctx, req.(*ResumeSandboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SandboxService_SetSandboxNetworkMode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetSandboxNetworkModeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SandboxServiceServer).SetSandboxNetworkMode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SandboxService_SetSandboxNetworkMode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SandboxServiceServer).SetSandboxNetworkMode(ctx, req.(*SetSandboxNetworkModeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -870,6 +912,10 @@ var SandboxService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResumeSandbox",
 			Handler:    _SandboxService_ResumeSandbox_Handler,
+		},
+		{
+			MethodName: "SetSandboxNetworkMode",
+			Handler:    _SandboxService_SetSandboxNetworkMode_Handler,
 		},
 		{
 			MethodName: "SyncSandboxes",

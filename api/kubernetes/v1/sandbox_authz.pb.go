@@ -129,6 +129,17 @@ var SandboxServiceAuthzRules = authz.Rules{
 		AuditEvent: "hub.sandbox.resume",
 		AuditRisk:  "medium",
 	},
+	"/kubernetes.v1.SandboxService/SetSandboxNetworkMode": {
+		Service:    "kubernetes.v1.SandboxService",
+		Method:     "SetSandboxNetworkMode",
+		FullMethod: "/kubernetes.v1.SandboxService/SetSandboxNetworkMode",
+		Action:     "manage",
+		Resource:   "k8s_sandbox:{id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.sandbox.set_network_mode",
+		AuditRisk:  "medium",
+	},
 	"/kubernetes.v1.SandboxService/SyncSandboxes": {
 		Service:    "kubernetes.v1.SandboxService",
 		Method:     "SyncSandboxes",
@@ -366,6 +377,17 @@ const SandboxServiceAuthzManifestJSON = `{
     },
     {
       "service": "kubernetes.v1.SandboxService",
+      "method": "SetSandboxNetworkMode",
+      "full_method": "/kubernetes.v1.SandboxService/SetSandboxNetworkMode",
+      "action": "manage",
+      "resource": "k8s_sandbox:{id}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.sandbox.set_network_mode",
+      "audit_risk": "medium"
+    },
+    {
+      "service": "kubernetes.v1.SandboxService",
       "method": "SyncSandboxes",
       "full_method": "/kubernetes.v1.SandboxService/SyncSandboxes",
       "action": "operate",
@@ -572,6 +594,8 @@ func _SandboxServiceNormalizeOperation(operation string) string {
 		return "/kubernetes.v1.SandboxService/SuspendSandbox"
 	case "ResumeSandbox", "kubernetes.v1.SandboxService/ResumeSandbox":
 		return "/kubernetes.v1.SandboxService/ResumeSandbox"
+	case "SetSandboxNetworkMode", "kubernetes.v1.SandboxService/SetSandboxNetworkMode":
+		return "/kubernetes.v1.SandboxService/SetSandboxNetworkMode"
 	case "SyncSandboxes", "kubernetes.v1.SandboxService/SyncSandboxes":
 		return "/kubernetes.v1.SandboxService/SyncSandboxes"
 	case "CreateWarmPool", "kubernetes.v1.SandboxService/CreateWarmPool":
@@ -999,6 +1023,45 @@ func (c *SandboxServiceSecureClient) ResumeSandbox(ctx context.Context, in *Resu
 		}
 	}
 	return c.raw.ResumeSandbox(ctx, in, opts...)
+}
+
+func (c *SandboxServiceSecureClient) SetSandboxNetworkMode(ctx context.Context, in *SetSandboxNetworkModeRequest, opts ...grpc.CallOption) (*SetSandboxNetworkModeResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SandboxServiceAuthzRules["/kubernetes.v1.SandboxService/SetSandboxNetworkMode"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SandboxServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.SetSandboxNetworkMode(ctx, in, opts...)
 }
 
 func (c *SandboxServiceSecureClient) SyncSandboxes(ctx context.Context, in *SyncSandboxesRequest, opts ...grpc.CallOption) (*SyncSandboxesResponse, error) {

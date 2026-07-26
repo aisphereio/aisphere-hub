@@ -152,6 +152,14 @@ func (s *SandboxService) ResumeSandbox(ctx context.Context, req *kubernetesv1.Re
 	return &kubernetesv1.ResumeSandboxResponse{Sandbox: sandboxToProto(resumed)}, nil
 }
 
+func (s *SandboxService) SetSandboxNetworkMode(ctx context.Context, req *kubernetesv1.SetSandboxNetworkModeRequest) (*kubernetesv1.SetSandboxNetworkModeResponse, error) {
+	updated, err := s.uc.SetSandboxNetworkMode(ctx, principalFromContext(ctx), req.GetId(), req.GetExpectedRevision(), req.GetNetworkMode().String())
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesv1.SetSandboxNetworkModeResponse{Sandbox: sandboxToProto(updated)}, nil
+}
+
 func (s *SandboxService) SyncSandboxes(ctx context.Context, req *kubernetesv1.SyncSandboxesRequest) (*kubernetesv1.SyncSandboxesResponse, error) {
 	imported, updated, removed, err := s.uc.SyncSandboxes(ctx, principalFromContext(ctx), req.GetNamespaceId())
 	if err != nil {
