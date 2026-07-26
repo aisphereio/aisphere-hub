@@ -117,6 +117,15 @@ type SandboxToolSchema struct {
 	Name        string
 	Description string
 	InputSchema string // JSON Schema
+
+	// Privileged tools require a Tool-level authorization check beyond sandbox.use
+	// (agent-identity-delegation-design §3.1). When Privileged is set, Permission
+	// names the SpiceDB permission to check and ResourceFromInput extracts the
+	// target resource ref from the tool's JSON input. Non-privileged (workspace.*)
+	// tools leave these zero and are gated only by sandbox.use.
+	Privileged        bool
+	Permission        string                                              // e.g. "fetch", "publish", "view", "edit"
+	ResourceFromInput func(inputJSON string) (AuthzObjectRef, error)     // e.g. {Type:"skill",ID:"ttt1"}
 }
 
 // sandboxToolRegistry is the V1 fixed tool surface exposed by every sandbox
@@ -157,7 +166,55 @@ var sandboxToolRegistry = []SandboxToolSchema{
 		Name:        "skill.fetch",
 		Description: "Fetch a published skill release into the sandbox workspace. Resolves <name>@<version> to a release tag and shallow-clones its snapshot.",
 		InputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name, e.g. \"ttt1\"."},"version":{"type":"string","description":"SemVer, e.g. \"1.4.2\" or \"v1.4.2\"."},"dest":{"type":"string","default":"./skills/{name}","description":"Destination directory relative to the workspace root."}},"required":["name","version"],"additionalProperties":false}`,
+		// Privileged: fetch = view on skill (see agent-identity-delegation-design §3.2, §5.1).
+		Privileged:        true,
+		Permission:        "fetch",
+		ResourceFromInput: skillResourceFromInput,
 	},
+	{
+		Name:        "skill.publish",
+		Description: "Publish a skill release from the sandbox workspace: validate SKILL.md, CAS-check the remote, tag and push an annotated release. Irreversible (creates a public release).",
+		InputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"version":{"type":"string","description":"SemVer to publish, e.g. \"1.4.2\"."},"notes":{"type":"string","description":"Release notes for the tag message."}},"required":["name","version"],"additionalProperties":false}`,
+		// Privileged: publish on skill (agent-identity-delegation-design §5.2).
+		Privileged:        true,
+		Permission:        "publish",
+		ResourceFromInput: skillResourceFromInput,
+	},
+	{
+		Name:        "git.pull",
+		Description: "Pull the latest draft of a skill repo into the sandbox workspace.",
+		InputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"ref":{"type":"string","default":"refs/heads/main","description":"Git ref to pull."}},"required":["name"],"additionalProperties":false}`,
+		// Privileged: view on skill (read = pull).
+		Privileged:        true,
+		Permission:        "view",
+		ResourceFromInput: skillResourceFromInput,
+	},
+	{
+		Name:        "git.push",
+		Description: "Push local skill draft commits to the Hub git remote.",
+		InputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"ref":{"type":"string","default":"refs/heads/main","description":"Git ref to push."}},"required":["name"],"additionalProperties":false}`,
+		// Privileged: edit on skill (write = push).
+		Privileged:        true,
+		Permission:        "edit",
+		ResourceFromInput: skillResourceFromInput,
+	},
+}
+
+// skillResourceFromInput extracts the skill name from a privileged tool's JSON
+// input and returns the SpiceDB resource ref. It is shared by
+// skill.fetch / skill.publish / git.pull / git.push.
+func skillResourceFromInput(inputJSON string) (AuthzObjectRef, error) {
+	var in struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal([]byte(inputJSON), &in); err != nil {
+		return AuthzObjectRef{}, fmt.Errorf("parse tool input: %w", err)
+	}
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		return AuthzObjectRef{}, fmt.Errorf("tool input missing required field: name")
+	}
+	return AuthzObjectRef{Type: "skill", ID: name}, nil
 }
 
 // ===================== SandboxTemplate operations =====================
@@ -1734,15 +1791,43 @@ func (uc *SandboxUsecase) CallSandboxTool(ctx context.Context, principal authn.P
 	}
 
 	// Validate the tool name against the registry.
+	var toolSchema *SandboxToolSchema
 	known := false
-	for _, t := range sandboxToolRegistry {
-		if t.Name == tool {
+	for i := range sandboxToolRegistry {
+		if sandboxToolRegistry[i].Name == tool {
 			known = true
+			toolSchema = &sandboxToolRegistry[i]
 			break
 		}
 	}
 	if !known {
 		return false, "", "", fmt.Errorf("%w: unknown tool %q", ErrClusterInvalidArgument, tool)
+	}
+
+	// Privileged tools (skill.fetch/publish, git.pull/push) require a Tool-level
+	// authorization check beyond sandbox.use: the acting subject must hold the
+	// tool's Permission on the target resource extracted from the input
+	// (agent-identity-delegation-design §3.1). This gate is enforced now so it
+	// is in place when the Runtime executor lands; non-privileged workspace.*
+	// tools are gated only by the sandbox.use check above.
+	if toolSchema.Privileged {
+		resourceRef, rerr := toolSchema.ResourceFromInput(inputJSON)
+		if rerr != nil {
+			return false, "", "", fmt.Errorf("%w: %v", ErrClusterInvalidArgument, rerr)
+		}
+		pdec, perr := uc.rels.Check(ctx, AuthzCheckRequest{
+			Subject:    subject,
+			Resource:   resourceRef,
+			Permission: toolSchema.Permission,
+			OrgID:      principal.OrgID,
+		})
+		if perr != nil {
+			return false, "", "", perr
+		}
+		if !pdec.Allowed {
+			return false, "", "", errorx.Forbidden(errorx.Code("PERMISSION_DENIED"),
+				fmt.Sprintf("forbidden: no %s permission on %s:%s", toolSchema.Permission, resourceRef.Type, resourceRef.ID))
+		}
 	}
 
 	// Tool execution is not yet wired to a runtime executor (design §11,
