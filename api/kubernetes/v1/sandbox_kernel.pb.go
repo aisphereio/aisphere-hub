@@ -162,6 +162,17 @@ var SandboxServiceKernelAuthzRules = authz.Rules{
 		AuditEvent: "hub.sandbox.resume",
 		AuditRisk:  "medium",
 	},
+	"/kubernetes.v1.SandboxService/SetSandboxNetworkMode": {
+		Service:    "kubernetes.v1.SandboxService",
+		Method:     "SetSandboxNetworkMode",
+		FullMethod: "/kubernetes.v1.SandboxService/SetSandboxNetworkMode",
+		Action:     "manage",
+		Resource:   "k8s_sandbox:{id}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.sandbox.set_network_mode",
+		AuditRisk:  "medium",
+	},
 	"/kubernetes.v1.SandboxService/SyncSandboxes": {
 		Service:    "kubernetes.v1.SandboxService",
 		Method:     "SyncSandboxes",
@@ -440,6 +451,21 @@ func SandboxServiceKernelRequestInfoResolver(ctx context.Context, operation stri
 		info.Labels["audit_event"] = "hub.sandbox.resume"
 		info.Labels["audit_risk"] = "medium"
 		return info.Normalize(), true, nil
+	case "/kubernetes.v1.SandboxService/SetSandboxNetworkMode":
+		info := requestx.Info{
+			Service:       "kubernetes.v1.SandboxService",
+			Method:        "SetSandboxNetworkMode",
+			Operation:     "/kubernetes.v1.SandboxService/SetSandboxNetworkMode",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "manage",
+			Resource:      "k8s_sandbox:{id}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.sandbox.set_network_mode"
+		info.Labels["audit_risk"] = "medium"
+		return info.Normalize(), true, nil
 	case "/kubernetes.v1.SandboxService/SyncSandboxes":
 		info := requestx.Info{
 			Service:       "kubernetes.v1.SandboxService",
@@ -655,6 +681,8 @@ func _SandboxServiceKernelNormalizeOperation(operation string) string {
 		return "/kubernetes.v1.SandboxService/SuspendSandbox"
 	case "ResumeSandbox", "kubernetes.v1.SandboxService/ResumeSandbox":
 		return "/kubernetes.v1.SandboxService/ResumeSandbox"
+	case "SetSandboxNetworkMode", "kubernetes.v1.SandboxService/SetSandboxNetworkMode":
+		return "/kubernetes.v1.SandboxService/SetSandboxNetworkMode"
 	case "SyncSandboxes", "kubernetes.v1.SandboxService/SyncSandboxes":
 		return "/kubernetes.v1.SandboxService/SyncSandboxes"
 	case "CreateWarmPool", "kubernetes.v1.SandboxService/CreateWarmPool":

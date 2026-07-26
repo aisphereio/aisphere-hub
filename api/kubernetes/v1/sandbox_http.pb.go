@@ -34,6 +34,7 @@ const OperationSandboxServiceListSandboxTools = "/kubernetes.v1.SandboxService/L
 const OperationSandboxServiceListSandboxes = "/kubernetes.v1.SandboxService/ListSandboxes"
 const OperationSandboxServiceListWarmPools = "/kubernetes.v1.SandboxService/ListWarmPools"
 const OperationSandboxServiceResumeSandbox = "/kubernetes.v1.SandboxService/ResumeSandbox"
+const OperationSandboxServiceSetSandboxNetworkMode = "/kubernetes.v1.SandboxService/SetSandboxNetworkMode"
 const OperationSandboxServiceSuspendSandbox = "/kubernetes.v1.SandboxService/SuspendSandbox"
 const OperationSandboxServiceSyncSandboxClaims = "/kubernetes.v1.SandboxService/SyncSandboxClaims"
 const OperationSandboxServiceSyncSandboxes = "/kubernetes.v1.SandboxService/SyncSandboxes"
@@ -57,6 +58,11 @@ type SandboxServiceHTTPServer interface {
 	ListSandboxes(context.Context, *ListSandboxesRequest) (*ListSandboxesResponse, error)
 	ListWarmPools(context.Context, *ListWarmPoolsRequest) (*ListWarmPoolsResponse, error)
 	ResumeSandbox(context.Context, *ResumeSandboxRequest) (*ResumeSandboxResponse, error)
+	// SetSandboxNetworkMode SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a
+	// CiliumNetworkPolicy egressDeny (overrides the operator's per-template allow
+	// policy, which standard NetworkPolicy cannot — Cilium unions allow rules);
+	// ONLINE removes it. The Hub row's network_mode is stamped to match.
+	SetSandboxNetworkMode(context.Context, *SetSandboxNetworkModeRequest) (*SetSandboxNetworkModeResponse, error)
 	// SuspendSandbox SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
 	// (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
 	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
@@ -97,6 +103,7 @@ func RegisterSandboxServiceHTTPServer(s *http.Server, srv SandboxServiceHTTPServ
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/sandboxes:sync", _SandboxService_SyncSandboxes0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools", _SandboxService_CreateWarmPool0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/namespaces/{namespace_id}/warm-pools:sync", _SandboxService_SyncWarmPools0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/sandboxes/{id}/network-mode", _SandboxService_SetSandboxNetworkMode0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/sandboxes/{id}/resume", _SandboxService_ResumeSandbox0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/sandboxes/{id}/suspend", _SandboxService_SuspendSandbox0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/sandboxes/{id}/tools:call", _SandboxService_CallSandboxTool0_HTTP_Handler(srv))
@@ -552,6 +559,31 @@ func _SandboxService_SyncWarmPools0_HTTP_Handler(srv SandboxServiceHTTPServer) f
 	}
 }
 
+func _SandboxService_SetSandboxNetworkMode0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SetSandboxNetworkModeRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSandboxServiceSetSandboxNetworkMode)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SetSandboxNetworkMode(ctx, req.(*SetSandboxNetworkModeRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*SetSandboxNetworkModeResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _SandboxService_ResumeSandbox0_HTTP_Handler(srv SandboxServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ResumeSandboxRequest
@@ -645,6 +677,11 @@ type SandboxServiceHTTPClient interface {
 	ListSandboxes(ctx context.Context, req *ListSandboxesRequest, opts ...http.CallOption) (rsp *ListSandboxesResponse, err error)
 	ListWarmPools(ctx context.Context, req *ListWarmPoolsRequest, opts ...http.CallOption) (rsp *ListWarmPoolsResponse, err error)
 	ResumeSandbox(ctx context.Context, req *ResumeSandboxRequest, opts ...http.CallOption) (rsp *ResumeSandboxResponse, err error)
+	// SetSandboxNetworkMode SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a
+	// CiliumNetworkPolicy egressDeny (overrides the operator's per-template allow
+	// policy, which standard NetworkPolicy cannot — Cilium unions allow rules);
+	// ONLINE removes it. The Hub row's network_mode is stamped to match.
+	SetSandboxNetworkMode(ctx context.Context, req *SetSandboxNetworkModeRequest, opts ...http.CallOption) (rsp *SetSandboxNetworkModeResponse, err error)
 	// SuspendSandbox SuspendSandbox stops a READY sandbox's pod while retaining its PVC/state
 	// (CRD spec.operatingMode -> "Suspended" via SSA patch). The sandbox row
 	// transitions lifecycle READY -> SUSPENDED. ResumeSandbox reverses it.
@@ -944,6 +981,27 @@ func (c *SandboxServiceHTTPClientImpl) ResumeSandbox(ctx context.Context, in *Re
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// SetSandboxNetworkMode SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a
+// CiliumNetworkPolicy egressDeny (overrides the operator's per-template allow
+// policy, which standard NetworkPolicy cannot — Cilium unions allow rules);
+// ONLINE removes it. The Hub row's network_mode is stamped to match.
+func (c *SandboxServiceHTTPClientImpl) SetSandboxNetworkMode(ctx context.Context, in *SetSandboxNetworkModeRequest, opts ...http.CallOption) (*SetSandboxNetworkModeResponse, error) {
+	var out SetSandboxNetworkModeResponse
+	pattern := "/v1/sandboxes/{id}/network-mode"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationSandboxServiceSetSandboxNetworkMode),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -113,6 +113,19 @@ service SandboxService {
     };
   }
 
+  // SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a
+  // CiliumNetworkPolicy egressDeny (overrides the operator's per-template allow
+  // policy, which standard NetworkPolicy cannot — Cilium unions allow rules);
+  // ONLINE removes it. The Hub row's network_mode is stamped to match.
+  rpc SetSandboxNetworkMode(SetSandboxNetworkModeRequest) returns (SetSandboxNetworkModeResponse) {
+    option (google.api.http) = { post: "/v1/sandboxes/{id}/network-mode" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "k8s_sandbox:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.sandbox.set_network_mode" risk: "medium" }
+    };
+  }
+
   rpc SyncSandboxes(SyncSandboxesRequest) returns (SyncSandboxesResponse) {
     option (google.api.http) = { post: "/v1/namespaces/{namespace_id}/sandboxes:sync" };
     option (aisphere.access.v1.policy) = {
@@ -518,6 +531,16 @@ message ResumeSandboxRequest {
 }
 
 message ResumeSandboxResponse {
+  Sandbox sandbox = 1;
+}
+
+message SetSandboxNetworkModeRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 expected_revision = 2 [(google.api.field_behavior) = REQUIRED];
+  SandboxNetworkMode network_mode = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SetSandboxNetworkModeResponse {
   Sandbox sandbox = 1;
 }
 

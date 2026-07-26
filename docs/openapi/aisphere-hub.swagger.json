@@ -358,6 +358,22 @@
       ],
       "type": "object"
     },
+    "SandboxServiceSetSandboxNetworkModeBody": {
+      "properties": {
+        "expectedRevision": {
+          "format": "int64",
+          "type": "string"
+        },
+        "networkMode": {
+          "$ref": "#/definitions/v1SandboxNetworkMode"
+        }
+      },
+      "required": [
+        "expectedRevision",
+        "networkMode"
+      ],
+      "type": "object"
+    },
     "SkillReleaseServiceCreateSkillReleaseBody": {
       "properties": {
         "expectedCommitSha": {
@@ -2696,6 +2712,14 @@
         "token": {
           "description": "Bearer token. Hub stores it AEAD-encrypted; never returned.",
           "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1SetSandboxNetworkModeResponse": {
+      "properties": {
+        "sandbox": {
+          "$ref": "#/definitions/v1Sandbox"
         }
       },
       "type": "object"
@@ -5428,6 +5452,45 @@
             }
           }
         },
+        "tags": [
+          "SandboxService"
+        ]
+      }
+    },
+    "/v1/sandboxes/{id}/network-mode": {
+      "post": {
+        "operationId": "SandboxService_SetSandboxNetworkMode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SandboxServiceSetSandboxNetworkModeBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetSandboxNetworkModeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "SetSandboxNetworkMode toggles a sandbox's network egress. OFFLINE applies a\nCiliumNetworkPolicy egressDeny (overrides the operator's per-template allow\npolicy, which standard NetworkPolicy cannot — Cilium unions allow rules);\nONLINE removes it. The Hub row's network_mode is stamped to match.",
         "tags": [
           "SandboxService"
         ]

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,6 +34,15 @@ var (
 	}
 	sandboxClaimGVR = schema.GroupVersionResource{
 		Group: "extensions.agents.x-k8s.io", Version: "v1beta1", Resource: "sandboxclaims",
+	}
+	// ciliumNetworkPolicyGVR is the CiliumNetworkPolicy CRD (cilium.io/v2). Hub
+	// uses CiliumNetworkPolicy egressDeny rather than a standard NetworkPolicy
+	// because Cilium unions allow rules across policies — a default-deny
+	// NetworkPolicy cannot override the operator's per-template allow policy.
+	// Cilium's egressDeny rules take precedence over allow rules, so OFFLINE
+	// egress isolation actually takes effect.
+	ciliumNetworkPolicyGVR = schema.GroupVersionResource{
+		Group: "cilium.io", Version: "v2", Resource: "ciliumnetworkpolicies",
 	}
 )
 
@@ -247,6 +257,83 @@ func (p *k8sClientPool) GetSandboxStatus(ctx context.Context, clusterID string, 
 		OperatingMode: getNestedString(obj.Object, "spec", "operatingMode"),
 	}
 	return status, nil
+}
+
+// ApplySandboxEgressPolicy toggles a sandbox's network egress. OFFLINE applies
+// a CiliumNetworkPolicy with egressDeny to all entities (Cilium's deny rules
+// override the operator's per-template allow policy, which standard
+// NetworkPolicy cannot — Cilium unions allow rules); ONLINE removes the
+// policy. The policy selects the sandbox's pod by the aisphere.io/sandbox-id
+// label Hub stamps on ApplySandbox. Idempotent: re-applying OFFLINE is a no-op
+// SSA patch; deleting a non-existent ONLINE policy is a silent success.
+func (p *k8sClientPool) ApplySandboxEgressPolicy(ctx context.Context, clusterID string, locator biz.CredentialLocator, namespace, sandboxKubeName, sandboxID, mode string) error {
+	client, err := p.getOrBuild(ctx, clusterID, locator, kubernetesx.Credential{})
+	if err != nil {
+		return err
+	}
+	// NetworkPolicy names must be DNS-1123 labels (≤63 chars). The sandbox
+	// kube name is already a DNS-1123 label; prefix + truncate to stay safe.
+	policyName := truncateDNS1123("aisphere-egress-deny-" + sandboxKubeName)
+
+	if mode != biz.SandboxNetworkModeOffline {
+		// ONLINE: remove the deny policy so egress reverts to the operator's
+		// per-template allow policy. A missing policy (already online) is not
+		// an error.
+		dyn := client.Dynamic()
+		if dyn == nil {
+			return errors.New("dynamic client not available")
+		}
+		err := dyn.Resource(ciliumNetworkPolicyGVR).Namespace(namespace).Delete(ctx, policyName, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("remove sandbox egress policy: %w", err)
+		}
+		return nil
+	}
+
+	// OFFLINE: apply a CiliumNetworkPolicy with egressDeny to all entities.
+	// endpointSelector matches the sandbox's pod by the Hub-managed
+	// aisphere.io/sandbox-id label (stamped on ApplySandbox and propagated to
+	// the pod by the operator). egressDeny takes precedence over any allow
+	// policy (including the operator's per-template one), so the pod loses all
+	// egress — including DNS — while the policy is in place.
+	obj := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "cilium.io/v2",
+		"kind":       "CiliumNetworkPolicy",
+		"metadata": map[string]interface{}{
+			"name":      policyName,
+			"namespace": namespace,
+			"labels": map[string]interface{}{
+				"aisphere.io/managed-by":    "hub",
+				"aisphere.io/sandbox-id":    sandboxID,
+				"aisphere.io/sandbox-kube":  sandboxKubeName,
+			},
+		},
+		"spec": map[string]interface{}{
+			"endpointSelector": map[string]interface{}{
+				"matchLabels": map[string]interface{}{
+					"aisphere.io/sandbox-id": sandboxID,
+				},
+			},
+			"egressDeny": []interface{}{
+				map[string]interface{}{
+					"toEntities": []interface{}{"all"},
+				},
+			},
+		},
+	}}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "cilium.io", Version: "v2", Kind: "CiliumNetworkPolicy",
+	})
+	return client.ApplyUnstructured(ctx, obj, kubernetesx.ApplyOptions{FieldManager: "aisphere-hub-sandbox-net"})
+}
+
+// truncateDNS1123 truncates s to 63 characters (DNS-1123 label limit). Callers
+// must pass an already-sanitized prefix+name; this only guards length.
+func truncateDNS1123(s string) string {
+	if len(s) <= 63 {
+		return s
+	}
+	return s[:63]
 }
 
 // ---- WarmPool operations ----

@@ -581,6 +581,14 @@ type SandboxProvider interface {
 	ListSandboxes(ctx context.Context, clusterID string, locator CredentialLocator, namespace string) ([]SandboxSyncResult, error)
 	GetSandboxStatus(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) (SandboxRuntimeStatus, error)
 
+	// ApplySandboxEgressPolicy toggles a sandbox's network egress. OFFLINE
+	// applies a CiliumNetworkPolicy with egressDeny to all entities (Cilium's
+	// deny rules override the operator's per-template allow policy, which
+	// standard NetworkPolicy cannot — Cilium unions allow rules); ONLINE
+	// removes the policy. The policy selects the sandbox's pod by the
+	// aisphere.io/sandbox-id label Hub stamps on ApplySandbox.
+	ApplySandboxEgressPolicy(ctx context.Context, clusterID string, locator CredentialLocator, namespace, sandboxKubeName, sandboxID, mode string) error
+
 	// WarmPool operations.
 	ApplyWarmPool(ctx context.Context, clusterID string, locator CredentialLocator, spec WarmPoolApplySpec) error
 	DeleteWarmPool(ctx context.Context, clusterID string, locator CredentialLocator, namespace, kubeName string) error
