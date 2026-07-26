@@ -153,7 +153,7 @@ func (s *SandboxService) ResumeSandbox(ctx context.Context, req *kubernetesv1.Re
 }
 
 func (s *SandboxService) SetSandboxNetworkMode(ctx context.Context, req *kubernetesv1.SetSandboxNetworkModeRequest) (*kubernetesv1.SetSandboxNetworkModeResponse, error) {
-	updated, err := s.uc.SetSandboxNetworkMode(ctx, principalFromContext(ctx), req.GetId(), req.GetExpectedRevision(), req.GetNetworkMode().String())
+	updated, err := s.uc.SetSandboxNetworkMode(ctx, principalFromContext(ctx), req.GetId(), req.GetExpectedRevision(), protoToSandboxNetworkMode(req.GetNetworkMode()))
 	if err != nil {
 		return nil, err
 	}
@@ -445,6 +445,20 @@ func sandboxNetworkModeToProto(v string) kubernetesv1.SandboxNetworkMode {
 		return kubernetesv1.SandboxNetworkMode_SANDBOX_NETWORK_MODE_ONLINE
 	}
 	return kubernetesv1.SandboxNetworkMode_SANDBOX_NETWORK_MODE_UNSPECIFIED
+}
+
+// protoToSandboxNetworkMode maps the proto enum to the biz string constant.
+// We avoid enum.String() here because it returns the prefixed name
+// ("SANDBOX_NETWORK_MODE_ONLINE"), which the usecase validates against the
+// unprefixed biz constants ("ONLINE"/"OFFLINE").
+func protoToSandboxNetworkMode(v kubernetesv1.SandboxNetworkMode) string {
+	switch v {
+	case kubernetesv1.SandboxNetworkMode_SANDBOX_NETWORK_MODE_OFFLINE:
+		return biz.SandboxNetworkModeOffline
+	case kubernetesv1.SandboxNetworkMode_SANDBOX_NETWORK_MODE_ONLINE:
+		return biz.SandboxNetworkModeOnline
+	}
+	return ""
 }
 
 func sandboxOperatingModeToProto(v string) kubernetesv1.SandboxOperatingMode {
