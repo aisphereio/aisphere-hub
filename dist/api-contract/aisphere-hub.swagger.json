@@ -509,6 +509,59 @@
       ],
       "type": "object"
     },
+    "ToolServiceResolveToolBody": {
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "runtimeId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ToolServiceUpdateToolBody": {
+      "properties": {
+        "commitMsg": {
+          "type": "string"
+        },
+        "definition": {
+          "$ref": "#/definitions/v1ToolDefinition"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "title": "new version label for this update",
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition"
+      ],
+      "type": "object"
+    },
     "protobufAny": {
       "additionalProperties": {},
       "properties": {
@@ -1096,6 +1149,59 @@
       },
       "type": "object"
     },
+    "v1CreateToolRequest": {
+      "properties": {
+        "commitMsg": {
+          "type": "string"
+        },
+        "definition": {
+          "$ref": "#/definitions/v1ToolDefinition"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "title": "initial version label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition"
+      ],
+      "type": "object"
+    },
+    "v1CreateToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
+        }
+      },
+      "type": "object"
+    },
     "v1CreateWarmPoolResponse": {
       "properties": {
         "warmPool": {
@@ -1195,6 +1301,14 @@
       "type": "object"
     },
     "v1DeleteSkillShareResponse": {
+      "type": "object"
+    },
+    "v1DeleteToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
+        }
+      },
       "type": "object"
     },
     "v1DeleteWarmPoolResponse": {
@@ -1412,6 +1526,14 @@
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
+        }
+      },
+      "type": "object"
+    },
+    "v1GetToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
         }
       },
       "type": "object"
@@ -1698,6 +1820,36 @@
         "skills": {
           "items": {
             "$ref": "#/definitions/v1Skill",
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "v1ListToolFailuresResponse": {
+      "properties": {
+        "failures": {
+          "items": {
+            "$ref": "#/definitions/v1ToolFailureRecord",
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ListToolsResponse": {
+      "properties": {
+        "nextPageToken": {
+          "type": "string"
+        },
+        "tools": {
+          "items": {
+            "$ref": "#/definitions/v1Tool",
             "type": "object"
           },
           "type": "array"
@@ -2288,6 +2440,27 @@
       "properties": {
         "release": {
           "$ref": "#/definitions/v1SkillRelease"
+        }
+      },
+      "type": "object"
+    },
+    "v1ResolveToolResponse": {
+      "properties": {
+        "generatedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "runtimeId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
+        },
+        "tool": {
+          "$ref": "#/definitions/v1ToolVersionRecord"
         }
       },
       "type": "object"
@@ -3061,6 +3234,343 @@
       },
       "type": "object"
     },
+    "v1Tool": {
+      "description": "Tool is the catalog record for an invocable agent capability. Tool content\nis versioned (ToolVersionRecord); latest_version points at the active one.",
+      "properties": {
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "latestVersion": {
+          "type": "string"
+        },
+        "object": {
+          "title": "\"tool:{id}\" SpiceDB object ref",
+          "type": "string"
+        },
+        "ownerSubject": {
+          "title": "\"{type}:{id}\" of the owner",
+          "type": "string"
+        },
+        "scope": {
+          "title": "system | project | private",
+          "type": "string"
+        },
+        "status": {
+          "title": "active | disabled | builtin",
+          "type": "string"
+        },
+        "updateTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "versions": {
+          "additionalProperties": {
+            "$ref": "#/definitions/v1ToolVersionRecord"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolDefinition": {
+      "description": "ToolDefinition is the full specification a Runtime reads to register and\nenforce a tool. Complex/nested structures (input_schema, output_schema,\nconfig, metadata, headers, env) are carried as JSON strings because proto\ncannot express arbitrary JSON Schema; the service layer marshals/unmarshals.",
+      "properties": {
+        "execution": {
+          "$ref": "#/definitions/v1ToolExecutionDefinition"
+        },
+        "inputSchema": {
+          "title": "JSON Schema (string)",
+          "type": "string"
+        },
+        "metadata": {
+          "title": "arbitrary JSON (string)",
+          "type": "string"
+        },
+        "outputSchema": {
+          "title": "JSON Schema (string)",
+          "type": "string"
+        },
+        "retry": {
+          "$ref": "#/definitions/v1ToolRetryPolicy"
+        },
+        "runtime": {
+          "$ref": "#/definitions/v1ToolRuntimeDefinition"
+        },
+        "timeoutMillis": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolExecutionDefinition": {
+      "description": "ToolExecutionDefinition describes where and how the tool executes, plus the\nsandboxing policy (filesystem/network/resources/capabilities). placement\ndetermines the governance path: \"runtime\" tools go through the Runtime MCP\nserver (authz + credential托管); \"sandbox\" tools execute locally in the\nagent pod (no privileged access).",
+      "properties": {
+        "allowHosts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "capabilities": {
+          "description": "capabilities map this tool to SpiceDB permissions on its target resource\n(e.g. [\"skill.view\"] for git.pull). The Runtime uses these to run the\nTool-level authz gate (agent-identity-delegation-design §3.1).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "command": {
+          "type": "string"
+        },
+        "denyHosts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "filesystem": {
+          "title": "none | readonly | workspace",
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "mounts": {
+          "items": {
+            "$ref": "#/definitions/v1ToolMount",
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "network": {
+          "title": "none | restricted | egress",
+          "type": "string"
+        },
+        "placement": {
+          "title": "sandbox | runtime | remote | hub",
+          "type": "string"
+        },
+        "resources": {
+          "$ref": "#/definitions/v1ToolResources"
+        },
+        "runner": {
+          "title": "builtin | mcp | stdio | http | container | wasm | python | binary",
+          "type": "string"
+        },
+        "secretRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workingDir": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolFailureRecord": {
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "errorCode": {
+          "type": "string"
+        },
+        "errorMessage": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "runtimeId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "toolId": {
+          "type": "string"
+        },
+        "toolVersion": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolMount": {
+      "properties": {
+        "mode": {
+          "title": "ro | rw",
+          "type": "string"
+        },
+        "mountPath": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolResources": {
+      "properties": {
+        "cpu": {
+          "type": "string"
+        },
+        "maxOutputBytes": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "memory": {
+          "type": "string"
+        },
+        "timeoutMillis": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolRetryPolicy": {
+      "properties": {
+        "backoffMillis": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "maxAttempts": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "retryOnErrorCodes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolRuntimeDefinition": {
+      "description": "ToolRuntimeDefinition describes how the tool is invoked at the protocol level.",
+      "properties": {
+        "config": {
+          "title": "arbitrary JSON (string)",
+          "type": "string"
+        },
+        "credentialRef": {
+          "title": "secret:// ref for outbound auth",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "entryPoint": {
+          "title": "entry symbol (type=function)",
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "method": {
+          "title": "HTTP method (type=http|openapi)",
+          "type": "string"
+        },
+        "name": {
+          "title": "function/tool name on the runtime",
+          "type": "string"
+        },
+        "package": {
+          "title": "package path (type=function)",
+          "type": "string"
+        },
+        "server": {
+          "title": "MCP server name (type=mcp)",
+          "type": "string"
+        },
+        "type": {
+          "title": "builtin | mcp | openapi | http | function",
+          "type": "string"
+        },
+        "url": {
+          "title": "endpoint (type=http|openapi)",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolVersionRecord": {
+      "description": "ToolVersionRecord is an immutable snapshot of a Tool definition at a version.",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "commitMsg": {
+          "type": "string"
+        },
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "definition": {
+          "$ref": "#/definitions/v1ToolDefinition"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "v1UpdateClusterResponse": {
       "properties": {
         "cluster": {
@@ -3134,6 +3644,14 @@
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
+        }
+      },
+      "type": "object"
+    },
+    "v1UpdateToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
         }
       },
       "type": "object"
@@ -6823,6 +7341,284 @@
           "SkillService"
         ]
       }
+    },
+    "/v1/tools": {
+      "get": {
+        "operationId": "ToolService_ListTools",
+        "parameters": [
+          {
+            "format": "int32",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by scope",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by runtime.type",
+            "in": "query",
+            "name": "runtimeType",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListToolsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      },
+      "post": {
+        "operationId": "ToolService_CreateTool",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateToolRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Tool"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      }
+    },
+    "/v1/tools/{id}": {
+      "delete": {
+        "operationId": "ToolService_DeleteTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteToolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      },
+      "get": {
+        "operationId": "ToolService_GetTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "optional; defaults to latest_version",
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Tool"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      },
+      "put": {
+        "operationId": "ToolService_UpdateTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ToolServiceUpdateToolBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Tool"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      }
+    },
+    "/v1/tools/{id}/failures": {
+      "get": {
+        "operationId": "ToolService_ListToolFailures",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "int32",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListToolFailuresResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "ListToolFailures returns recent execution failures for a Tool. Not yet\nimplemented (depends on the audit/failure store extension).",
+        "tags": [
+          "ToolService"
+        ]
+      }
+    },
+    "/v1/tools/{id}:resolve": {
+      "post": {
+        "operationId": "ToolService_ResolveTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ToolServiceResolveToolBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResolveToolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "ResolveTool projects a Tool version into a runtime snapshot the AISphere\nRuntime consumes when registering the tool as an MCP callable. Not yet\nimplemented (depends on the Runtime execution plane).",
+        "tags": [
+          "ToolService"
+        ]
+      }
     }
   },
   "produces": [
@@ -6856,6 +7652,9 @@
     },
     {
       "name": "SkillReleaseService"
+    },
+    {
+      "name": "ToolService"
     }
   ]
 }

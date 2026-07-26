@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "f8aefab9ea1676f758b1fef2a3eafaa3c5b9354b",
-  "ref": "feat/sandbox-network-mode-pr10",
-  "sha256": "b9f1f6b0739911f3eb9b3e0fd5c80933a5a3d3563967d45a4452f1d3ed0aa4a2",
+  "git_sha": "d56f6289783f5dc742e05528496dd65d80bfde55",
+  "ref": "feat/agent-identity-delegation",
+  "sha256": "345d1082190e44e1bc43071f288740381922d24ba1a32cb4fd2dd6afcdec1f9e",
   "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }
