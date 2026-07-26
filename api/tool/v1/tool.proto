@@ -1,0 +1,298 @@
+syntax = "proto3";
+
+package tool.v1;
+
+import "aisphere/access/v1/access.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/tool/v1;toolv1";
+
+// ToolService manages the Tool catalog — the source of truth for capabilities
+// an agent can invoke via tool calling / MCP. Each Tool carries a versioned
+// ToolDefinition (runtime type + execution policy + JSON-Schema) that the
+// AISphere Runtime fetches to register MCP tools dynamically.
+//
+// Authz uses the SpiceDB `tool` definition (owner/editor/executor/viewer,
+// manage/edit/execute/view permissions; parent tool_space). See
+// aisphere-iam/configs/spicedb/aisphere.schema.zed.
+service ToolService {
+  rpc ListTools(ListToolsRequest) returns (ListToolsResponse) {
+    option (google.api.http) = { get: "/v1/tools" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      gateway: { upstream_service: "hub-service" }
+      audit: { enabled: true event: "hub.tool.list" risk: "low" }
+      reason: "handler batch-checks view permission for every concrete tool"
+    };
+  }
+
+  rpc GetTool(GetToolRequest) returns (GetToolResponse) {
+    option (google.api.http) = { get: "/v1/tools/{id}" response_body: "tool" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "tool:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.tool.get" risk: "low" }
+    };
+  }
+
+  rpc CreateTool(CreateToolRequest) returns (CreateToolResponse) {
+    option (google.api.http) = { post: "/v1/tools" body: "*" response_body: "tool" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "tool_space:{org_id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.tool.create" risk: "medium" }
+    };
+  }
+
+  rpc UpdateTool(UpdateToolRequest) returns (UpdateToolResponse) {
+    option (google.api.http) = { put: "/v1/tools/{id}" body: "*" response_body: "tool" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "tool:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.tool.update" risk: "medium" }
+    };
+  }
+
+  rpc DeleteTool(DeleteToolRequest) returns (DeleteToolResponse) {
+    option (google.api.http) = { delete: "/v1/tools/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "tool:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.tool.delete" risk: "high" }
+    };
+  }
+
+  // ResolveTool projects a Tool version into a runtime snapshot the AISphere
+  // Runtime consumes when registering the tool as an MCP callable. Not yet
+  // implemented (depends on the Runtime execution plane).
+  rpc ResolveTool(ResolveToolRequest) returns (ResolveToolResponse) {
+    option (google.api.http) = { post: "/v1/tools/{id}:resolve" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "execute" resource: "tool:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.tool.resolve" risk: "low" }
+    };
+  }
+
+  // ListToolFailures returns recent execution failures for a Tool. Not yet
+  // implemented (depends on the audit/failure store extension).
+  rpc ListToolFailures(ListToolFailuresRequest) returns (ListToolFailuresResponse) {
+    option (google.api.http) = { get: "/v1/tools/{id}/failures" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "tool:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.tool.failures.list" risk: "low" }
+    };
+  }
+}
+
+// Tool is the catalog record for an invocable agent capability. Tool content
+// is versioned (ToolVersionRecord); latest_version points at the active one.
+message Tool {
+  string id = 1;
+  string display_name = 2;
+  string description = 3;
+  string status = 4;            // active | disabled | builtin
+  string scope = 5;             // system | project | private
+  map<string, string> labels = 6;
+  string object = 7;            // "tool:{id}" SpiceDB object ref
+  string owner_subject = 8;     // "{type}:{id}" of the owner
+  string latest_version = 9;
+  map<string, ToolVersionRecord> versions = 10;
+  google.protobuf.Timestamp create_time = 11;
+  google.protobuf.Timestamp update_time = 12;
+}
+
+// ToolVersionRecord is an immutable snapshot of a Tool definition at a version.
+message ToolVersionRecord {
+  string version = 1;
+  string revision = 2;
+  string sha256 = 3;
+  string author = 4;
+  string commit_msg = 5;
+  google.protobuf.Timestamp create_time = 6;
+  ToolDefinition definition = 7;
+}
+
+// ToolDefinition is the full specification a Runtime reads to register and
+// enforce a tool. Complex/nested structures (input_schema, output_schema,
+// config, metadata, headers, env) are carried as JSON strings because proto
+// cannot express arbitrary JSON Schema; the service layer marshals/unmarshals.
+message ToolDefinition {
+  ToolRuntimeDefinition runtime = 1;
+  ToolExecutionDefinition execution = 2;
+  string input_schema = 3;   // JSON Schema (string)
+  string output_schema = 4;  // JSON Schema (string)
+  int32 timeout_millis = 5;
+  ToolRetryPolicy retry = 6;
+  string metadata = 7;       // arbitrary JSON (string)
+}
+
+// ToolRuntimeDefinition describes how the tool is invoked at the protocol level.
+message ToolRuntimeDefinition {
+  string type = 1;           // builtin | mcp | openapi | http | function
+  string server = 2;         // MCP server name (type=mcp)
+  string name = 3;           // function/tool name on the runtime
+  string url = 4;            // endpoint (type=http|openapi)
+  string method = 5;         // HTTP method (type=http|openapi)
+  string package = 6;        // package path (type=function)
+  string entry_point = 7;    // entry symbol (type=function)
+  map<string, string> headers = 8;
+  string config = 9;         // arbitrary JSON (string)
+  string credential_ref = 10; // secret:// ref for outbound auth
+  string description = 11;
+}
+
+// ToolExecutionDefinition describes where and how the tool executes, plus the
+// sandboxing policy (filesystem/network/resources/capabilities). placement
+// determines the governance path: "runtime" tools go through the Runtime MCP
+// server (authz + credential托管); "sandbox" tools execute locally in the
+// agent pod (no privileged access).
+message ToolExecutionDefinition {
+  string placement = 1;      // sandbox | runtime | remote | hub
+  string runner = 2;         // builtin | mcp | stdio | http | container | wasm | python | binary
+  string image = 3;
+  string command = 4;
+  repeated string args = 5;
+  string working_dir = 6;
+  string filesystem = 7;     // none | readonly | workspace
+  string network = 8;        // none | restricted | egress
+  repeated ToolMount mounts = 9;
+  map<string, string> env = 10;
+  repeated string secret_refs = 11;
+  repeated string allow_hosts = 12;
+  repeated string deny_hosts = 13;
+  ToolResources resources = 14;
+  // capabilities map this tool to SpiceDB permissions on its target resource
+  // (e.g. ["skill.view"] for git.pull). The Runtime uses these to run the
+  // Tool-level authz gate (agent-identity-delegation-design §3.1).
+  repeated string capabilities = 15;
+}
+
+message ToolMount {
+  string name = 1;
+  string ref = 2;
+  string mount_path = 3;
+  string mode = 4;           // ro | rw
+}
+
+message ToolResources {
+  string cpu = 1;
+  string memory = 2;
+  int32 timeout_millis = 3;
+  int32 max_output_bytes = 4;
+}
+
+message ToolRetryPolicy {
+  int32 max_attempts = 1;
+  int32 backoff_millis = 2;
+  repeated string retry_on_error_codes = 3;
+}
+
+message ListToolsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string query = 3;
+  string scope = 4;          // filter by scope
+  string status = 5;         // filter by status
+  string runtime_type = 6;   // filter by runtime.type
+}
+
+message ListToolsResponse {
+  repeated Tool tools = 1;
+  string next_page_token = 2;
+}
+
+message GetToolRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;        // optional; defaults to latest_version
+}
+
+message GetToolResponse {
+  Tool tool = 1;
+}
+
+message CreateToolRequest {
+  string id = 1;
+  string display_name = 2;
+  string description = 3;
+  string status = 4;
+  string scope = 5;
+  map<string, string> labels = 6;
+  string version = 7;        // initial version label
+  string commit_msg = 8;
+  ToolDefinition definition = 9 [(google.api.field_behavior) = REQUIRED];
+  string org_id = 10;
+  string project_id = 11;
+}
+
+message CreateToolResponse {
+  Tool tool = 1;
+}
+
+message UpdateToolRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2;
+  string description = 3;
+  string status = 4;
+  string scope = 5;
+  map<string, string> labels = 6;
+  string version = 7;        // new version label for this update
+  string commit_msg = 8;
+  ToolDefinition definition = 9 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateToolResponse {
+  Tool tool = 1;
+}
+
+message DeleteToolRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteToolResponse {
+  Tool tool = 1;
+}
+
+message ResolveToolRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string runtime_id = 2;
+  string session_id = 3;
+  string version = 4;
+  string label = 5;
+}
+
+message ResolveToolResponse {
+  string snapshot_id = 1;
+  string runtime_id = 2;
+  string session_id = 3;
+  google.protobuf.Timestamp generated_at = 4;
+  ToolVersionRecord tool = 5;
+}
+
+message ListToolFailuresRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ToolFailureRecord {
+  string id = 1;
+  string tool_id = 2;
+  string tool_version = 3;
+  string agent_id = 4;
+  string runtime_id = 5;
+  string session_id = 6;
+  string run_id = 7;
+  string trace_id = 8;
+  string error_code = 9;
+  string error_message = 10;
+  google.protobuf.Timestamp create_time = 11;
+}
+
+message ListToolFailuresResponse {
+  repeated ToolFailureRecord failures = 1;
+  string next_page_token = 2;
+}

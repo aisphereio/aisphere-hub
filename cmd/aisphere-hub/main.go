@@ -148,6 +148,17 @@ func main() {
 	fileUsecase := biz.NewFileUsecase(gitEngine, authzUsecase)
 	fileService := service.NewFileService(fileUsecase)
 
+	// Tool catalog: the source of truth for agent-invocable capabilities. The
+	// Runtime MCP server fetches Tool definitions to register MCP tools
+	// dynamically. Builtin tools (workspace.*, skill.fetch/publish, git.*) are
+	// seeded at startup so the catalog is never empty.
+	toolRepo := data.NewToolRepo(resources)
+	toolUsecase := biz.NewToolUsecase(toolRepo, authzUsecase)
+	toolService := service.NewToolService(toolUsecase)
+	if err := biz.SeedBuiltinTools(bootstrapCtx, toolRepo); err != nil {
+		logger.Warn("builtin tool seed failed; catalog may be incomplete", logx.Err(err))
+	}
+
 	// Repair durable owner relationships through IAM's runtime authorization API.
 	if err := data.BootstrapAuthzRelationships(bootstrapCtx, resources, logger); err != nil {
 		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
@@ -181,6 +192,7 @@ func main() {
 		k8sRuntime.namespaceService,
 		k8sRuntime.sandboxService,
 		fileService,
+		toolService,
 	)
 	grpcServer := server.NewGRPCServer(
 		bc.Server,
@@ -195,6 +207,7 @@ func main() {
 		k8sRuntime.namespaceService,
 		k8sRuntime.sandboxService,
 		fileService,
+		toolService,
 	)
 
 	opts := []kernel.Option{
