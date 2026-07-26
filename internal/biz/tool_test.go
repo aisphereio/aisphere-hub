@@ -86,9 +86,10 @@ func TestSeedBuiltinTools_PrivilegedToolsHaveCapability(t *testing.T) {
 	}{
 		{"workspace.read", "", "sandbox"},
 		{"skill.fetch", "skill:view", "runtime"},
+		{"skill.pull", "skill:view", "runtime"},
+		{"skill.push", "skill:edit", "runtime"},
+		{"skill.tag", "skill:publish", "runtime"},
 		{"skill.publish", "skill:publish", "runtime"},
-		{"git.pull", "skill:view", "runtime"},
-		{"git.push", "skill:edit", "runtime"},
 	}
 	for _, c := range cases {
 		t.Run(c.id, func(t *testing.T) {

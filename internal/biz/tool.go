@@ -442,24 +442,41 @@ var builtinToolSeeds = []builtinToolSeed{
 		inputSchema: `{"type":"object","properties":{"url":{"type":"string","format":"uri"}},"required":["url"],"additionalProperties":false}`, placement: "sandbox" },
 	{ id: "skill.fetch", displayName: "Skill Fetch", description: "Fetch a published skill release into the sandbox workspace. Resolves <name>@<version> to a release tag and shallow-clones its snapshot.",
 		inputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name, e.g. \"ttt1\"."},"version":{"type":"string","description":"SemVer, e.g. \"1.4.2\" or \"v1.4.2\"."},"dest":{"type":"string","default":"./skills/{name}","description":"Destination directory relative to the workspace root."}},"required":["name","version"],"additionalProperties":false}`, placement: "runtime", capability: "skill:view" },
-	{ id: "skill.publish", displayName: "Skill Publish", description: "Publish a skill release from the sandbox workspace: validate SKILL.md, CAS-check the remote, tag and push an annotated release. Irreversible (creates a public release).",
-		inputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"version":{"type":"string","description":"SemVer to publish, e.g. \"1.4.2\"."},"notes":{"type":"string","description":"Release notes for the tag message."}},"required":["name","version"],"additionalProperties":false}`, placement: "runtime", capability: "skill:publish" },
-	{ id: "git.pull", displayName: "Git Pull", description: "Pull the latest draft of a skill repo into the sandbox workspace.",
+	{ id: "skill.pull", displayName: "Skill Pull", description: "Pull the latest draft (main branch) of a skill repo into the sandbox workspace for editing.",
 		inputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"ref":{"type":"string","default":"refs/heads/main","description":"Git ref to pull."}},"required":["name"],"additionalProperties":false}`, placement: "runtime", capability: "skill:view" },
-	{ id: "git.push", displayName: "Git Push", description: "Push local skill draft commits to the Hub git remote.",
+	{ id: "skill.push", displayName: "Skill Push", description: "Push local skill draft commits to the Hub git remote (updates the main branch draft).",
 		inputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"ref":{"type":"string","default":"refs/heads/main","description":"Git ref to push."}},"required":["name"],"additionalProperties":false}`, placement: "runtime", capability: "skill:edit" },
+	{ id: "skill.tag", displayName: "Skill Tag", description: "Create an annotated release tag on a commit without pushing. Validates SKILL.md at the target commit. The tag message carries AISphere-Source-Ref and AISphere-Publisher-ID. Use skill.publish to tag and push in one step.",
+		inputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"version":{"type":"string","description":"SemVer to tag, e.g. \"1.4.2\"."},"commitSha":{"type":"string","description":"The commit SHA to tag. Defaults to the current HEAD of the pulled draft."},"notes":{"type":"string","description":"Release notes for the tag message."}},"required":["name","version"],"additionalProperties":false}`, placement: "runtime", capability: "skill:publish" },
+	{ id: "skill.publish", displayName: "Skill Publish", description: "Publish a skill release: validate SKILL.md, create an annotated release tag, and push it to the Hub git remote. Irreversible (creates a public release). Equivalent to skill.tag + push.",
+		inputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name."},"version":{"type":"string","description":"SemVer to publish, e.g. \"1.4.2\"."},"commitSha":{"type":"string","description":"The commit SHA to tag. Defaults to the current HEAD of the pulled draft."},"notes":{"type":"string","description":"Release notes for the tag message."}},"required":["name","version"],"additionalProperties":false}`, placement: "runtime", capability: "skill:publish" },
+}
+
+// deprecatedBuiltinToolIDs lists builtin tool IDs that were renamed or removed.
+// SeedBuiltinTools soft-deletes any lingering rows so the catalog does not
+// accumulate stale entries across versions.
+var deprecatedBuiltinToolIDs = []string{
+	"git.pull", // renamed to skill.pull
+	"git.push", // renamed to skill.push
 }
 
 // SeedBuiltinTools idempotently upserts the builtin tool surface into the
 // catalog. It is called at Hub startup. Builtin tools have scope=system,
 // status=builtin, owner=system, and no SpiceDB relationships (they are
 // universally readable; per-call authorization happens in the Runtime
-// Tool-level gate using the capability field).
+// Tool-level gate using the capability field). Renamed/removed builtin IDs
+// are soft-deleted so stale rows do not linger.
 func SeedBuiltinTools(ctx context.Context, repo ToolRepository) error {
 	for _, s := range builtinToolSeeds {
 		t := builtinSeedToTool(s)
 		if _, err := repo.UpsertBuiltin(ctx, t); err != nil {
 			return fmt.Errorf("seed builtin tool %q: %w", s.id, err)
+		}
+	}
+	for _, id := range deprecatedBuiltinToolIDs {
+		// Best-effort soft-delete; a missing row is not an error.
+		if err := repo.Delete(ctx, id); err != nil && !errors.Is(err, ErrToolNotFound) {
+			return fmt.Errorf("deprecate builtin tool %q: %w", id, err)
 		}
 	}
 	return nil
