@@ -56,10 +56,12 @@ type ModelProfileServiceClient interface {
 	// credential_ref (never a plain-text key), capabilities and limits. Runtime
 	// resolves the actual credential via its CredentialProvider.
 	ResolveModelProfile(ctx context.Context, in *ResolveModelProfileRequest, opts ...grpc.CallOption) (*ResolveModelProfileResponse, error)
-	// TestModelProfile probes a model endpoint with a minimal request. Not yet
-	// implemented (depends on a model gateway / Runtime dialer); returns
-	// UNAVAILABLE. The audit event is recorded even on the stub so test attempts
-	// are traceable.
+	// TestModelProfile probes the upstream model endpoint with a minimal
+	// request built from api_format. Hub never holds plain-text credentials:
+	// only env:// secret refs are resolved locally (from the hub process
+	// environment); other refs probe without auth, so a 401/403 still proves
+	// reachability and is reported via http_status. The audit event is recorded
+	// so test attempts are traceable.
 	TestModelProfile(ctx context.Context, in *TestModelProfileRequest, opts ...grpc.CallOption) (*TestModelProfileResponse, error)
 }
 
@@ -169,10 +171,12 @@ type ModelProfileServiceServer interface {
 	// credential_ref (never a plain-text key), capabilities and limits. Runtime
 	// resolves the actual credential via its CredentialProvider.
 	ResolveModelProfile(context.Context, *ResolveModelProfileRequest) (*ResolveModelProfileResponse, error)
-	// TestModelProfile probes a model endpoint with a minimal request. Not yet
-	// implemented (depends on a model gateway / Runtime dialer); returns
-	// UNAVAILABLE. The audit event is recorded even on the stub so test attempts
-	// are traceable.
+	// TestModelProfile probes the upstream model endpoint with a minimal
+	// request built from api_format. Hub never holds plain-text credentials:
+	// only env:// secret refs are resolved locally (from the hub process
+	// environment); other refs probe without auth, so a 401/403 still proves
+	// reachability and is reported via http_status. The audit event is recorded
+	// so test attempts are traceable.
 	TestModelProfile(context.Context, *TestModelProfileRequest) (*TestModelProfileResponse, error)
 	mustEmbedUnimplementedModelProfileServiceServer()
 }
