@@ -362,7 +362,12 @@ func (uc *ModelProfileUsecase) CreateModelProfile(ctx context.Context, principal
 		_ = uc.profiles.Delete(ctx, p.ID)
 		return nil, fmt.Errorf("model profile create: grant owner: %w", err)
 	}
-	if err := uc.rels.GrantParent(ctx, modelProfileResource(p.ID), AuthzSubjectRef{Type: "zone", ID: principal.OrgID}); err != nil {
+	// GrantParent writes model_profile#parent@project:{orgID}. The schema
+	// parent relation is project; we use orgID as the project subject id
+	// because IAM project IDs carry "/" (rejected by SpiceDB objectIds).
+	// The parent relationship is metadata for inheritance; create-time authz
+	// uses an independent zone.manage_skills check above, not parent->write.
+	if err := uc.rels.GrantParent(ctx, modelProfileResource(p.ID), AuthzSubjectRef{Type: "project", ID: principal.OrgID}); err != nil {
 		_ = uc.profiles.Delete(ctx, p.ID)
 		return nil, fmt.Errorf("model profile create: grant parent: %w", err)
 	}

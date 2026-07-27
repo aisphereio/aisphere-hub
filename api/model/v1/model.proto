@@ -48,7 +48,7 @@ service ModelProfileService {
       exposure: AUTHENTICATED
       gateway: { upstream_service: "hub-service" }
       audit: { enabled: true event: "hub.model.create" risk: "medium" }
-      reason: "handler checks manage_skills on zone:{org_id} using principal identity (model_profile.parent is zone; project IDs carry '/' which SpiceDB rejects)"
+      reason: "handler checks manage_skills on zone:{org_id} using principal identity (independent check; model_profile.parent is project but IAM project IDs carry '/' so parent inheritance is metadata-only)"
     };
   }
 
