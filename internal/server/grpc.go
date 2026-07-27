@@ -5,7 +5,9 @@ import (
 	authnv1 "github.com/aisphereio/aisphere-hub/api/authn/v1"
 	authzv1 "github.com/aisphereio/aisphere-hub/api/authz/v1"
 	kubernetesv1 "github.com/aisphereio/aisphere-hub/api/kubernetes/v1"
+	modelv1 "github.com/aisphereio/aisphere-hub/api/model/v1"
 	skillv1 "github.com/aisphereio/aisphere-hub/api/skill/v1"
+	toolv1 "github.com/aisphereio/aisphere-hub/api/tool/v1"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
 	"github.com/aisphereio/aisphere-hub/internal/service"
@@ -24,7 +26,7 @@ import (
 // The 302 redirect routes (/v1/authn/login, /v1/authn/logout) are
 // HTTP-only by design (gRPC clients are SPAs/SDKs that should consume
 // the JSON RPCs directly), so they do not have gRPC equivalents.
-func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, sandboxSvc *service.SandboxService, fileSvc *service.FileService) *kgrpc.Server {
+func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, sandboxSvc *service.SandboxService, fileSvc *service.FileService, toolSvc *service.ToolService, modelProfileSvc *service.ModelProfileService) *kgrpc.Server {
 	var opts []kgrpc.ServerOption
 	if c.GRPC.Addr != "" {
 		opts = append(opts, kgrpc.Address(c.GRPC.Addr))
@@ -70,6 +72,12 @@ func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resource
 	}
 	if fileSvc != nil {
 		skillv1.RegisterFileServiceServer(srv, fileSvc)
+	}
+	if toolSvc != nil {
+		toolv1.RegisterToolServiceServer(srv, toolSvc)
+	}
+	if modelProfileSvc != nil {
+		modelv1.RegisterModelProfileServiceServer(srv, modelProfileSvc)
 	}
 	return srv
 }

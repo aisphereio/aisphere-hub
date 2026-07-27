@@ -1,0 +1,286 @@
+syntax = "proto3";
+
+package model.v1;
+
+import "aisphere/access/v1/access.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/aisphereio/aisphere-hub/api/model/v1;modelv1";
+
+// ModelProfileService manages the enterprise model catalog. Hub is the source
+// of truth for model endpoints, protocol, capabilities, credential refs and
+// limits; the AISphere Runtime resolves an immutable revision to build an ADK
+// model.LLM via the aisphere:// factory. Plain-text credentials never leave
+// the credential store; resolve returns only a credential_ref.
+//
+// Authz uses the SpiceDB `model_profile` definition (owner/editor/viewer/
+// executor; manage/edit/view/execute; parent project). See
+// aisphere-iam/configs/spicedb/aisphere.schema.zed.
+service ModelProfileService {
+  rpc ListModelProfiles(ListModelProfilesRequest) returns (ListModelProfilesResponse) {
+    option (google.api.http) = { get: "/v1/model-profiles" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      gateway: { upstream_service: "hub-service" }
+      audit: { enabled: true event: "hub.model.list" risk: "low" }
+      reason: "handler batch-checks view permission for every concrete model profile"
+    };
+  }
+
+  rpc GetModelProfile(GetModelProfileRequest) returns (GetModelProfileResponse) {
+    option (google.api.http) = { get: "/v1/model-profiles/{id}" response_body: "model_profile" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "view" resource: "model_profile:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.model.get" risk: "low" }
+    };
+  }
+
+  // CreateModelProfile is AUTHENTICATED rather than AUTHORIZED at the gateway
+  // because the authz resource (zone/project) is derived from the principal's
+  // OrgID, not a path parameter. The biz layer performs the explicit
+  // edit-on-project check using principal.OrgID/ProjectID.
+  rpc CreateModelProfile(CreateModelProfileRequest) returns (CreateModelProfileResponse) {
+    option (google.api.http) = { post: "/v1/model-profiles" body: "*" response_body: "model_profile" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHENTICATED
+      gateway: { upstream_service: "hub-service" }
+      audit: { enabled: true event: "hub.model.create" risk: "medium" }
+      reason: "handler checks manage_skills on zone:{org_id} using principal identity (independent check; model_profile.parent is project but IAM project IDs carry '/' so parent inheritance is metadata-only)"
+    };
+  }
+
+  rpc UpdateModelProfile(UpdateModelProfileRequest) returns (UpdateModelProfileResponse) {
+    option (google.api.http) = { put: "/v1/model-profiles/{id}" body: "*" response_body: "model_profile" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "model_profile:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.model.update" risk: "medium" }
+    };
+  }
+
+  rpc DeleteModelProfile(DeleteModelProfileRequest) returns (DeleteModelProfileResponse) {
+    option (google.api.http) = { delete: "/v1/model-profiles/{id}" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "model_profile:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.model.delete" risk: "high" }
+    };
+  }
+
+  // ResolveModelProfile returns an immutable runtime snapshot the AISphere
+  // Runtime consumes to build an ADK model.LLM. The snapshot carries a
+  // credential_ref (never a plain-text key), capabilities and limits. Runtime
+  // resolves the actual credential via its CredentialProvider.
+  rpc ResolveModelProfile(ResolveModelProfileRequest) returns (ResolveModelProfileResponse) {
+    option (google.api.http) = { post: "/v1/model-profiles/{id}:resolve" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "execute" resource: "model_profile:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.model.resolve" risk: "low" }
+    };
+  }
+
+  // TestModelProfile probes a model endpoint with a minimal request. Not yet
+  // implemented (depends on a model gateway / Runtime dialer); returns
+  // UNAVAILABLE. The audit event is recorded even on the stub so test attempts
+  // are traceable.
+  rpc TestModelProfile(TestModelProfileRequest) returns (TestModelProfileResponse) {
+    option (google.api.http) = { post: "/v1/model-profiles/{id}:test" body: "*" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "edit" resource: "model_profile:{id}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.model.test" risk: "medium" }
+    };
+  }
+}
+
+// ModelProfile is the flat catalog record (matches the frontend ModelProfile
+// type). The versioned, immutable detail lives in ModelProfileRevision; this
+// message carries the latest revision's fields inline for convenience.
+message ModelProfile {
+  string id = 1;
+  string version = 2;            // latest revision label
+  string status = 3;             // active | disabled
+  string display_name = 4;
+  string description = 5;
+  string provider = 6;           // openai | vllm | vertex | custom
+  string api_format = 7;         // openai_responses | openai_chat_completions | gemini
+  string endpoint = 8;           // base_url or logical endpoint name
+  string model = 9;              // logical model name (aisphere://{id})
+  string upstream_model = 10;    // real model name at the provider
+  string upstream_path = 11;     // API path, e.g. /v1/chat/completions
+  string secret_ref = 12;        // credential ref, e.g. secret://model/openai-prod
+  repeated string allowed_tools = 13;
+  ModelProfileLimits limits = 14;
+  string reasoning = 15;         // arbitrary JSON (string)
+  map<string, string> labels = 16;
+  string metadata = 17;          // arbitrary JSON (string)
+  string object = 18;            // "model_profile:{id}" SpiceDB object ref
+  string owner_subject = 19;     // "{type}:{id}" of the owner
+  google.protobuf.Timestamp create_time = 20;
+  google.protobuf.Timestamp update_time = 21;
+}
+
+message ModelProfileLimits {
+  int32 max_input_tokens = 1;
+  int32 max_output_tokens = 2;
+}
+
+// ModelProfileRevision is an immutable snapshot of a profile at a revision.
+message ModelProfileRevision {
+  string revision = 1;
+  string provider = 2;
+  string api_format = 3;
+  string endpoint = 4;
+  string model = 5;
+  string upstream_model = 6;
+  string upstream_path = 7;
+  string secret_ref = 8;
+  repeated string allowed_tools = 9;
+  ModelProfileLimits limits = 10;
+  string reasoning = 11;         // JSON (string)
+  string default_parameters = 12; // JSON (string)
+  string metadata = 13;          // JSON (string)
+  string sha256 = 14;
+  string author = 15;
+  string commit_msg = 16;
+  google.protobuf.Timestamp create_time = 17;
+}
+
+message ListModelProfilesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string query = 3;
+  string status = 4;             // filter by status
+  string provider = 5;           // filter by provider
+}
+
+message ListModelProfilesResponse {
+  repeated ModelProfile model_profiles = 1;
+  string next_page_token = 2;
+}
+
+message GetModelProfileRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;            // optional revision; defaults to latest
+}
+
+message GetModelProfileResponse {
+  ModelProfile model_profile = 1;
+}
+
+message CreateModelProfileRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2;
+  string description = 3;
+  string status = 4;
+  string provider = 5 [(google.api.field_behavior) = REQUIRED];
+  string api_format = 6 [(google.api.field_behavior) = REQUIRED];
+  string endpoint = 7 [(google.api.field_behavior) = REQUIRED];
+  string model = 8;
+  string upstream_model = 9 [(google.api.field_behavior) = REQUIRED];
+  string upstream_path = 10;
+  string secret_ref = 11;
+  repeated string allowed_tools = 12;
+  ModelProfileLimits limits = 13;
+  string reasoning = 14;
+  map<string, string> labels = 15;
+  string metadata = 16;
+  string version = 17;           // initial revision label; defaults to "v1"
+  string org_id = 18;
+  string project_id = 19;
+}
+
+message CreateModelProfileResponse {
+  ModelProfile model_profile = 1;
+}
+
+message UpdateModelProfileRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2;
+  string description = 3;
+  string status = 4;
+  string provider = 5 [(google.api.field_behavior) = REQUIRED];
+  string api_format = 6 [(google.api.field_behavior) = REQUIRED];
+  string endpoint = 7 [(google.api.field_behavior) = REQUIRED];
+  string model = 8;
+  string upstream_model = 9 [(google.api.field_behavior) = REQUIRED];
+  string upstream_path = 10;
+  string secret_ref = 11;
+  repeated string allowed_tools = 12;
+  ModelProfileLimits limits = 13;
+  string reasoning = 14;
+  map<string, string> labels = 15;
+  string metadata = 16;
+  string version = 17;           // new revision label for this update
+}
+
+message UpdateModelProfileResponse {
+  ModelProfile model_profile = 1;
+}
+
+message DeleteModelProfileRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteModelProfileResponse {
+  ModelProfile model_profile = 1; // the deleted profile (optional convenience)
+}
+
+// --- Resolve (runtime snapshot) ---
+
+message ResolveModelProfileRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string version = 2;            // optional revision; defaults to latest
+  string runtime_id = 3;         // Runtime instance requesting the snapshot
+  string session_id = 4;
+}
+
+// ResolveModelProfileResponse is the immutable runtime snapshot. It never
+// contains a plain-text credential — only a credential_ref the Runtime
+// CredentialProvider resolves. logical_name is what ADK sees
+// (e.g. "aisphere://coding/default@17").
+message ResolveModelProfileResponse {
+  string profile_id = 1;
+  string revision = 2;
+  string logical_name = 3;       // aisphere://{id}@{revision}
+  string provider = 4;
+  string protocol = 5;           // = api_format
+  string base_url = 6;           // = endpoint
+  string upstream_model = 7;
+  string upstream_path = 8;
+  string credential_ref = 9;     // secret ref; Runtime resolves the actual key
+  ModelProfileCapabilities capabilities = 10;
+  ModelProfileSnapshotLimits limits = 11;
+  string sha256 = 12;
+  string default_parameters = 13; // JSON (string)
+  google.protobuf.Timestamp generated_at = 14;
+}
+
+message ModelProfileCapabilities {
+  bool tools = 1;
+  bool streaming = 2;
+  bool reasoning = 3;
+  bool multimodal = 4;
+}
+
+message ModelProfileSnapshotLimits {
+  int32 context_window = 1;      // = max_input_tokens
+  int32 max_output_tokens = 2;
+}
+
+// --- Test (stub) ---
+
+message TestModelProfileRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string prompt = 2;             // optional test prompt; defaults to a ping
+}
+
+message TestModelProfileResponse {
+  bool ok = 1;
+  string error = 2;
+  int32 latency_millis = 3;
+}

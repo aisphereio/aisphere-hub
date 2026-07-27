@@ -166,9 +166,12 @@ var sandboxToolRegistry = []SandboxToolSchema{
 		Name:        "skill.fetch",
 		Description: "Fetch a published skill release into the sandbox workspace. Resolves <name>@<version> to a release tag and shallow-clones its snapshot.",
 		InputSchema: `{"type":"object","properties":{"name":{"type":"string","description":"Skill name, e.g. \"ttt1\"."},"version":{"type":"string","description":"SemVer, e.g. \"1.4.2\" or \"v1.4.2\"."},"dest":{"type":"string","default":"./skills/{name}","description":"Destination directory relative to the workspace root."}},"required":["name","version"],"additionalProperties":false}`,
-		// Privileged: fetch = view on skill (see agent-identity-delegation-design §3.2, §5.1).
+		// Privileged: fetch is a read operation, gated by view on skill
+		// (agent-identity-delegation-design §5.1). Reuses the existing `view`
+		// permission rather than a separate `fetch` to avoid role_binding/
+		// custom_role churn.
 		Privileged:        true,
-		Permission:        "fetch",
+		Permission:        "view",
 		ResourceFromInput: skillResourceFromInput,
 	},
 	{

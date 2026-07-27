@@ -119,6 +119,97 @@
       ],
       "type": "object"
     },
+    "ModelProfileServiceResolveModelProfileBody": {
+      "properties": {
+        "runtimeId": {
+          "title": "Runtime instance requesting the snapshot",
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "version": {
+          "title": "optional revision; defaults to latest",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ModelProfileServiceTestModelProfileBody": {
+      "properties": {
+        "prompt": {
+          "title": "optional test prompt; defaults to a ping",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ModelProfileServiceUpdateModelProfileBody": {
+      "properties": {
+        "allowedTools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "apiFormat": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1ModelProfileLimits"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "reasoning": {
+          "type": "string"
+        },
+        "secretRef": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "upstreamModel": {
+          "type": "string"
+        },
+        "upstreamPath": {
+          "type": "string"
+        },
+        "version": {
+          "title": "new revision label for this update",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "apiFormat",
+        "endpoint",
+        "upstreamModel"
+      ],
+      "type": "object"
+    },
     "NamespaceServiceCreateNamespaceBody": {
       "properties": {
         "createMode": {
@@ -506,6 +597,59 @@
       },
       "required": [
         "visibility"
+      ],
+      "type": "object"
+    },
+    "ToolServiceResolveToolBody": {
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "runtimeId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ToolServiceUpdateToolBody": {
+      "properties": {
+        "commitMsg": {
+          "type": "string"
+        },
+        "definition": {
+          "$ref": "#/definitions/v1ToolDefinition"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "title": "new version label for this update",
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition"
       ],
       "type": "object"
     },
@@ -997,6 +1141,90 @@
       ],
       "type": "string"
     },
+    "v1CreateModelProfileRequest": {
+      "properties": {
+        "allowedTools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "apiFormat": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1ModelProfileLimits"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "reasoning": {
+          "type": "string"
+        },
+        "secretRef": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "upstreamModel": {
+          "type": "string"
+        },
+        "upstreamPath": {
+          "type": "string"
+        },
+        "version": {
+          "title": "initial revision label; defaults to \"v1\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "apiFormat",
+        "endpoint",
+        "upstreamModel"
+      ],
+      "type": "object"
+    },
+    "v1CreateModelProfileResponse": {
+      "properties": {
+        "modelProfile": {
+          "$ref": "#/definitions/v1ModelProfile"
+        }
+      },
+      "type": "object"
+    },
     "v1CreateNamespaceResponse": {
       "properties": {
         "namespace": {
@@ -1096,6 +1324,59 @@
       },
       "type": "object"
     },
+    "v1CreateToolRequest": {
+      "properties": {
+        "commitMsg": {
+          "type": "string"
+        },
+        "definition": {
+          "$ref": "#/definitions/v1ToolDefinition"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "title": "initial version label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition"
+      ],
+      "type": "object"
+    },
+    "v1CreateToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
+        }
+      },
+      "type": "object"
+    },
     "v1CreateWarmPoolResponse": {
       "properties": {
         "warmPool": {
@@ -1119,6 +1400,15 @@
         },
         "commitSha": {
           "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1DeleteModelProfileResponse": {
+      "properties": {
+        "modelProfile": {
+          "$ref": "#/definitions/v1ModelProfile",
+          "title": "the deleted profile (optional convenience)"
         }
       },
       "type": "object"
@@ -1195,6 +1485,14 @@
       "type": "object"
     },
     "v1DeleteSkillShareResponse": {
+      "type": "object"
+    },
+    "v1DeleteToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
+        }
+      },
       "type": "object"
     },
     "v1DeleteWarmPoolResponse": {
@@ -1361,6 +1659,14 @@
       },
       "type": "object"
     },
+    "v1GetModelProfileResponse": {
+      "properties": {
+        "modelProfile": {
+          "$ref": "#/definitions/v1ModelProfile"
+        }
+      },
+      "type": "object"
+    },
     "v1GetNamespaceResponse": {
       "properties": {
         "namespace": {
@@ -1412,6 +1718,14 @@
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
+        }
+      },
+      "type": "object"
+    },
+    "v1GetToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
         }
       },
       "type": "object"
@@ -1533,6 +1847,21 @@
         "clusters": {
           "items": {
             "$ref": "#/definitions/v1Cluster",
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ListModelProfilesResponse": {
+      "properties": {
+        "modelProfiles": {
+          "items": {
+            "$ref": "#/definitions/v1ModelProfile",
             "type": "object"
           },
           "type": "array"
@@ -1705,6 +2034,36 @@
       },
       "type": "object"
     },
+    "v1ListToolFailuresResponse": {
+      "properties": {
+        "failures": {
+          "items": {
+            "$ref": "#/definitions/v1ToolFailureRecord",
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ListToolsResponse": {
+      "properties": {
+        "nextPageToken": {
+          "type": "string"
+        },
+        "tools": {
+          "items": {
+            "$ref": "#/definitions/v1Tool",
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "v1ListWarmPoolsResponse": {
       "properties": {
         "nextPageToken": {
@@ -1784,6 +2143,140 @@
       "properties": {
         "pullRequest": {
           "$ref": "#/definitions/v1PullRequest"
+        }
+      },
+      "type": "object"
+    },
+    "v1ModelProfile": {
+      "description": "ModelProfile is the flat catalog record (matches the frontend ModelProfile\ntype). The versioned, immutable detail lives in ModelProfileRevision; this\nmessage carries the latest revision's fields inline for convenience.",
+      "properties": {
+        "allowedTools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "apiFormat": {
+          "title": "openai_responses | openai_chat_completions | gemini",
+          "type": "string"
+        },
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "endpoint": {
+          "title": "base_url or logical endpoint name",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1ModelProfileLimits"
+        },
+        "metadata": {
+          "title": "arbitrary JSON (string)",
+          "type": "string"
+        },
+        "model": {
+          "title": "logical model name (aisphere://{id})",
+          "type": "string"
+        },
+        "object": {
+          "title": "\"model_profile:{id}\" SpiceDB object ref",
+          "type": "string"
+        },
+        "ownerSubject": {
+          "title": "\"{type}:{id}\" of the owner",
+          "type": "string"
+        },
+        "provider": {
+          "title": "openai | vllm | vertex | custom",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "arbitrary JSON (string)",
+          "type": "string"
+        },
+        "secretRef": {
+          "title": "credential ref, e.g. secret://model/openai-prod",
+          "type": "string"
+        },
+        "status": {
+          "title": "active | disabled",
+          "type": "string"
+        },
+        "updateTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "upstreamModel": {
+          "title": "real model name at the provider",
+          "type": "string"
+        },
+        "upstreamPath": {
+          "title": "API path, e.g. /v1/chat/completions",
+          "type": "string"
+        },
+        "version": {
+          "title": "latest revision label",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ModelProfileCapabilities": {
+      "properties": {
+        "multimodal": {
+          "type": "boolean"
+        },
+        "reasoning": {
+          "type": "boolean"
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "tools": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "v1ModelProfileLimits": {
+      "properties": {
+        "maxInputTokens": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "maxOutputTokens": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "v1ModelProfileSnapshotLimits": {
+      "properties": {
+        "contextWindow": {
+          "format": "int32",
+          "title": "= max_input_tokens",
+          "type": "integer"
+        },
+        "maxOutputTokens": {
+          "format": "int32",
+          "type": "integer"
         }
       },
       "type": "object"
@@ -2276,6 +2769,60 @@
       },
       "type": "object"
     },
+    "v1ResolveModelProfileResponse": {
+      "description": "ResolveModelProfileResponse is the immutable runtime snapshot. It never\ncontains a plain-text credential — only a credential_ref the Runtime\nCredentialProvider resolves. logical_name is what ADK sees\n(e.g. \"aisphere://coding/default@17\").",
+      "properties": {
+        "baseUrl": {
+          "title": "= endpoint",
+          "type": "string"
+        },
+        "capabilities": {
+          "$ref": "#/definitions/v1ModelProfileCapabilities"
+        },
+        "credentialRef": {
+          "title": "secret ref; Runtime resolves the actual key",
+          "type": "string"
+        },
+        "defaultParameters": {
+          "title": "JSON (string)",
+          "type": "string"
+        },
+        "generatedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1ModelProfileSnapshotLimits"
+        },
+        "logicalName": {
+          "title": "aisphere://{id}@{revision}",
+          "type": "string"
+        },
+        "profileId": {
+          "type": "string"
+        },
+        "protocol": {
+          "title": "= api_format",
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "upstreamModel": {
+          "type": "string"
+        },
+        "upstreamPath": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "v1ResolveSkillRefResponse": {
       "properties": {
         "ref": {
@@ -2288,6 +2835,27 @@
       "properties": {
         "release": {
           "$ref": "#/definitions/v1SkillRelease"
+        }
+      },
+      "type": "object"
+    },
+    "v1ResolveToolResponse": {
+      "properties": {
+        "generatedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "runtimeId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
+        },
+        "tool": {
+          "$ref": "#/definitions/v1ToolVersionRecord"
         }
       },
       "type": "object"
@@ -3061,6 +3629,358 @@
       },
       "type": "object"
     },
+    "v1TestModelProfileResponse": {
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "latencyMillis": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "v1Tool": {
+      "description": "Tool is the catalog record for an invocable agent capability. Tool content\nis versioned (ToolVersionRecord); latest_version points at the active one.",
+      "properties": {
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "latestVersion": {
+          "type": "string"
+        },
+        "object": {
+          "title": "\"tool:{id}\" SpiceDB object ref",
+          "type": "string"
+        },
+        "ownerSubject": {
+          "title": "\"{type}:{id}\" of the owner",
+          "type": "string"
+        },
+        "scope": {
+          "title": "system | project | private",
+          "type": "string"
+        },
+        "status": {
+          "title": "active | disabled | builtin",
+          "type": "string"
+        },
+        "updateTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "versions": {
+          "additionalProperties": {
+            "$ref": "#/definitions/v1ToolVersionRecord"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolDefinition": {
+      "description": "ToolDefinition is the full specification a Runtime reads to register and\nenforce a tool. Complex/nested structures (input_schema, output_schema,\nconfig, metadata, headers, env) are carried as JSON strings because proto\ncannot express arbitrary JSON Schema; the service layer marshals/unmarshals.",
+      "properties": {
+        "execution": {
+          "$ref": "#/definitions/v1ToolExecutionDefinition"
+        },
+        "inputSchema": {
+          "title": "JSON Schema (string)",
+          "type": "string"
+        },
+        "metadata": {
+          "title": "arbitrary JSON (string)",
+          "type": "string"
+        },
+        "outputSchema": {
+          "title": "JSON Schema (string)",
+          "type": "string"
+        },
+        "retry": {
+          "$ref": "#/definitions/v1ToolRetryPolicy"
+        },
+        "runtime": {
+          "$ref": "#/definitions/v1ToolRuntimeDefinition"
+        },
+        "timeoutMillis": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolExecutionDefinition": {
+      "description": "ToolExecutionDefinition describes where and how the tool executes, plus the\nsandboxing policy (filesystem/network/resources/capabilities). placement\ndetermines the governance path: \"runtime\" tools go through the Runtime MCP\nserver (authz + credential托管); \"sandbox\" tools execute locally in the\nagent pod (no privileged access).",
+      "properties": {
+        "allowHosts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "capabilities": {
+          "description": "capabilities map this tool to SpiceDB permissions on its target resource\n(e.g. [\"skill.view\"] for git.pull). The Runtime uses these to run the\nTool-level authz gate (agent-identity-delegation-design §3.1).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "command": {
+          "type": "string"
+        },
+        "denyHosts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "filesystem": {
+          "title": "none | readonly | workspace",
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "mounts": {
+          "items": {
+            "$ref": "#/definitions/v1ToolMount",
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "network": {
+          "title": "none | restricted | egress",
+          "type": "string"
+        },
+        "placement": {
+          "title": "sandbox | runtime | remote | hub",
+          "type": "string"
+        },
+        "resources": {
+          "$ref": "#/definitions/v1ToolResources"
+        },
+        "runner": {
+          "title": "builtin | mcp | stdio | http | container | wasm | python | binary",
+          "type": "string"
+        },
+        "secretRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workingDir": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolFailureRecord": {
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "errorCode": {
+          "type": "string"
+        },
+        "errorMessage": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "runtimeId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "toolId": {
+          "type": "string"
+        },
+        "toolVersion": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolMount": {
+      "properties": {
+        "mode": {
+          "title": "ro | rw",
+          "type": "string"
+        },
+        "mountPath": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolResources": {
+      "properties": {
+        "cpu": {
+          "type": "string"
+        },
+        "maxOutputBytes": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "memory": {
+          "type": "string"
+        },
+        "timeoutMillis": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolRetryPolicy": {
+      "properties": {
+        "backoffMillis": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "maxAttempts": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "retryOnErrorCodes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolRuntimeDefinition": {
+      "description": "ToolRuntimeDefinition describes how the tool is invoked at the protocol level.",
+      "properties": {
+        "config": {
+          "title": "arbitrary JSON (string)",
+          "type": "string"
+        },
+        "credentialRef": {
+          "title": "secret:// ref for outbound auth",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "entryPoint": {
+          "title": "entry symbol (type=function)",
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "method": {
+          "title": "HTTP method (type=http|openapi)",
+          "type": "string"
+        },
+        "name": {
+          "title": "function/tool name on the runtime",
+          "type": "string"
+        },
+        "package": {
+          "title": "package path (type=function)",
+          "type": "string"
+        },
+        "server": {
+          "title": "MCP server name (type=mcp)",
+          "type": "string"
+        },
+        "type": {
+          "title": "builtin | mcp | openapi | http | function",
+          "type": "string"
+        },
+        "url": {
+          "title": "endpoint (type=http|openapi)",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "v1ToolVersionRecord": {
+      "description": "ToolVersionRecord is an immutable snapshot of a Tool definition at a version.",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "commitMsg": {
+          "type": "string"
+        },
+        "createTime": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "definition": {
+          "$ref": "#/definitions/v1ToolDefinition"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "v1UpdateClusterResponse": {
       "properties": {
         "cluster": {
@@ -3106,6 +4026,14 @@
       },
       "type": "object"
     },
+    "v1UpdateModelProfileResponse": {
+      "properties": {
+        "modelProfile": {
+          "$ref": "#/definitions/v1ModelProfile"
+        }
+      },
+      "type": "object"
+    },
     "v1UpdateNamespaceResponse": {
       "properties": {
         "namespace": {
@@ -3134,6 +4062,14 @@
       "properties": {
         "skill": {
           "$ref": "#/definitions/v1Skill"
+        }
+      },
+      "type": "object"
+    },
+    "v1UpdateToolResponse": {
+      "properties": {
+        "tool": {
+          "$ref": "#/definitions/v1Tool"
         }
       },
       "type": "object"
@@ -4646,6 +5582,273 @@
         },
         "tags": [
           "ClusterService"
+        ]
+      }
+    },
+    "/v1/model-profiles": {
+      "get": {
+        "operationId": "ModelProfileService_ListModelProfiles",
+        "parameters": [
+          {
+            "format": "int32",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by provider",
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListModelProfilesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ModelProfileService"
+        ]
+      },
+      "post": {
+        "operationId": "ModelProfileService_CreateModelProfile",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateModelProfileRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1ModelProfile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "CreateModelProfile is AUTHENTICATED rather than AUTHORIZED at the gateway\nbecause the authz resource (zone/project) is derived from the principal's\nOrgID, not a path parameter. The biz layer performs the explicit\nedit-on-project check using principal.OrgID/ProjectID.",
+        "tags": [
+          "ModelProfileService"
+        ]
+      }
+    },
+    "/v1/model-profiles/{id}": {
+      "delete": {
+        "operationId": "ModelProfileService_DeleteModelProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteModelProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ModelProfileService"
+        ]
+      },
+      "get": {
+        "operationId": "ModelProfileService_GetModelProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "optional revision; defaults to latest",
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1ModelProfile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ModelProfileService"
+        ]
+      },
+      "put": {
+        "operationId": "ModelProfileService_UpdateModelProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ModelProfileServiceUpdateModelProfileBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1ModelProfile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ModelProfileService"
+        ]
+      }
+    },
+    "/v1/model-profiles/{id}:resolve": {
+      "post": {
+        "operationId": "ModelProfileService_ResolveModelProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ModelProfileServiceResolveModelProfileBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResolveModelProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "ResolveModelProfile returns an immutable runtime snapshot the AISphere\nRuntime consumes to build an ADK model.LLM. The snapshot carries a\ncredential_ref (never a plain-text key), capabilities and limits. Runtime\nresolves the actual credential via its CredentialProvider.",
+        "tags": [
+          "ModelProfileService"
+        ]
+      }
+    },
+    "/v1/model-profiles/{id}:test": {
+      "post": {
+        "operationId": "ModelProfileService_TestModelProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ModelProfileServiceTestModelProfileBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TestModelProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "TestModelProfile probes a model endpoint with a minimal request. Not yet\nimplemented (depends on a model gateway / Runtime dialer); returns\nUNAVAILABLE. The audit event is recorded even on the stub so test attempts\nare traceable.",
+        "tags": [
+          "ModelProfileService"
         ]
       }
     },
@@ -6823,6 +8026,284 @@
           "SkillService"
         ]
       }
+    },
+    "/v1/tools": {
+      "get": {
+        "operationId": "ToolService_ListTools",
+        "parameters": [
+          {
+            "format": "int32",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by scope",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "filter by runtime.type",
+            "in": "query",
+            "name": "runtimeType",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListToolsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      },
+      "post": {
+        "operationId": "ToolService_CreateTool",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateToolRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Tool"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      }
+    },
+    "/v1/tools/{id}": {
+      "delete": {
+        "operationId": "ToolService_DeleteTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteToolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      },
+      "get": {
+        "operationId": "ToolService_GetTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "optional; defaults to latest_version",
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Tool"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      },
+      "put": {
+        "operationId": "ToolService_UpdateTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ToolServiceUpdateToolBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/v1Tool"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "ToolService"
+        ]
+      }
+    },
+    "/v1/tools/{id}/failures": {
+      "get": {
+        "operationId": "ToolService_ListToolFailures",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "int32",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListToolFailuresResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "ListToolFailures returns recent execution failures for a Tool. Not yet\nimplemented (depends on the audit/failure store extension).",
+        "tags": [
+          "ToolService"
+        ]
+      }
+    },
+    "/v1/tools/{id}:resolve": {
+      "post": {
+        "operationId": "ToolService_ResolveTool",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ToolServiceResolveToolBody"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResolveToolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/KernelErrorResponse"
+            }
+          }
+        },
+        "summary": "ResolveTool projects a Tool version into a runtime snapshot the AISphere\nRuntime consumes when registering the tool as an MCP callable. Not yet\nimplemented (depends on the Runtime execution plane).",
+        "tags": [
+          "ToolService"
+        ]
+      }
     }
   },
   "produces": [
@@ -6849,6 +8330,9 @@
       "name": "SandboxService"
     },
     {
+      "name": "ModelProfileService"
+    },
+    {
       "name": "FileService"
     },
     {
@@ -6856,6 +8340,9 @@
     },
     {
       "name": "SkillReleaseService"
+    },
+    {
+      "name": "ToolService"
     }
   ]
 }
