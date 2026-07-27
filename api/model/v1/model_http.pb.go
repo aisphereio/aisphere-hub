@@ -39,10 +39,12 @@ type ModelProfileServiceHTTPServer interface {
 	// credential_ref (never a plain-text key), capabilities and limits. Runtime
 	// resolves the actual credential via its CredentialProvider.
 	ResolveModelProfile(context.Context, *ResolveModelProfileRequest) (*ResolveModelProfileResponse, error)
-	// TestModelProfile TestModelProfile probes a model endpoint with a minimal request. Not yet
-	// implemented (depends on a model gateway / Runtime dialer); returns
-	// UNAVAILABLE. The audit event is recorded even on the stub so test attempts
-	// are traceable.
+	// TestModelProfile TestModelProfile probes the upstream model endpoint with a minimal
+	// request built from api_format. Hub never holds plain-text credentials:
+	// only env:// secret refs are resolved locally (from the hub process
+	// environment); other refs probe without auth, so a 401/403 still proves
+	// reachability and is reported via http_status. The audit event is recorded
+	// so test attempts are traceable.
 	TestModelProfile(context.Context, *TestModelProfileRequest) (*TestModelProfileResponse, error)
 	UpdateModelProfile(context.Context, *UpdateModelProfileRequest) (*UpdateModelProfileResponse, error)
 }
@@ -241,10 +243,12 @@ type ModelProfileServiceHTTPClient interface {
 	// credential_ref (never a plain-text key), capabilities and limits. Runtime
 	// resolves the actual credential via its CredentialProvider.
 	ResolveModelProfile(ctx context.Context, req *ResolveModelProfileRequest, opts ...http.CallOption) (rsp *ResolveModelProfileResponse, err error)
-	// TestModelProfile TestModelProfile probes a model endpoint with a minimal request. Not yet
-	// implemented (depends on a model gateway / Runtime dialer); returns
-	// UNAVAILABLE. The audit event is recorded even on the stub so test attempts
-	// are traceable.
+	// TestModelProfile TestModelProfile probes the upstream model endpoint with a minimal
+	// request built from api_format. Hub never holds plain-text credentials:
+	// only env:// secret refs are resolved locally (from the hub process
+	// environment); other refs probe without auth, so a 401/403 still proves
+	// reachability and is reported via http_status. The audit event is recorded
+	// so test attempts are traceable.
 	TestModelProfile(ctx context.Context, req *TestModelProfileRequest, opts ...http.CallOption) (rsp *TestModelProfileResponse, err error)
 	UpdateModelProfile(ctx context.Context, req *UpdateModelProfileRequest, opts ...http.CallOption) (rsp *UpdateModelProfileResponse, err error)
 }
@@ -347,10 +351,12 @@ func (c *ModelProfileServiceHTTPClientImpl) ResolveModelProfile(ctx context.Cont
 	return &out, nil
 }
 
-// TestModelProfile TestModelProfile probes a model endpoint with a minimal request. Not yet
-// implemented (depends on a model gateway / Runtime dialer); returns
-// UNAVAILABLE. The audit event is recorded even on the stub so test attempts
-// are traceable.
+// TestModelProfile TestModelProfile probes the upstream model endpoint with a minimal
+// request built from api_format. Hub never holds plain-text credentials:
+// only env:// secret refs are resolved locally (from the hub process
+// environment); other refs probe without auth, so a 401/403 still proves
+// reachability and is reported via http_status. The audit event is recorded
+// so test attempts are traceable.
 func (c *ModelProfileServiceHTTPClientImpl) TestModelProfile(ctx context.Context, in *TestModelProfileRequest, opts ...http.CallOption) (*TestModelProfileResponse, error) {
 	var out TestModelProfileResponse
 	pattern := "/v1/model-profiles/{id}:test"
