@@ -497,7 +497,20 @@ func (uc *AuthzUsecase) GrantOwner(ctx context.Context, resource AuthzObjectRef,
 		})
 		return err
 	}
-	
+
+	// GrantParent writes a {resource}#parent@{subject} relationship. Used by
+	// resources that nest under a project (model_profile, skill_space,
+	// sandbox_space) so the parent project's manage/write/read/operate
+	// permissions flow down to the child.
+	func (uc *AuthzUsecase) GrantParent(ctx context.Context, resource AuthzObjectRef, subject AuthzSubjectRef) error {
+		_, err := uc.WriteRelationships(ctx, AuthzRelationship{
+			Resource: resource,
+			Relation: "parent",
+			Subject:  subject,
+		})
+		return err
+	}
+
 	// GrantRole writes a {resource}#{relation}@{subject} relationship. Use
 // relation = "viewer" / "editor" / "admin" etc.
 func (uc *AuthzUsecase) GrantRole(ctx context.Context, resource AuthzObjectRef, relation string, subject AuthzSubjectRef) error {

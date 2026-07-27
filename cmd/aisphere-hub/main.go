@@ -159,6 +159,15 @@ func main() {
 		logger.Warn("builtin tool seed failed; catalog may be incomplete", logx.Err(err))
 	}
 
+	// ModelProfile catalog: the enterprise-controlled LLM model registry. Hub
+	// owns endpoint/protocol/capability/credential_ref/limits; the Runtime
+	// resolves an immutable revision to build an ADK model.LLM via the
+	// aisphere:// factory. Create checks edit on the parent project explicitly
+	// in the biz layer (no proto authz interpolation).
+	modelProfileRepo := data.NewModelProfileRepo(resources)
+	modelProfileUsecase := biz.NewModelProfileUsecase(modelProfileRepo, authzUsecase)
+	modelProfileService := service.NewModelProfileService(modelProfileUsecase)
+
 	// Repair durable owner relationships through IAM's runtime authorization API.
 	if err := data.BootstrapAuthzRelationships(bootstrapCtx, resources, logger); err != nil {
 		logger.Warn("authz relationship bootstrap failed; historical skill permissions may be incomplete", logx.Err(err))
@@ -193,6 +202,7 @@ func main() {
 		k8sRuntime.sandboxService,
 		fileService,
 		toolService,
+		modelProfileService,
 	)
 	grpcServer := server.NewGRPCServer(
 		bc.Server,
@@ -208,6 +218,7 @@ func main() {
 		k8sRuntime.sandboxService,
 		fileService,
 		toolService,
+		modelProfileService,
 	)
 
 	opts := []kernel.Option{
