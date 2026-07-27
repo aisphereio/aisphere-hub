@@ -432,14 +432,131 @@ func TestDeleteModelProfile_RevokesResource(t *testing.T) {
 	}
 }
 
-func TestTestModelProfile_Unavailable(t *testing.T) {
+func TestTestModelProfile_UnavailableWithoutProber(t *testing.T) {
 	uc := NewModelProfileUsecase(newFakeModelProfileRepo(), &fakeModelProfileRels{allow: map[string]bool{}})
 	_, err := uc.TestModelProfile(context.Background(), modelPrincipal(), "any", "ping")
 	if err == nil {
-		t.Fatal("expected Unavailable from TestModelProfile stub")
+		t.Fatal("expected Unavailable when no prober is configured")
 	}
-	if !strings.Contains(err.Error(), "not yet available") {
-		t.Errorf("expected unavailable message, got: %v", err)
+	if !strings.Contains(err.Error(), "no endpoint prober is configured") {
+		t.Errorf("expected prober-not-configured message, got: %v", err)
+	}
+}
+
+// fakeModelProfileProber records the probe request and returns a canned result.
+type fakeModelProfileProber struct {
+	got    *ModelProfileProbeRequest
+	result *ModelProfileTestResult
+}
+
+func (f *fakeModelProfileProber) Probe(_ context.Context, req ModelProfileProbeRequest) (*ModelProfileTestResult, error) {
+	cp := req
+	f.got = &cp
+	return f.result, nil
+}
+
+func TestTestModelProfile_DeniesWithoutEdit(t *testing.T) {
+	repo := newFakeModelProfileRepo()
+	rels := &fakeModelProfileRels{allow: map[string]bool{
+		"zone:org-1|manage_skills": true,
+		// no model_profile edit grant
+	}}
+	prober := &fakeModelProfileProber{result: &ModelProfileTestResult{OK: true}}
+	uc := NewModelProfileUsecase(repo, rels).WithProber(prober)
+	created, err := uc.CreateModelProfile(context.Background(), modelPrincipal(), &ModelProfile{
+		ID: "codedef", Provider: "openai", APIFormat: "openai_chat_completions",
+		Endpoint: "https://api.openai.com", UpstreamModel: "gpt-4o", ProjectID: "proj-1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if _, err := uc.TestModelProfile(context.Background(), modelPrincipal(), created.ID, "ping"); err == nil {
+		t.Fatal("expected forbidden when edit is not granted")
+	}
+	if prober.got != nil {
+		t.Error("prober must not be called when the edit check fails")
+	}
+}
+
+func TestTestModelProfile_ProbesWithProfileConfig(t *testing.T) {
+	repo := newFakeModelProfileRepo()
+	rels := &fakeModelProfileRels{allow: map[string]bool{
+		"zone:org-1|manage_skills":     true,
+		"model_profile:codedef|edit": true,
+	}}
+	prober := &fakeModelProfileProber{result: &ModelProfileTestResult{OK: true, LatencyMs: 42, HTTPStatus: 200}}
+	uc := NewModelProfileUsecase(repo, rels).WithProber(prober)
+	created, err := uc.CreateModelProfile(context.Background(), modelPrincipal(), &ModelProfile{
+		ID: "codedef", Provider: "openai", APIFormat: "openai_chat_completions",
+		Endpoint: "https://api.openai.com", UpstreamModel: "gpt-4o",
+		UpstreamPath: "/v1/chat/completions", SecretRef: "env://OPENAI_KEY",
+		ProjectID: "proj-1",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	res, err := uc.TestModelProfile(context.Background(), modelPrincipal(), created.ID, "hello")
+	if err != nil {
+		t.Fatalf("test: %v", err)
+	}
+	if !res.OK || res.LatencyMs != 42 || res.HTTPStatus != 200 {
+		t.Errorf("unexpected result: %+v", res)
+	}
+	if prober.got == nil {
+		t.Fatal("prober was not called")
+	}
+	if prober.got.Endpoint != "https://api.openai.com" ||
+		prober.got.APIFormat != "openai_chat_completions" ||
+		prober.got.UpstreamModel != "gpt-4o" ||
+		prober.got.UpstreamPath != "/v1/chat/completions" ||
+		prober.got.SecretRef != "env://OPENAI_KEY" ||
+		prober.got.Prompt != "hello" {
+		t.Errorf("probe request mismatch: %+v", prober.got)
+	}
+}
+
+func TestTestModelProfile_NotFound(t *testing.T) {
+	prober := &fakeModelProfileProber{result: &ModelProfileTestResult{OK: true}}
+	uc := NewModelProfileUsecase(newFakeModelProfileRepo(), &fakeModelProfileRels{allow: map[string]bool{}}).WithProber(prober)
+	if _, err := uc.TestModelProfile(context.Background(), modelPrincipal(), "missing", ""); err == nil {
+		t.Fatal("expected not-found error for a missing profile")
+	}
+	if prober.got != nil {
+		t.Error("prober must not be called for a missing profile")
+	}
+}
+
+func TestCreateModelProfile_ContextConfigFlowsToRevision(t *testing.T) {
+	repo := newFakeModelProfileRepo()
+	rels := &fakeModelProfileRels{allow: map[string]bool{
+		"zone:org-1|manage_skills": true,
+	}}
+	uc := NewModelProfileUsecase(repo, rels)
+	p := validModelProfileInput()
+	p.Limits = ModelProfileLimits{MaxInputTokens: 131072, MaxOutputTokens: 8192}
+	p.DefaultParameters = `{"temperature":0.2,"top_p":0.9}`
+
+	out, err := uc.CreateModelProfile(context.Background(), modelPrincipal(), p)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	rev := out.Revisions["v1"]
+	if rev.DefaultParameters != `{"temperature":0.2,"top_p":0.9}` {
+		t.Errorf("revision default_parameters: got %q", rev.DefaultParameters)
+	}
+	if rev.Limits.MaxInputTokens != 131072 || rev.Limits.MaxOutputTokens != 8192 {
+		t.Errorf("revision limits: got %+v", rev.Limits)
+	}
+	// same definition + different default_parameters must change the sha
+	p2 := validModelProfileInput()
+	p2.ID = "coding-alt"
+	p2.DefaultParameters = `{"temperature":0.7}`
+	out2, err := uc.CreateModelProfile(context.Background(), modelPrincipal(), p2)
+	if err != nil {
+		t.Fatalf("create p2: %v", err)
+	}
+	if out.Revisions["v1"].SHA256 == out2.Revisions["v1"].SHA256 {
+		t.Error("sha256 must cover default_parameters")
 	}
 }
 

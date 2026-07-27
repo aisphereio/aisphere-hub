@@ -69,6 +69,10 @@ type ModelProfile struct {
 	AllowedTools  []string
 	Limits        ModelProfileLimits
 	Reasoning     string // arbitrary JSON (string)
+	// DefaultParameters carries arbitrary JSON (string) merged into every
+	// upstream request by the Runtime (temperature/top_p/...). Together with
+	// Limits it forms the profile's context configuration.
+	DefaultParameters string
 	Labels        map[string]string
 	Metadata      string // arbitrary JSON (string)
 	Object        string // "model_profile:{id}" SpiceDB object ref
@@ -182,10 +186,19 @@ type ModelProfileRelationships interface {
 type ModelProfileUsecase struct {
 	profiles ModelProfileRepository
 	rels     ModelProfileRelationships
+	prober   ModelProfileProber
 }
 
 func NewModelProfileUsecase(profiles ModelProfileRepository, rels ModelProfileRelationships) *ModelProfileUsecase {
 	return &ModelProfileUsecase{profiles: profiles, rels: rels}
+}
+
+// WithProber attaches the endpoint prober used by TestModelProfile. Without
+// one the RPC keeps returning Unavailable (preserves the pre-probe behavior
+// in tests and minimal deployments).
+func (uc *ModelProfileUsecase) WithProber(p ModelProfileProber) *ModelProfileUsecase {
+	uc.prober = p
+	return uc
 }
 
 func modelProfileResource(id string) AuthzObjectRef {
@@ -209,6 +222,7 @@ func (p *ModelProfile) currentRevision(author, commitMsg string) ModelProfileRev
 		AllowedTools: append([]string(nil), p.AllowedTools...),
 		Limits:       p.Limits,
 		Reasoning:    p.Reasoning,
+		DefaultParameters: p.DefaultParameters,
 		Metadata:     p.Metadata,
 		Author:       author,
 		CommitMsg:    commitMsg,
@@ -611,19 +625,72 @@ func buildSnapshot(p *ModelProfile, rev ModelProfileRevision) *ModelProfileSnaps
 	}
 }
 
-// TestModelProfile is not yet implemented (depends on a model gateway / Runtime
-// dialer). Returns Unavailable. The audit event is recorded by the access
-// policy (hub.model.test) even on the stub so test attempts are traceable.
+// TestModelProfile probes the upstream endpoint with a minimal request built
+// from the profile's api_format. The caller needs edit permission (matching
+// the proto authz policy). Hub never holds plain-text credentials: only
+// env:// secret refs are resolved from the hub process environment; other
+// refs probe without auth, so a 401/403 response still proves reachability
+// and is reported through HTTPStatus.
 func (uc *ModelProfileUsecase) TestModelProfile(ctx context.Context, principal authn.Principal, id, prompt string) (*ModelProfileTestResult, error) {
-	return nil, errorx.Unavailable(errorx.Code("MODEL_TEST_NOT_AVAILABLE"), "model profile test is not yet available; the runtime model dialer is not connected")
+	if uc.prober == nil {
+		return nil, errorx.Unavailable(errorx.Code("MODEL_TEST_NOT_AVAILABLE"), "model profile test is not available: no endpoint prober is configured")
+	}
+	p, err := uc.profiles.Get(ctx, id, "")
+	if err != nil {
+		return nil, err
+	}
+	subject, err := canonicalSubject(principal)
+	if err != nil {
+		return nil, err
+	}
+	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
+		Subject:    subject,
+		Resource:   modelProfileResource(p.ID),
+		Permission: "edit",
+		OrgID:      principal.OrgID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !dec.Allowed {
+		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no edit permission on model profile")
+	}
+	return uc.prober.Probe(ctx, ModelProfileProbeRequest{
+		APIFormat:     p.APIFormat,
+		Endpoint:      p.Endpoint,
+		UpstreamModel: p.UpstreamModel,
+		UpstreamPath:  p.UpstreamPath,
+		SecretRef:     p.SecretRef,
+		Prompt:        prompt,
+	})
 }
 
-// ModelProfileTestResult is the (future) test result shape. Returned today by
-// no code path — TestModelProfile always errors with Unavailable.
+// ModelProfileProbeRequest is everything the prober needs to build a minimal
+// upstream request. SecretRef is passed through so the prober can resolve
+// env:// refs locally; it must never be logged or persisted.
+type ModelProfileProbeRequest struct {
+	APIFormat     string
+	Endpoint      string
+	UpstreamModel string
+	UpstreamPath  string
+	SecretRef     string
+	Prompt        string
+}
+
+// ModelProfileProber probes an upstream model endpoint for reachability.
+// Implementations live in the data layer (HTTP) and are faked in tests.
+type ModelProfileProber interface {
+	Probe(ctx context.Context, req ModelProfileProbeRequest) (*ModelProfileTestResult, error)
+}
+
+// ModelProfileTestResult is the outcome of a single probe attempt. HTTPStatus
+// is 0 when no response was received (DNS/TLS/timeout); 401/403 means the
+// endpoint answered but the credential was missing or rejected.
 type ModelProfileTestResult struct {
-	OK          bool
-	Error       string
-	LatencyMs   int32
+	OK         bool
+	Error      string
+	LatencyMs  int32
+	HTTPStatus int32
 }
 
 // EnsureErrors keeps the errors import referenced when no direct use remains.

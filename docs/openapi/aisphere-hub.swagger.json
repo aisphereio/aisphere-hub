@@ -155,6 +155,10 @@
         "apiFormat": {
           "type": "string"
         },
+        "defaultParameters": {
+          "title": "JSON (string); context configuration",
+          "type": "string"
+        },
         "description": {
           "type": "string"
         },
@@ -1150,6 +1154,10 @@
           "type": "array"
         },
         "apiFormat": {
+          "type": "string"
+        },
+        "defaultParameters": {
+          "title": "JSON (string); context configuration",
           "type": "string"
         },
         "description": {
@@ -2162,6 +2170,10 @@
         },
         "createTime": {
           "format": "date-time",
+          "type": "string"
+        },
+        "defaultParameters": {
+          "description": "default_parameters carries arbitrary JSON (string) merged into every\nupstream request by the Runtime (e.g. {\"temperature\":0.2,\"top_p\":0.9}).\nTogether with limits it forms the profile's context configuration.",
           "type": "string"
         },
         "description": {
@@ -3633,6 +3645,11 @@
       "properties": {
         "error": {
           "type": "string"
+        },
+        "httpStatus": {
+          "description": "http_status is the upstream HTTP status when a response was received\n(0 when the probe failed before any response, e.g. DNS/TLS/timeout).\n401/403 means the endpoint is reachable but the credential was missing\nor rejected — Hub holds no plain-text key for secret:// refs.",
+          "format": "int32",
+          "type": "integer"
         },
         "latencyMillis": {
           "format": "int32",
@@ -5846,7 +5863,7 @@
             }
           }
         },
-        "summary": "TestModelProfile probes a model endpoint with a minimal request. Not yet\nimplemented (depends on a model gateway / Runtime dialer); returns\nUNAVAILABLE. The audit event is recorded even on the stub so test attempts\nare traceable.",
+        "summary": "TestModelProfile probes the upstream model endpoint with a minimal\nrequest built from api_format. Hub never holds plain-text credentials:\nonly env:// secret refs are resolved locally (from the hub process\nenvironment); other refs probe without auth, so a 401/403 still proves\nreachability and is reported via http_status. The audit event is recorded\nso test attempts are traceable.",
         "tags": [
           "ModelProfileService"
         ]

@@ -165,7 +165,12 @@ func main() {
 	// aisphere:// factory. Create checks edit on the parent project explicitly
 	// in the biz layer (no proto authz interpolation).
 	modelProfileRepo := data.NewModelProfileRepo(resources)
-	modelProfileUsecase := biz.NewModelProfileUsecase(modelProfileRepo, authzUsecase)
+	// The HTTP prober powers TestModelProfile: it builds a minimal request
+	// from api_format and reports reachability (env:// secret refs resolve
+	// locally; secret:// refs probe unauthenticated, so 401/403 still proves
+	// the endpoint answers).
+	modelProfileUsecase := biz.NewModelProfileUsecase(modelProfileRepo, authzUsecase).
+		WithProber(data.NewModelProfileProber())
 	modelProfileService := service.NewModelProfileService(modelProfileUsecase)
 
 	// Repair durable owner relationships through IAM's runtime authorization API.

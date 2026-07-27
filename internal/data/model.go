@@ -232,7 +232,10 @@ func (r *modelProfileRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// loadRevisions attaches revision records to a profile model.
+// loadRevisions attaches revision records to a profile model. JSON-only
+// fields (limits/allowed_tools/reasoning/default_parameters/metadata) live
+// exclusively in the revision rows, so the latest revision's values are
+// merged back into the flat profile the proto surface exposes inline.
 func (r *modelProfileRepo) loadRevisions(db *gorm.DB, row *aihubModelProfileModel) (*biz.ModelProfile, error) {
 	p := modelProfileModelToBiz(row)
 	var vrows []aihubModelProfileRevisionModel
@@ -245,6 +248,13 @@ func (r *modelProfileRepo) loadRevisions(db *gorm.DB, row *aihubModelProfileMode
 	p.Revisions = make(map[string]biz.ModelProfileRevision, len(vrows))
 	for _, v := range vrows {
 		p.Revisions[v.Revision] = modelProfileRevisionModelToBiz(v)
+	}
+	if latest, ok := p.Revisions[row.LatestRevision]; ok {
+		p.Limits = latest.Limits
+		p.AllowedTools = latest.AllowedTools
+		p.Reasoning = latest.Reasoning
+		p.DefaultParameters = latest.DefaultParameters
+		p.Metadata = latest.Metadata
 	}
 	return p, nil
 }

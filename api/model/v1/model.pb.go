@@ -50,8 +50,12 @@ type ModelProfile struct {
 	OwnerSubject  string                 `protobuf:"bytes,19,opt,name=owner_subject,json=ownerSubject,proto3" json:"owner_subject,omitempty"` // "{type}:{id}" of the owner
 	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// default_parameters carries arbitrary JSON (string) merged into every
+	// upstream request by the Runtime (e.g. {"temperature":0.2,"top_p":0.9}).
+	// Together with limits it forms the profile's context configuration.
+	DefaultParameters string `protobuf:"bytes,22,opt,name=default_parameters,json=defaultParameters,proto3" json:"default_parameters,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ModelProfile) Reset() {
@@ -229,6 +233,13 @@ func (x *ModelProfile) GetUpdateTime() *timestamppb.Timestamp {
 		return x.UpdateTime
 	}
 	return nil
+}
+
+func (x *ModelProfile) GetDefaultParameters() string {
+	if x != nil {
+		return x.DefaultParameters
+	}
+	return ""
 }
 
 type ModelProfileLimits struct {
@@ -681,28 +692,29 @@ func (x *GetModelProfileResponse) GetModelProfile() *ModelProfile {
 }
 
 type CreateModelProfileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	Provider      string                 `protobuf:"bytes,5,opt,name=provider,proto3" json:"provider,omitempty"`
-	ApiFormat     string                 `protobuf:"bytes,6,opt,name=api_format,json=apiFormat,proto3" json:"api_format,omitempty"`
-	Endpoint      string                 `protobuf:"bytes,7,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Model         string                 `protobuf:"bytes,8,opt,name=model,proto3" json:"model,omitempty"`
-	UpstreamModel string                 `protobuf:"bytes,9,opt,name=upstream_model,json=upstreamModel,proto3" json:"upstream_model,omitempty"`
-	UpstreamPath  string                 `protobuf:"bytes,10,opt,name=upstream_path,json=upstreamPath,proto3" json:"upstream_path,omitempty"`
-	SecretRef     string                 `protobuf:"bytes,11,opt,name=secret_ref,json=secretRef,proto3" json:"secret_ref,omitempty"`
-	AllowedTools  []string               `protobuf:"bytes,12,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
-	Limits        *ModelProfileLimits    `protobuf:"bytes,13,opt,name=limits,proto3" json:"limits,omitempty"`
-	Reasoning     string                 `protobuf:"bytes,14,opt,name=reasoning,proto3" json:"reasoning,omitempty"`
-	Labels        map[string]string      `protobuf:"bytes,15,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Metadata      string                 `protobuf:"bytes,16,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Version       string                 `protobuf:"bytes,17,opt,name=version,proto3" json:"version,omitempty"` // initial revision label; defaults to "v1"
-	OrgId         string                 `protobuf:"bytes,18,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,19,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName       string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Status            string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	Provider          string                 `protobuf:"bytes,5,opt,name=provider,proto3" json:"provider,omitempty"`
+	ApiFormat         string                 `protobuf:"bytes,6,opt,name=api_format,json=apiFormat,proto3" json:"api_format,omitempty"`
+	Endpoint          string                 `protobuf:"bytes,7,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Model             string                 `protobuf:"bytes,8,opt,name=model,proto3" json:"model,omitempty"`
+	UpstreamModel     string                 `protobuf:"bytes,9,opt,name=upstream_model,json=upstreamModel,proto3" json:"upstream_model,omitempty"`
+	UpstreamPath      string                 `protobuf:"bytes,10,opt,name=upstream_path,json=upstreamPath,proto3" json:"upstream_path,omitempty"`
+	SecretRef         string                 `protobuf:"bytes,11,opt,name=secret_ref,json=secretRef,proto3" json:"secret_ref,omitempty"`
+	AllowedTools      []string               `protobuf:"bytes,12,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
+	Limits            *ModelProfileLimits    `protobuf:"bytes,13,opt,name=limits,proto3" json:"limits,omitempty"`
+	Reasoning         string                 `protobuf:"bytes,14,opt,name=reasoning,proto3" json:"reasoning,omitempty"`
+	Labels            map[string]string      `protobuf:"bytes,15,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata          string                 `protobuf:"bytes,16,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Version           string                 `protobuf:"bytes,17,opt,name=version,proto3" json:"version,omitempty"` // initial revision label; defaults to "v1"
+	OrgId             string                 `protobuf:"bytes,18,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	ProjectId         string                 `protobuf:"bytes,19,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	DefaultParameters string                 `protobuf:"bytes,20,opt,name=default_parameters,json=defaultParameters,proto3" json:"default_parameters,omitempty"` // JSON (string); context configuration
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateModelProfileRequest) Reset() {
@@ -868,6 +880,13 @@ func (x *CreateModelProfileRequest) GetProjectId() string {
 	return ""
 }
 
+func (x *CreateModelProfileRequest) GetDefaultParameters() string {
+	if x != nil {
+		return x.DefaultParameters
+	}
+	return ""
+}
+
 type CreateModelProfileResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ModelProfile  *ModelProfile          `protobuf:"bytes,1,opt,name=model_profile,json=modelProfile,proto3" json:"model_profile,omitempty"`
@@ -913,26 +932,27 @@ func (x *CreateModelProfileResponse) GetModelProfile() *ModelProfile {
 }
 
 type UpdateModelProfileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	Provider      string                 `protobuf:"bytes,5,opt,name=provider,proto3" json:"provider,omitempty"`
-	ApiFormat     string                 `protobuf:"bytes,6,opt,name=api_format,json=apiFormat,proto3" json:"api_format,omitempty"`
-	Endpoint      string                 `protobuf:"bytes,7,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Model         string                 `protobuf:"bytes,8,opt,name=model,proto3" json:"model,omitempty"`
-	UpstreamModel string                 `protobuf:"bytes,9,opt,name=upstream_model,json=upstreamModel,proto3" json:"upstream_model,omitempty"`
-	UpstreamPath  string                 `protobuf:"bytes,10,opt,name=upstream_path,json=upstreamPath,proto3" json:"upstream_path,omitempty"`
-	SecretRef     string                 `protobuf:"bytes,11,opt,name=secret_ref,json=secretRef,proto3" json:"secret_ref,omitempty"`
-	AllowedTools  []string               `protobuf:"bytes,12,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
-	Limits        *ModelProfileLimits    `protobuf:"bytes,13,opt,name=limits,proto3" json:"limits,omitempty"`
-	Reasoning     string                 `protobuf:"bytes,14,opt,name=reasoning,proto3" json:"reasoning,omitempty"`
-	Labels        map[string]string      `protobuf:"bytes,15,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Metadata      string                 `protobuf:"bytes,16,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Version       string                 `protobuf:"bytes,17,opt,name=version,proto3" json:"version,omitempty"` // new revision label for this update
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName       string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Status            string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	Provider          string                 `protobuf:"bytes,5,opt,name=provider,proto3" json:"provider,omitempty"`
+	ApiFormat         string                 `protobuf:"bytes,6,opt,name=api_format,json=apiFormat,proto3" json:"api_format,omitempty"`
+	Endpoint          string                 `protobuf:"bytes,7,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Model             string                 `protobuf:"bytes,8,opt,name=model,proto3" json:"model,omitempty"`
+	UpstreamModel     string                 `protobuf:"bytes,9,opt,name=upstream_model,json=upstreamModel,proto3" json:"upstream_model,omitempty"`
+	UpstreamPath      string                 `protobuf:"bytes,10,opt,name=upstream_path,json=upstreamPath,proto3" json:"upstream_path,omitempty"`
+	SecretRef         string                 `protobuf:"bytes,11,opt,name=secret_ref,json=secretRef,proto3" json:"secret_ref,omitempty"`
+	AllowedTools      []string               `protobuf:"bytes,12,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
+	Limits            *ModelProfileLimits    `protobuf:"bytes,13,opt,name=limits,proto3" json:"limits,omitempty"`
+	Reasoning         string                 `protobuf:"bytes,14,opt,name=reasoning,proto3" json:"reasoning,omitempty"`
+	Labels            map[string]string      `protobuf:"bytes,15,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata          string                 `protobuf:"bytes,16,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Version           string                 `protobuf:"bytes,17,opt,name=version,proto3" json:"version,omitempty"`                                              // new revision label for this update
+	DefaultParameters string                 `protobuf:"bytes,18,opt,name=default_parameters,json=defaultParameters,proto3" json:"default_parameters,omitempty"` // JSON (string); context configuration
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateModelProfileRequest) Reset() {
@@ -1080,6 +1100,13 @@ func (x *UpdateModelProfileRequest) GetMetadata() string {
 func (x *UpdateModelProfileRequest) GetVersion() string {
 	if x != nil {
 		return x.Version
+	}
+	return ""
+}
+
+func (x *UpdateModelProfileRequest) GetDefaultParameters() string {
+	if x != nil {
+		return x.DefaultParameters
 	}
 	return ""
 }
@@ -1613,6 +1640,11 @@ type TestModelProfileResponse struct {
 	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
 	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	LatencyMillis int32                  `protobuf:"varint,3,opt,name=latency_millis,json=latencyMillis,proto3" json:"latency_millis,omitempty"`
+	// http_status is the upstream HTTP status when a response was received
+	// (0 when the probe failed before any response, e.g. DNS/TLS/timeout).
+	// 401/403 means the endpoint is reachable but the credential was missing
+	// or rejected — Hub holds no plain-text key for secret:// refs.
+	HttpStatus    int32 `protobuf:"varint,4,opt,name=http_status,json=httpStatus,proto3" json:"http_status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1668,11 +1700,18 @@ func (x *TestModelProfileResponse) GetLatencyMillis() int32 {
 	return 0
 }
 
+func (x *TestModelProfileResponse) GetHttpStatus() int32 {
+	if x != nil {
+		return x.HttpStatus
+	}
+	return 0
+}
+
 var File_model_v1_model_proto protoreflect.FileDescriptor
 
 const file_model_v1_model_proto_rawDesc = "" +
 	"\n" +
-	"\x14model/v1/model.proto\x12\bmodel.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb0\x06\n" +
+	"\x14model/v1/model.proto\x12\bmodel.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdf\x06\n" +
 	"\fModelProfile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12\x16\n" +
@@ -1699,7 +1738,8 @@ const file_model_v1_model_proto_rawDesc = "" +
 	"\vcreate_time\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\x1a9\n" +
+	"updateTime\x12-\n" +
+	"\x12default_parameters\x18\x16 \x01(\tR\x11defaultParameters\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"j\n" +
@@ -1743,7 +1783,7 @@ const file_model_v1_model_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\"V\n" +
 	"\x17GetModelProfileResponse\x12;\n" +
-	"\rmodel_profile\x18\x01 \x01(\v2\x16.model.v1.ModelProfileR\fmodelProfile\"\xe2\x05\n" +
+	"\rmodel_profile\x18\x01 \x01(\v2\x16.model.v1.ModelProfileR\fmodelProfile\"\x91\x06\n" +
 	"\x19CreateModelProfileRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
@@ -1767,12 +1807,13 @@ const file_model_v1_model_proto_rawDesc = "" +
 	"\aversion\x18\x11 \x01(\tR\aversion\x12\x15\n" +
 	"\x06org_id\x18\x12 \x01(\tR\x05orgId\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x13 \x01(\tR\tprojectId\x1a9\n" +
+	"project_id\x18\x13 \x01(\tR\tprojectId\x12-\n" +
+	"\x12default_parameters\x18\x14 \x01(\tR\x11defaultParameters\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"Y\n" +
 	"\x1aCreateModelProfileResponse\x12;\n" +
-	"\rmodel_profile\x18\x01 \x01(\v2\x16.model.v1.ModelProfileR\fmodelProfile\"\xac\x05\n" +
+	"\rmodel_profile\x18\x01 \x01(\v2\x16.model.v1.ModelProfileR\fmodelProfile\"\xdb\x05\n" +
 	"\x19UpdateModelProfileRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
@@ -1793,7 +1834,8 @@ const file_model_v1_model_proto_rawDesc = "" +
 	"\treasoning\x18\x0e \x01(\tR\treasoning\x12G\n" +
 	"\x06labels\x18\x0f \x03(\v2/.model.v1.UpdateModelProfileRequest.LabelsEntryR\x06labels\x12\x1a\n" +
 	"\bmetadata\x18\x10 \x01(\tR\bmetadata\x12\x18\n" +
-	"\aversion\x18\x11 \x01(\tR\aversion\x1a9\n" +
+	"\aversion\x18\x11 \x01(\tR\aversion\x12-\n" +
+	"\x12default_parameters\x18\x12 \x01(\tR\x11defaultParameters\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"Y\n" +
@@ -1839,11 +1881,13 @@ const file_model_v1_model_proto_rawDesc = "" +
 	"\x11max_output_tokens\x18\x02 \x01(\x05R\x0fmaxOutputTokens\"F\n" +
 	"\x17TestModelProfileRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12\x16\n" +
-	"\x06prompt\x18\x02 \x01(\tR\x06prompt\"g\n" +
+	"\x06prompt\x18\x02 \x01(\tR\x06prompt\"\x88\x01\n" +
 	"\x18TestModelProfileResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\x12%\n" +
-	"\x0elatency_millis\x18\x03 \x01(\x05R\rlatencyMillis2\xca\r\n" +
+	"\x0elatency_millis\x18\x03 \x01(\x05R\rlatencyMillis\x12\x1f\n" +
+	"\vhttp_status\x18\x04 \x01(\x05R\n" +
+	"httpStatus2\xca\r\n" +
 	"\x13ModelProfileService\x12\xee\x01\n" +
 	"\x11ListModelProfiles\x12\".model.v1.ListModelProfilesRequest\x1a#.model.v1.ListModelProfilesResponse\"\x8f\x01\x92\xf4\x18q\b\x02\x1a\x17\b\x01\x12\x0ehub.model.list\x1a\x03low2Ehandler batch-checks view permission for every concrete model profile:\r\"\vhub-service\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/model-profiles\x12\xcf\x01\n" +
 	"\x0fGetModelProfile\x12 .model.v1.GetModelProfileRequest\x1a!.model.v1.GetModelProfileResponse\"w\x92\xf4\x18E\b\x03\x12)\n" +

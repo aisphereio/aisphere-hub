@@ -83,10 +83,12 @@ service ModelProfileService {
     };
   }
 
-  // TestModelProfile probes a model endpoint with a minimal request. Not yet
-  // implemented (depends on a model gateway / Runtime dialer); returns
-  // UNAVAILABLE. The audit event is recorded even on the stub so test attempts
-  // are traceable.
+  // TestModelProfile probes the upstream model endpoint with a minimal
+  // request built from api_format. Hub never holds plain-text credentials:
+  // only env:// secret refs are resolved locally (from the hub process
+  // environment); other refs probe without auth, so a 401/403 still proves
+  // reachability and is reported via http_status. The audit event is recorded
+  // so test attempts are traceable.
   rpc TestModelProfile(TestModelProfileRequest) returns (TestModelProfileResponse) {
     option (google.api.http) = { post: "/v1/model-profiles/{id}:test" body: "*" };
     option (aisphere.access.v1.policy) = {
@@ -122,6 +124,10 @@ message ModelProfile {
   string owner_subject = 19;     // "{type}:{id}" of the owner
   google.protobuf.Timestamp create_time = 20;
   google.protobuf.Timestamp update_time = 21;
+  // default_parameters carries arbitrary JSON (string) merged into every
+  // upstream request by the Runtime (e.g. {"temperature":0.2,"top_p":0.9}).
+  // Together with limits it forms the profile's context configuration.
+  string default_parameters = 22;
 }
 
 message ModelProfileLimits {
@@ -192,6 +198,7 @@ message CreateModelProfileRequest {
   string version = 17;           // initial revision label; defaults to "v1"
   string org_id = 18;
   string project_id = 19;
+  string default_parameters = 20; // JSON (string); context configuration
 }
 
 message CreateModelProfileResponse {
@@ -216,6 +223,7 @@ message UpdateModelProfileRequest {
   map<string, string> labels = 15;
   string metadata = 16;
   string version = 17;           // new revision label for this update
+  string default_parameters = 18; // JSON (string); context configuration
 }
 
 message UpdateModelProfileResponse {
@@ -272,7 +280,7 @@ message ModelProfileSnapshotLimits {
   int32 max_output_tokens = 2;
 }
 
-// --- Test (stub) ---
+// --- Test ---
 
 message TestModelProfileRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
@@ -283,4 +291,9 @@ message TestModelProfileResponse {
   bool ok = 1;
   string error = 2;
   int32 latency_millis = 3;
+  // http_status is the upstream HTTP status when a response was received
+  // (0 when the probe failed before any response, e.g. DNS/TLS/timeout).
+  // 401/403 means the endpoint is reachable but the credential was missing
+  // or rejected — Hub holds no plain-text key for secret:// refs.
+  int32 http_status = 4;
 }

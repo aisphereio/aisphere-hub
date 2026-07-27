@@ -91,12 +91,16 @@ func (s *ModelProfileService) ResolveModelProfile(ctx context.Context, req *mode
 }
 
 func (s *ModelProfileService) TestModelProfile(ctx context.Context, req *modelv1.TestModelProfileRequest) (*modelv1.TestModelProfileResponse, error) {
-	if _, err := s.uc.TestModelProfile(ctx, principalFromContext(ctx), req.GetId(), req.GetPrompt()); err != nil {
+	res, err := s.uc.TestModelProfile(ctx, principalFromContext(ctx), req.GetId(), req.GetPrompt())
+	if err != nil {
 		return nil, err
 	}
-	// Unreachable today (TestModelProfile always returns Unavailable); the body
-	// below is the shape callers will receive once the Runtime model dialer lands.
-	return &modelv1.TestModelProfileResponse{Ok: false, Error: "model test not yet available"}, nil
+	return &modelv1.TestModelProfileResponse{
+		Ok:            res.OK,
+		Error:         res.Error,
+		LatencyMillis: res.LatencyMs,
+		HttpStatus:    res.HTTPStatus,
+	}, nil
 }
 
 // --- proto <-> biz conversion ---
@@ -117,6 +121,7 @@ func modelProfileToProto(p *biz.ModelProfile) *modelv1.ModelProfile {
 		SecretRef: p.SecretRef, AllowedTools: p.AllowedTools,
 		Limits:    limitsToProto(p.Limits),
 		Reasoning: p.Reasoning, Labels: p.Labels, Metadata: p.Metadata,
+		DefaultParameters: p.DefaultParameters,
 		Object: p.Object, OwnerSubject: ownerSubject,
 		CreateTime: timestamp(p.CreatedAt), UpdateTime: timestamp(p.UpdatedAt),
 	}
@@ -157,6 +162,7 @@ func createModelProfileRequestToBiz(req *modelv1.CreateModelProfileRequest) *biz
 		Labels:        req.GetLabels(),
 		Metadata:      req.GetMetadata(),
 		ProjectID:     req.GetProjectId(),
+		DefaultParameters: req.GetDefaultParameters(),
 	}
 }
 
@@ -179,6 +185,7 @@ func updateModelProfileRequestToBiz(req *modelv1.UpdateModelProfileRequest) *biz
 		Reasoning:     req.GetReasoning(),
 		Labels:        req.GetLabels(),
 		Metadata:      req.GetMetadata(),
+		DefaultParameters: req.GetDefaultParameters(),
 	}
 }
 
