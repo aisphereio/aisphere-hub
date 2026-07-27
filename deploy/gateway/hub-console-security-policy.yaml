@@ -1,0 +1,113 @@
+# Hub Console SecurityPolicy — OIDC authentication for the hub.weagent.cc
+# frontend + API routes (HTTPRoute hub-console).
+#
+# This is the OIDC policy that protects the Next.js SPA and the /v1/* API
+# routes served on hub.weagent.cc. Envoy terminates OIDC here: unauthenticated
+# browser requests are redirected to Casdoor; after login, Envoy sets session
+# cookies and injects x-aisphere-* headers that the hub backend trusts
+# (authn mode: gateway_trusted).
+#
+# IMPORTANT — cookieDomain is intentionally NOT set (host-only cookies):
+#   Earlier we tried cookieDomain: weagent.cc to widen cookie scope. This
+#   caused a login loop (ERR_TOO_MANY_REDIRECTS) for browsers that had logged
+#   in BEFORE the change: they held stale host-only cookies (same name,
+#   e.g. OauthHMAC-ecbc7476) from the old config. After the patch, new logins
+#   set domain-scoped cookies, but the browser sends BOTH (host-only first),
+#   so Envoy's OIDC filter reads the stale host-only HMAC, fails validation,
+#   and redirects back to Casdoor — an infinite loop. Keeping cookies host-only
+#   (the default) means each new login overwrites the previous host-only cookie
+#   with the same name+path+domain, so the session self-heals cleanly.
+#
+#   SameSite=Lax is retained — it allows the OIDC redirect (cross-site from
+#   Casdoor back to hub.weagent.cc) to carry the callback cookies while still
+#   blocking CSRF on cross-site subresource requests.
+#
+# Casdoor application: aisphere-hub (client_id: bbdcfc272e2b990cb923)
+# Cookie suffix "ecbc7476" is Envoy's per-client_id qualifier — stable across
+# config changes, so the cookie names above (Aisphere-Hub-AccessToken etc.)
+# plus the hashed OauthHMAC/OauthExpires/RefreshToken are deterministic.
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: hub-console-oidc
+  namespace: aisphere
+  labels:
+    app.kubernetes.io/name: aisphere-hub
+    app.kubernetes.io/component: gateway-security
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: hub-console
+  oidc:
+    provider:
+      issuer: "https://casdoor.weagent.cc:30723"
+      authorizationEndpoint: "https://casdoor.weagent.cc:30723/login/oauth/authorize"
+      tokenEndpoint: "http://casdoor.aisphere:8000/api/login/oauth/access_token"
+      # endSessionEndpoint is REQUIRED for logout to work. Without it, logoutPath
+      # only clears Envoy's own OIDC cookies but has nowhere to redirect, and since
+      # /logout is itself OIDC-protected the just-cleared session triggers a fresh
+      # login redirect → Casdoor → callback → /logout → ... ERR_TOO_MANY_REDIRECTS.
+      # Pointing it at Casdoor's /api logout endpoint gives Envoy a 302 target after
+      # clearing its cookies, breaking the loop.
+      #
+      # Casdoor caveat: /api/logout validates post_logout_redirect_uri (which Envoy
+      # sets to the hub root, https://hub.weagent.cc:30723/) against the application's
+      # redirect_uris whitelist via IsRedirectUriValid(). The hub root URL MUST be
+      # present in the aisphere-hub application's redirect_uris in Casdoor, otherwise
+      # Casdoor returns "重定向 URI ... 在许可跳转列表中未找到" and the browser lands on
+      # a JSON error page instead of the login page. (Casdoor has no separate
+      # post-logout redirect list; it reuses redirect_uris.)
+      endSessionEndpoint: "https://casdoor.weagent.cc:30723/api/logout"
+    clientID: "bbdcfc272e2b990cb923"
+    clientSecret:
+      name: casdoor-hub-client-secret
+    redirectURL: "https://hub.weagent.cc:30723/oauth2/callback"
+    logoutPath: "/logout"
+    scopes:
+      - openid
+      - profile
+      - email
+    refreshToken: true
+    forwardAccessToken: true
+    passThroughAuthHeader: true
+    # Host-only cookies (no cookieDomain) — see header comment for why.
+    cookieConfig:
+      sameSite: Lax
+    cookieNames:
+      accessToken: Aisphere-Hub-AccessToken
+      idToken: Aisphere-Hub-IDToken
+  jwt:
+    providers:
+      - name: casdoor
+        issuer: "https://casdoor.weagent.cc:30723"
+        audiences:
+          - "bbdcfc272e2b990cb923"
+        remoteJWKS:
+          uri: "http://casdoor.aisphere:8000/.well-known/jwks"
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "
+          cookies:
+            - Aisphere-Hub-AccessToken
+        claimToHeaders:
+          - claim: sub
+            header: x-aisphere-external-sub
+          - claim: email
+            header: x-aisphere-external-email
+          - claim: name
+            header: x-aisphere-external-name
+          - claim: preferred_username
+            header: x-aisphere-external-username
+          - claim: iss
+            header: x-aisphere-external-issuer
+          - claim: owner
+            header: x-aisphere-external-owner
+          - claim: id
+            header: x-aisphere-external-id
+          - claim: displayName
+            header: x-aisphere-external-display-name
+          - claim: scope
+            header: x-aisphere-external-scope
