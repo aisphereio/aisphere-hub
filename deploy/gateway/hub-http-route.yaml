@@ -86,6 +86,12 @@ spec:
             value: /v1/skillsets/
         - path:
             type: PathPrefix
+            value: /v1/tools/
+        - path:
+            type: PathPrefix
+            value: /v1/model-profiles/
+        - path:
+            type: PathPrefix
             value: /v1/audit/
         - path:
             type: PathPrefix
