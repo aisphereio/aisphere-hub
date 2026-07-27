@@ -310,15 +310,16 @@ func (uc *ModelProfileUsecase) CreateModelProfile(ctx context.Context, principal
 	if err != nil {
 		return nil, err
 	}
-	// Explicit biz-layer edit check on the parent project (correction 4). The
+	// Explicit biz-layer edit check on the parent zone (correction 4). The
 	// proto policy is AUTHENTICATED only; the resource is derived from the
-	// principal identity, not a path parameter. Project has no `edit`
-	// permission (it has manage/write/operate/read); model_profile.edit
-	// inherits project.write via parent->write, so we check `write` here.
+	// principal identity, not a path parameter. model_profile.parent is zone
+	// (IAM project IDs carry "/" which SpiceDB objectIds reject, so zone is
+	// the stable parent). zone.manage_skills flows to model_profile.edit via
+	// parent->manage_skills.
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
-		Resource:   AuthzObjectRef{Type: "project", ID: projectID},
-		Permission: "write",
+		Resource:   AuthzObjectRef{Type: "zone", ID: principal.OrgID},
+		Permission: "manage_skills",
 		OrgID:      principal.OrgID,
 	})
 	if err != nil {
@@ -361,7 +362,7 @@ func (uc *ModelProfileUsecase) CreateModelProfile(ctx context.Context, principal
 		_ = uc.profiles.Delete(ctx, p.ID)
 		return nil, fmt.Errorf("model profile create: grant owner: %w", err)
 	}
-	if err := uc.rels.GrantParent(ctx, modelProfileResource(p.ID), AuthzSubjectRef{Type: "project", ID: projectID}); err != nil {
+	if err := uc.rels.GrantParent(ctx, modelProfileResource(p.ID), AuthzSubjectRef{Type: "zone", ID: principal.OrgID}); err != nil {
 		_ = uc.profiles.Delete(ctx, p.ID)
 		return nil, fmt.Errorf("model profile create: grant parent: %w", err)
 	}

@@ -180,7 +180,7 @@ func TestCreateModelProfile_RequiresProjectEdit(t *testing.T) {
 func TestCreateModelProfile_PersistsAndGrantsOwnerParent(t *testing.T) {
 	repo := newFakeModelProfileRepo()
 	rels := &fakeModelProfileRels{allow: map[string]bool{
-		"project:proj-1|write": true, // creator can edit the parent project
+		"zone:org-1|manage_skills": true, // creator can edit the parent project
 	}}
 	uc := NewModelProfileUsecase(repo, rels)
 	p := validModelProfileInput()
@@ -229,7 +229,7 @@ func TestCreateModelProfile_PersistsAndGrantsOwnerParent(t *testing.T) {
 func TestCreateModelProfile_OrgIDFallbackWhenNoProject(t *testing.T) {
 	repo := newFakeModelProfileRepo()
 	rels := &fakeModelProfileRels{allow: map[string]bool{
-		"project:org-1|write": true, // edit via org-id fallback
+		"zone:org-1|manage_skills": true, // edit via org-id fallback
 	}}
 	uc := NewModelProfileUsecase(repo, rels)
 	p := validModelProfileInput()
@@ -249,7 +249,7 @@ func TestCreateModelProfile_OrgIDFallbackWhenNoProject(t *testing.T) {
 func TestCreateModelProfile_RollbackOwnerGrantFailure(t *testing.T) {
 	repo := newFakeModelProfileRepo()
 	rels := &fakeModelProfileRels{
-		allow:         map[string]bool{"project:proj-1|write": true},
+		allow:         map[string]bool{"zone:org-1|manage_skills": true},
 		grantOwnerErr: errFakeGrant,
 	}
 	uc := NewModelProfileUsecase(repo, rels)
@@ -265,7 +265,7 @@ func TestCreateModelProfile_RollbackOwnerGrantFailure(t *testing.T) {
 func TestResolveModelProfile_SnapshotNoPlaintextCredential(t *testing.T) {
 	repo := newFakeModelProfileRepo()
 	rels := &fakeModelProfileRels{allow: map[string]bool{
-		"project:proj-1|write":            true,
+		"zone:org-1|manage_skills":            true,
 		"model_profile:openai-prod|view": true,
 		"model_profile:openai-prod|execute": true,
 	}}
@@ -324,7 +324,7 @@ func TestResolveModelProfile_SnapshotNoPlaintextCredential(t *testing.T) {
 func TestResolveModelProfile_DeniesWithoutExecute(t *testing.T) {
 	repo := newFakeModelProfileRepo()
 	rels := &fakeModelProfileRels{allow: map[string]bool{
-		"project:proj-1|write":               true,
+		"zone:org-1|manage_skills":               true,
 		"model_profile:openai-prod|view":    true,
 		"model_profile:openai-prod|execute": false, // explicitly denied
 	}}
@@ -344,7 +344,7 @@ func TestResolveModelProfile_DeniesWithoutExecute(t *testing.T) {
 func TestUpdateModelProfile_AdvancesRevision(t *testing.T) {
 	repo := newFakeModelProfileRepo()
 	rels := &fakeModelProfileRels{allow: map[string]bool{
-		"project:proj-1|write":                  true,
+		"zone:org-1|manage_skills":                  true,
 		"model_profile:codedef|edit":           true,
 		"model_profile:codedef|view":           true,
 	}}
@@ -412,7 +412,7 @@ func TestNextRevisionLabel(t *testing.T) {
 func TestDeleteModelProfile_RevokesResource(t *testing.T) {
 	repo := newFakeModelProfileRepo()
 	rels := &fakeModelProfileRels{allow: map[string]bool{
-		"project:proj-1|write":                 true,
+		"zone:org-1|manage_skills":                 true,
 		"model_profile:codedef|manage":        true,
 		"model_profile:codedef|view":          true,
 	}}
