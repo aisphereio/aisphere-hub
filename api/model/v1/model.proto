@@ -48,7 +48,7 @@ service ModelProfileService {
       exposure: AUTHENTICATED
       gateway: { upstream_service: "hub-service" }
       audit: { enabled: true event: "hub.model.create" risk: "medium" }
-      reason: "handler checks edit on project:{org_id}/{project_id} using principal identity"
+      reason: "handler checks write on project:{org_id}/{project_id} using principal identity (project has no edit permission; model_profile.edit inherits parent->write)"
     };
   }
 

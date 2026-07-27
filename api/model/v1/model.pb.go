@@ -1843,12 +1843,12 @@ const file_model_v1_model_proto_rawDesc = "" +
 	"\x18TestModelProfileResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\x12%\n" +
-	"\x0elatency_millis\x18\x03 \x01(\x05R\rlatencyMillis2\xd5\f\n" +
+	"\x0elatency_millis\x18\x03 \x01(\x05R\rlatencyMillis2\xa4\r\n" +
 	"\x13ModelProfileService\x12\xee\x01\n" +
 	"\x11ListModelProfiles\x12\".model.v1.ListModelProfilesRequest\x1a#.model.v1.ListModelProfilesResponse\"\x8f\x01\x92\xf4\x18q\b\x02\x1a\x17\b\x01\x12\x0ehub.model.list\x1a\x03low2Ehandler batch-checks view permission for every concrete model profile:\r\"\vhub-service\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/model-profiles\x12\xcf\x01\n" +
 	"\x0fGetModelProfile\x12 .model.v1.GetModelProfileRequest\x1a!.model.v1.GetModelProfileResponse\"w\x92\xf4\x18E\b\x03\x12)\n" +
-	"\x04view\x12\x12model_profile:{id}\x1a\vhub-service \x01\x1a\x16\b\x01\x12\rhub.model.get\x1a\x03low\x82\xd3\xe4\x93\x02(b\rmodel_profile\x12\x17/v1/model-profiles/{id}\x12\x90\x02\n" +
-	"\x12CreateModelProfile\x12#.model.v1.CreateModelProfileRequest\x1a$.model.v1.CreateModelProfileResponse\"\xae\x01\x92\xf4\x18~\b\x02\x1a\x1c\b\x01\x12\x10hub.model.create\x1a\x06medium2Mhandler checks edit on project:{org_id}/{project_id} using principal identity:\r\"\vhub-service\x82\xd3\xe4\x93\x02&:\x01*b\rmodel_profile\"\x12/v1/model-profiles\x12\xe2\x01\n" +
+	"\x04view\x12\x12model_profile:{id}\x1a\vhub-service \x01\x1a\x16\b\x01\x12\rhub.model.get\x1a\x03low\x82\xd3\xe4\x93\x02(b\rmodel_profile\x12\x17/v1/model-profiles/{id}\x12\xdf\x02\n" +
+	"\x12CreateModelProfile\x12#.model.v1.CreateModelProfileRequest\x1a$.model.v1.CreateModelProfileResponse\"\xfd\x01\x92\xf4\x18\xcc\x01\b\x02\x1a\x1c\b\x01\x12\x10hub.model.create\x1a\x06medium2\x9a\x01handler checks write on project:{org_id}/{project_id} using principal identity (project has no edit permission; model_profile.edit inherits parent->write):\r\"\vhub-service\x82\xd3\xe4\x93\x02&:\x01*b\rmodel_profile\"\x12/v1/model-profiles\x12\xe2\x01\n" +
 	"\x12UpdateModelProfile\x12#.model.v1.UpdateModelProfileRequest\x1a$.model.v1.UpdateModelProfileResponse\"\x80\x01\x92\xf4\x18K\b\x03\x12)\n" +
 	"\x04edit\x12\x12model_profile:{id}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x10hub.model.update\x1a\x06medium\x82\xd3\xe4\x93\x02+:\x01*b\rmodel_profile\x1a\x17/v1/model-profiles/{id}\x12\xcf\x01\n" +
 	"\x12DeleteModelProfile\x12#.model.v1.DeleteModelProfileRequest\x1a$.model.v1.DeleteModelProfileResponse\"n\x92\xf4\x18K\b\x03\x12+\n" +

@@ -312,11 +312,13 @@ func (uc *ModelProfileUsecase) CreateModelProfile(ctx context.Context, principal
 	}
 	// Explicit biz-layer edit check on the parent project (correction 4). The
 	// proto policy is AUTHENTICATED only; the resource is derived from the
-	// principal identity, not a path parameter.
+	// principal identity, not a path parameter. Project has no `edit`
+	// permission (it has manage/write/operate/read); model_profile.edit
+	// inherits project.write via parent->write, so we check `write` here.
 	dec, err := uc.rels.Check(ctx, AuthzCheckRequest{
 		Subject:    subject,
 		Resource:   AuthzObjectRef{Type: "project", ID: projectID},
-		Permission: "edit",
+		Permission: "write",
 		OrgID:      principal.OrgID,
 	})
 	if err != nil {
