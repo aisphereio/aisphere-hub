@@ -115,6 +115,9 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	if modelProfileSvc != nil {
 		modelProfileSvc.RegisterHTTPServer(srv)
 	}
+	// Agent is currently a lightweight versioned HTTP control-plane resource.
+	// Tool approval modes are human consent metadata; IAM remains authoritative.
+	registerSecuredAgentHTTP(srv, resources)
 	// SkillSet remains a lightweight HTTP resource. It stores ordered references
 	// to canonical Skills plus immutable release-resolution snapshots.
 	registerSecuredSkillSetHTTP(srv, resources, git)
