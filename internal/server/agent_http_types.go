@@ -98,10 +98,19 @@ type agentToolBinding struct {
 	ApprovalMode string `json:"approvalMode,omitempty"`
 }
 
+// agentModelBinding points to the AISphere-owned ModelProfile UUID. Revision is
+// optional: zero means resolve the latest revision when the Agent run snapshot
+// is created. The resolved revision is then frozen into that run snapshot.
+type agentModelBinding struct {
+	ProfileID string `json:"profileId"`
+	Revision  int64  `json:"revision,omitempty"`
+}
+
 type agentDefinitionProjection struct {
-	EntryPoint string             `json:"entryPoint"`
-	Files      map[string]string  `json:"files"`
-	Tools      []agentToolBinding `json:"tools"`
+	EntryPoint string              `json:"entryPoint"`
+	Files      map[string]string   `json:"files"`
+	Model      *agentModelBinding  `json:"model,omitempty"`
+	Tools      []agentToolBinding  `json:"tools"`
 }
 
 type agentRunRequest struct {
