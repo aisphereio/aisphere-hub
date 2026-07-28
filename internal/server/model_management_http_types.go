@@ -262,6 +262,7 @@ func (h *modelManagementHTTPHandler) requireZone(ctx context.Context, principal 
 	if strings.TrimSpace(principal.OrgID) == "" {
 		return errModelManagementForbidden
 	}
+	permission = modelManagementPermission(permission)
 	decision, err := h.authz.Check(ctx, biz.AuthzCheckRequest{
 		Subject:    biz.AuthzSubjectRef{Type: principal.SubjectType, ID: principal.SubjectID},
 		Resource:   biz.AuthzObjectRef{Type: "zone", ID: principal.OrgID},
@@ -272,6 +273,21 @@ func (h *modelManagementHTTPHandler) requireZone(ctx context.Context, principal 
 		return errModelManagementForbidden
 	}
 	return nil
+}
+
+// modelManagementPermission keeps call sites readable while decoupling model
+// operations from the Skill permission domain. It also makes the migration from
+// the first V2 draft explicit: no model request is authorized with a Skill
+// capability after IAM PR #61 is deployed.
+func modelManagementPermission(permission string) string {
+	switch permission {
+	case "manage_skills", "manage_models":
+		return "manage_models"
+	case "view_skills", "use_models":
+		return "use_models"
+	default:
+		return permission
+	}
 }
 
 func newModelUUID() string {
