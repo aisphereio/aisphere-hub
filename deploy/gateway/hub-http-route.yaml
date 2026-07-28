@@ -86,6 +86,9 @@ spec:
             value: /v1/skillsets/
         - path:
             type: PathPrefix
+            value: /v1/agents/
+        - path:
+            type: PathPrefix
             value: /v1/tools/
         - path:
             type: PathPrefix
