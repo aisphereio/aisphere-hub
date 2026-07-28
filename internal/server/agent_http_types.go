@@ -217,5 +217,5 @@ func (h *agentHTTPHandler) allowCreate(ctx context.Context, principal authn.Prin
 	if strings.TrimSpace(principal.OrgID) == "" {
 		return errAgentZoneRequired
 	}
-	return h.requirePermission(ctx, principal, "zone", principal.OrgID, "create_agent")
+	return h.requirePermission(ctx, principal, "zone", principal.OrgID, "create_skill")
 }
