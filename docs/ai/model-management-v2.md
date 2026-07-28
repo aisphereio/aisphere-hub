@@ -174,7 +174,21 @@ Runtime
 
 The Agent and Sandbox never receive plaintext model credentials.
 
-## 6. Migration
+## 6. Authorization
+
+Model catalog permissions are independent from the Skill domain:
+
+```text
+zone.use_models
+zone.manage_models
+```
+
+- `use_models` allows catalog reads and resolving an active ModelProfile.
+- `manage_models` allows Model, ModelEndpoint and ModelProfile mutations.
+
+The permissions are defined by the companion IAM change `aisphere-iam#61` and flow through custom roles and role bindings.
+
+## 7. Migration
 
 The V2 implementation uses new tables:
 
@@ -184,5 +198,3 @@ The V2 implementation uses new tables:
 - `aihub_model_profile_revisions_v2`
 
 The old flat ModelProfile HTTP contract is no longer mounted. The legacy generated gRPC service remains available temporarily for migration, but new clients must use the V2 HTTP resources.
-
-Current authorization temporarily reuses existing zone model-adjacent capabilities (`manage_skills` / `view_skills`) until IAM adds dedicated `manage_models` and `use_models` permissions. This is an explicit migration debt and must be removed before production release.
