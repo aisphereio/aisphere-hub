@@ -92,7 +92,13 @@ spec:
             value: /v1/tools/
         - path:
             type: PathPrefix
-            value: /v1/model-profiles/
+            value: /v1/models
+        - path:
+            type: PathPrefix
+            value: /v1/model-endpoints
+        - path:
+            type: PathPrefix
+            value: /v1/model-profiles
         - path:
             type: PathPrefix
             value: /v1/audit/

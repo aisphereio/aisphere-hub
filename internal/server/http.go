@@ -112,9 +112,12 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	if toolSvc != nil {
 		toolSvc.RegisterHTTPServer(srv)
 	}
-	if modelProfileSvc != nil {
-		modelProfileSvc.RegisterHTTPServer(srv)
-	}
+	// Model management V2 owns the HTTP paths for models, endpoints and profiles.
+	// The legacy generated ModelProfile service remains available to gRPC callers
+	// during the migration, but is deliberately not mounted on HTTP to avoid two
+	// incompatible contracts competing for /v1/model-profiles.
+	_ = modelProfileSvc
+	registerModelManagementHTTP(srv, resources)
 	// Agent is currently a lightweight versioned HTTP control-plane resource.
 	// Tool approval modes are human consent metadata; IAM remains authoritative.
 	registerSecuredAgentHTTP(srv, resources)

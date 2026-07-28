@@ -54,6 +54,9 @@ func (h *agentHTTPHandler) selectedVersion(agent *agentRow, requested string) (a
 }
 
 func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal authn.Principal, projection agentDefinitionProjection) error {
+	if _, err := h.resolveAgentModelSnapshot(ctx, principal, projection.Model); err != nil {
+		return err
+	}
 	for _, binding := range projection.Tools {
 		if normalizeApprovalMode(binding.ApprovalMode) == agentApprovalDisabled {
 			continue
@@ -63,6 +66,53 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 		}
 	}
 	return nil
+}
+
+// resolveAgentModelSnapshot validates the Agent's ModelProfile binding and
+// returns the immutable, fully-resolved V2 runtime snapshot. The Agent stores an
+// internal Profile UUID, never a provider model name or plaintext credential.
+func (h *agentHTTPHandler) resolveAgentModelSnapshot(ctx context.Context, principal authn.Principal, binding *agentModelBinding) (map[string]any, error) {
+	if binding == nil || strings.TrimSpace(binding.ProfileID) == "" {
+		return nil, nil
+	}
+	if err := h.requirePermission(ctx, principal, "zone", principal.OrgID, "use_models"); err != nil {
+		return nil, errorx.Forbidden("AGENT_MODEL_USE_DENIED", "caller cannot use the selected model profile")
+	}
+	var profile modelProfileRowV2
+	if err := h.db(ctx).
+		Where("id = ? AND org_id = ? AND deleted_at IS NULL", strings.TrimSpace(binding.ProfileID), principal.OrgID).
+		First(&profile).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errorx.NotFound("AGENT_MODEL_PROFILE_NOT_FOUND", "bound model profile not found")
+		}
+		return nil, agentDBErr(err)
+	}
+	if profile.Status != "active" {
+		return nil, errorx.Conflict("AGENT_MODEL_PROFILE_DISABLED", "bound model profile is disabled")
+	}
+	revision := binding.Revision
+	if revision == 0 {
+		revision = profile.LatestRevision
+	}
+	var row modelProfileRevisionRowV2
+	if err := h.db(ctx).
+		Where("profile_id = ? AND revision = ?", profile.ID, revision).
+		First(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errorx.NotFound("AGENT_MODEL_REVISION_NOT_FOUND", "bound model profile revision not found")
+		}
+		return nil, agentDBErr(err)
+	}
+	var snapshot map[string]any
+	if err := json.Unmarshal(row.SnapshotJSON, &snapshot); err != nil {
+		return nil, errorx.Internal("AGENT_MODEL_SNAPSHOT_INVALID", "stored model snapshot is invalid", errorx.WithCause(err))
+	}
+	snapshot["profileId"] = profile.ID
+	snapshot["profileCode"] = profile.Code
+	snapshot["logicalName"] = "aisphere://model-profiles/" + profile.Code
+	snapshot["revision"] = row.Revision
+	snapshot["sha256"] = row.SHA256
+	return snapshot, nil
 }
 
 func (h *agentHTTPHandler) resolveTool(ctx context.Context, principal authn.Principal, binding agentToolBinding) (resolvedAgentTool, error) {
@@ -218,6 +268,10 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 	if err != nil {
 		return nil, nil, err
 	}
+	modelSnapshot, err := h.resolveAgentModelSnapshot(ctx, principal, projection.Model)
+	if err != nil {
+		return nil, nil, err
+	}
 	approved := toSet(request.ApprovedTools)
 	resolved := make([]resolvedAgentTool, 0, len(projection.Tools))
 	approvals := make([]agentToolApproval, 0, len(projection.Tools))
@@ -246,6 +300,7 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 		"iamEnforcement":       "resource_service",
 		"requiresApproval":     requiresApproval,
 		"approvalConfirmed":    request.ApprovalConfirmed,
+		"model":                modelSnapshot,
 		"tools":                approvals,
 	}
 	return plan, resolved, nil
