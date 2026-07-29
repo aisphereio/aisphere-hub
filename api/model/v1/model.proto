@@ -107,7 +107,7 @@ message ModelProfile {
   string display_name = 4;
   string description = 5;
   string provider = 6;           // openai | vllm | vertex | custom
-  string api_format = 7;         // openai_responses | openai_chat_completions | claude_code | gemini
+  string api_format = 7;         // openai_responses | openai_chat_completions | gemini
   string endpoint = 8;           // base_url or logical endpoint name
   string model = 9;              // logical model name (aisphere://{id})
   string upstream_model = 10;    // real model name at the provider
