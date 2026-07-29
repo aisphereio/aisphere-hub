@@ -37,7 +37,7 @@ func (h *modelManagementHTTPHandler) createModel(ctx khttp.Context) error {
 		return errorx.BadRequest("MODEL_REQUEST_INVALID", "invalid model request", errorx.WithCause(err))
 	}
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.CreateModel", &req, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "manage_skills"); err != nil {
+		if err := h.requireZone(c, principal, "manage_models"); err != nil {
 			return nil, err
 		}
 		row, err := buildModelRow(req, principal)
@@ -66,7 +66,7 @@ func (h *modelManagementHTTPHandler) updateModel(ctx khttp.Context) error {
 	}
 	id := strings.TrimSpace(ctx.Vars().Get("id"))
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.UpdateModel", &req, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "manage_skills"); err != nil {
+		if err := h.requireZone(c, principal, "manage_models"); err != nil {
 			return nil, err
 		}
 		row, err := buildModelRow(req, principal)
@@ -120,7 +120,7 @@ func (h *modelManagementHTTPHandler) createEndpoint(ctx khttp.Context) error {
 		return errorx.BadRequest("MODEL_ENDPOINT_REQUEST_INVALID", "invalid endpoint request", errorx.WithCause(err))
 	}
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.CreateEndpoint", &req, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "manage_skills"); err != nil {
+		if err := h.requireZone(c, principal, "manage_models"); err != nil {
 			return nil, err
 		}
 		if err := h.ensureModel(c, req.ModelID, principal.OrgID); err != nil {
@@ -152,7 +152,7 @@ func (h *modelManagementHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 	}
 	id := strings.TrimSpace(ctx.Vars().Get("id"))
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.UpdateEndpoint", &req, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "manage_skills"); err != nil {
+		if err := h.requireZone(c, principal, "manage_models"); err != nil {
 			return nil, err
 		}
 		if err := h.ensureModel(c, req.ModelID, principal.OrgID); err != nil {
@@ -212,7 +212,7 @@ func (h *modelManagementHTTPHandler) createProfile(ctx khttp.Context) error {
 		return errorx.BadRequest("MODEL_PROFILE_REQUEST_INVALID", "invalid profile request", errorx.WithCause(err))
 	}
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.CreateProfile", &req, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "manage_skills"); err != nil {
+		if err := h.requireZone(c, principal, "manage_models"); err != nil {
 			return nil, err
 		}
 		row, revision, err := h.buildProfile(c, req, principal, "", 1)
@@ -238,7 +238,7 @@ func (h *modelManagementHTTPHandler) createProfile(ctx khttp.Context) error {
 func (h *modelManagementHTTPHandler) getProfile(ctx khttp.Context) error {
 	id := strings.TrimSpace(ctx.Vars().Get("id"))
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.GetProfile", nil, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "view_skills"); err != nil {
+		if err := h.requireZone(c, principal, "view_models"); err != nil {
 			return nil, err
 		}
 		var row modelProfileRowV2
@@ -264,7 +264,7 @@ func (h *modelManagementHTTPHandler) updateProfile(ctx khttp.Context) error {
 	}
 	id := strings.TrimSpace(ctx.Vars().Get("id"))
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.UpdateProfile", &req, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "manage_skills"); err != nil {
+		if err := h.requireZone(c, principal, "manage_models"); err != nil {
 			return nil, err
 		}
 		var existing modelProfileRowV2
@@ -307,7 +307,7 @@ func (h *modelManagementHTTPHandler) resolveProfile(ctx khttp.Context) error {
 	id := strings.TrimSpace(ctx.Vars().Get("id"))
 	revisionNumber, _ := strconv.ParseInt(strings.TrimSpace(ctx.Query().Get("revision")), 10, 64)
 	out, err := h.withAuthn(ctx, "aisphere.hub.model.v2.ResolveProfile", nil, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "view_skills"); err != nil {
+		if err := h.requireZone(c, principal, "view_models"); err != nil {
 			return nil, err
 		}
 		var profile modelProfileRowV2
@@ -348,7 +348,7 @@ func (h *modelManagementHTTPHandler) listResource(ctx khttp.Context, operation s
 	}
 	offset := positiveInt(ctx.Query().Get("offset"), 0)
 	out, err := h.withAuthn(ctx, operation, nil, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "view_skills"); err != nil {
+		if err := h.requireZone(c, principal, "view_models"); err != nil {
 			return nil, err
 		}
 		return fn(c, principal.OrgID, limit, offset)
@@ -362,7 +362,7 @@ func (h *modelManagementHTTPHandler) listResource(ctx khttp.Context, operation s
 func (h *modelManagementHTTPHandler) getResource(ctx khttp.Context, operation string, model any, key string) error {
 	id := strings.TrimSpace(ctx.Vars().Get("id"))
 	out, err := h.withAuthn(ctx, operation, nil, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "view_skills"); err != nil {
+		if err := h.requireZone(c, principal, "view_models"); err != nil {
 			return nil, err
 		}
 		if err := h.db(c).Where("id = ? AND org_id = ? AND deleted_at IS NULL", id, principal.OrgID).First(model).Error; err != nil {
@@ -379,7 +379,7 @@ func (h *modelManagementHTTPHandler) getResource(ctx khttp.Context, operation st
 func (h *modelManagementHTTPHandler) deleteResource(ctx khttp.Context, operation string, model any, key string) error {
 	id := strings.TrimSpace(ctx.Vars().Get("id"))
 	out, err := h.withAuthn(ctx, operation, nil, func(c context.Context, principal authn.Principal) (any, error) {
-		if err := h.requireZone(c, principal, "manage_skills"); err != nil {
+		if err := h.requireZone(c, principal, "manage_models"); err != nil {
 			return nil, err
 		}
 		var count int64
@@ -434,14 +434,35 @@ func buildEndpointRow(req endpointWriteRequest, principal authn.Principal) (mode
 	if strings.TrimSpace(req.ModelID) == "" || strings.TrimSpace(req.DisplayName) == "" || strings.TrimSpace(req.BaseURL) == "" || strings.TrimSpace(req.ProviderModelID) == "" {
 		return modelEndpointRowV2{}, errorx.BadRequest("MODEL_ENDPOINT_REQUIRED_FIELDS_MISSING", "modelId, displayName, baseUrl and providerModelId are required")
 	}
+	apiFormat, err := normalizeModelAPIFormat(req.APIFormat)
+	if err != nil {
+		return modelEndpointRowV2{}, errorx.BadRequest("MODEL_ENDPOINT_API_FORMAT_INVALID", err.Error())
+	}
 	if req.ReasoningMapping.Strategy == "" {
 		req.ReasoningMapping.Strategy = "none"
+	}
+	adapter := strings.TrimSpace(req.Adapter)
+	if adapter == "" {
+		switch apiFormat {
+		case modelAPIFormatClaudeCode:
+			adapter = "anthropic"
+		case modelAPIFormatGemini:
+			adapter = "gemini"
+		case modelAPIFormatCustom:
+			adapter = "custom"
+		default:
+			adapter = "openai_compatible"
+		}
+	}
+	apiPath := strings.TrimSpace(req.APIPath)
+	if apiPath == "" {
+		apiPath = defaultModelAPIPath(apiFormat)
 	}
 	now := time.Now().UTC()
 	return modelEndpointRowV2{
 		ID: newModelUUID(), ModelID: strings.TrimSpace(req.ModelID), DisplayName: strings.TrimSpace(req.DisplayName), Description: strings.TrimSpace(req.Description),
-		Status: normalizeStatus(req.Status), Adapter: firstNonEmpty(strings.TrimSpace(req.Adapter), "openai_compatible"), APIFormat: firstNonEmpty(strings.TrimSpace(req.APIFormat), "chat_completions"),
-		BaseURL: strings.TrimRight(strings.TrimSpace(req.BaseURL), "/"), ProviderModelID: strings.TrimSpace(req.ProviderModelID), APIPath: strings.TrimSpace(req.APIPath),
+		Status: normalizeStatus(req.Status), Adapter: adapter, APIFormat: apiFormat,
+		BaseURL: strings.TrimRight(strings.TrimSpace(req.BaseURL), "/"), ProviderModelID: strings.TrimSpace(req.ProviderModelID), APIPath: apiPath,
 		CredentialRef: strings.TrimSpace(req.CredentialRef), LimitsJSON: rawJSON(req.Limits, `{}`), ReasoningMappingJSON: rawJSON(req.ReasoningMapping, `{}`),
 		RequestDefaultsJSON: rawJSON(req.RequestDefaults, `{}`), ProviderConfigJSON: rawJSON(req.ProviderConfig, `{}`), HealthStatus: "unknown",
 		OrgID: principal.OrgID, ProjectID: strings.TrimSpace(req.ProjectID), CreatedAt: now, UpdatedAt: now,
@@ -491,9 +512,9 @@ func (h *modelManagementHTTPHandler) buildProfile(c context.Context, req profile
 		CreatedAt: now, UpdatedAt: now,
 	}
 	snapshot := map[string]any{
-		"profile": map[string]any{"id": row.ID, "code": row.Code, "limits": req.Limits, "allowedTools": req.AllowedTools, "defaultParameters": req.DefaultParameters},
-		"model": map[string]any{"id": model.ID, "code": model.Code, "displayName": model.DisplayName, "vendor": model.Vendor, "family": model.Family, "modelType": model.ModelType, "capabilities": json.RawMessage(model.CapabilitiesJSON), "reasoning": capability},
-		"endpoint": map[string]any{"id": endpoint.ID, "adapter": endpoint.Adapter, "apiFormat": endpoint.APIFormat, "baseUrl": endpoint.BaseURL, "providerModelId": endpoint.ProviderModelID, "apiPath": endpoint.APIPath, "credentialRef": endpoint.CredentialRef, "limits": json.RawMessage(endpoint.LimitsJSON), "requestDefaults": json.RawMessage(endpoint.RequestDefaultsJSON)},
+		"profile":   map[string]any{"id": row.ID, "code": row.Code, "limits": req.Limits, "allowedTools": req.AllowedTools, "defaultParameters": req.DefaultParameters},
+		"model":     map[string]any{"id": model.ID, "code": model.Code, "displayName": model.DisplayName, "vendor": model.Vendor, "family": model.Family, "modelType": model.ModelType, "capabilities": json.RawMessage(model.CapabilitiesJSON), "reasoning": capability},
+		"endpoint":  map[string]any{"id": endpoint.ID, "adapter": endpoint.Adapter, "apiFormat": endpoint.APIFormat, "baseUrl": endpoint.BaseURL, "providerModelId": endpoint.ProviderModelID, "apiPath": endpoint.APIPath, "credentialRef": endpoint.CredentialRef, "limits": json.RawMessage(endpoint.LimitsJSON), "requestDefaults": json.RawMessage(endpoint.RequestDefaultsJSON)},
 		"reasoning": map[string]any{"policy": policy, "providerRequestPatch": providerPatch, "responseField": mapping.ResponseField, "preserveOnTool": mapping.PreserveOnTool},
 	}
 	snapshotJSON, sha, err := snapshotDigest(snapshot)

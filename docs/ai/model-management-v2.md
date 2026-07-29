@@ -172,6 +172,29 @@ Runtime
 - call model and record telemetry
 ```
 
+## 5.1 Endpoint protocol catalog
+
+`apiFormat` is a controlled Endpoint field. The canonical values are:
+
+| Value | Request shape | Default path | Adapter |
+| --- | --- | --- | --- |
+| `chat_completions` | OpenAI Chat Completions | `/v1/chat/completions` | `openai_compatible` |
+| `responses` | OpenAI Responses | `/v1/responses` | `openai_compatible` |
+| `claude_code` | Claude Code / Anthropic Messages compatible | `/v1/messages` | `anthropic` |
+| `gemini` | Gemini generate content | `/v1beta/models` | `gemini` |
+| `custom` | Customer-defined protocol | customer-defined | `custom` |
+
+The Hub accepts legacy aliases such as `openai_chat_completions`,
+`openai_responses`, `claudecode` and `anthropic_messages`, but stores the
+canonical value in the Endpoint and immutable Runtime snapshot.
+
+Model presets are UI metadata, not a second source of truth. They fill the
+vendor, family, capabilities, normalized reasoning options and the initial
+Endpoint mapping. Customers still provide the provider model ID, base URL,
+credential reference and limits. Runtime must have a matching adapter before
+an active Profile using that protocol can execute; the Hub only owns the
+selection, validation and immutable resolution of the configuration.
+
 The Agent and Sandbox never receive plaintext model credentials.
 
 ## 6. Authorization
