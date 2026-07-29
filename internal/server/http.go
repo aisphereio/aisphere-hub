@@ -118,6 +118,7 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	// incompatible contracts competing for /v1/model-profiles.
 	_ = modelProfileSvc
 	registerModelManagementHTTP(srv, resources)
+	registerModelEndpointProbeHTTP(srv, resources)
 	// Agent is currently a lightweight versioned HTTP control-plane resource.
 	// Tool approval modes are human consent metadata; IAM remains authoritative.
 	registerSecuredAgentHTTP(srv, resources)
