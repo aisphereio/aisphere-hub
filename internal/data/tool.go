@@ -2,9 +2,12 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -15,7 +18,7 @@ import (
 // aihubToolModel maps to aihub_tools (migration 202607270001).
 type aihubToolModel struct {
 	ID            int64           `gorm:"primaryKey;column:id;autoIncrement"`
-	ToolID        string          `gorm:"column:tool_id;size:128;uniqueIndex;not null"`
+	ToolID        string          `gorm:"column:tool_id;size:128;not null"`
 	DisplayName   string          `gorm:"column:display_name;size:256;not null;default:''"`
 	Description   string          `gorm:"column:description;type:text;not null;default:''"`
 	Status        string          `gorm:"column:status;size:32;not null;default:'active'"`
@@ -87,6 +90,16 @@ func (r *toolRepo) List(ctx context.Context, opts biz.ToolListOptions) ([]*biz.T
 	if opts.Status != "" {
 		q = q.Where("status = ?", opts.Status)
 	}
+	if rt := strings.TrimSpace(opts.RuntimeType); rt != "" {
+		// runtime.type lives inside the latest version's definition_json
+		// ({"Runtime":{"Type":...}} — Go struct marshal, capitalized keys).
+		q = q.Where(`EXISTS (
+			SELECT 1 FROM aihub_tool_versions v
+			WHERE v.tool_id = aihub_tools.tool_id
+			  AND v.version = aihub_tools.latest_version
+			  AND v.definition_json->'Runtime'->>'Type' = ?
+		)`, rt)
+	}
 	limit := opts.Limit
 	if limit <= 0 {
 		limit = 50
@@ -144,7 +157,7 @@ func (r *toolRepo) Create(ctx context.Context, t *biz.Tool) (*biz.Tool, error) {
 		if err := tx.Create(&model).Error; err != nil {
 			return err
 		}
-		return writeVersionRows(tx, t)
+		return writeVersionRows(tx, t, versionConflictStrict)
 	})
 	if err != nil {
 		return nil, err
@@ -176,7 +189,7 @@ func (r *toolRepo) Update(ctx context.Context, t *biz.Tool) (*biz.Tool, error) {
 		if res.RowsAffected == 0 {
 			return biz.ErrToolNotFound
 		}
-		return writeVersionRows(tx, t)
+		return writeVersionRows(tx, t, versionConflictStrict)
 	})
 	if err != nil {
 		return nil, err
@@ -202,9 +215,11 @@ func (r *toolRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// UpsertBuiltin idempotently upserts a builtin tool (matched by tool_id). It
-// always overwrites the builtin-v1 version row so seed definitions stay in
-// sync with the code. Used by biz.SeedBuiltinTools at startup.
+// UpsertBuiltin idempotently upserts a builtin tool (matched by tool_id).
+// Builtin versions are content-addressed ("builtin-<sha256[:12]>"), so
+// reseeding an unchanged definition is a no-op and a changed definition
+// inserts a NEW version row (existing rows are never overwritten). Used by
+// biz.SeedBuiltinTools at startup.
 func (r *toolRepo) UpsertBuiltin(ctx context.Context, t *biz.Tool) (*biz.Tool, error) {
 	database := r.db(ctx)
 	if database == nil {
@@ -238,7 +253,7 @@ func (r *toolRepo) UpsertBuiltin(ctx context.Context, t *biz.Tool) (*biz.Tool, e
 				return err
 			}
 		}
-		return writeVersionRows(tx, t)
+		return writeVersionRows(tx, t, versionConflictSkip)
 	})
 	if err != nil {
 		return nil, err
@@ -269,49 +284,97 @@ func (r *toolRepo) loadVersions(db *gorm.DB, row *aihubToolModel, version string
 	return t, nil
 }
 
-// writeVersionRows inserts version rows, skipping ones that already exist
-// (ON CONFLICT do nothing) so upserts are idempotent.
-func writeVersionRows(tx *gorm.DB, t *biz.Tool) error {
+// versionConflictMode controls how writeVersionRows treats an already-existing
+// (tool_id, version) row.
+type versionConflictMode int
+
+const (
+	// versionConflictStrict keeps versions immutable for user-driven writes:
+	// identical content is adopted as a no-op (e.g. re-creating a previously
+	// soft-deleted tool whose old version rows are still present), while
+	// different content is rejected with ErrToolVersionConflict.
+	versionConflictStrict versionConflictMode = iota
+	// versionConflictSkip silently skips existing rows. Used by content-
+	// addressed builtin seeding, where the version label already derives from
+	// the definition, so "exists" always means "same content".
+	versionConflictSkip
+)
+
+// writeVersionRows inserts version rows for t. It NEVER updates an existing
+// row's definition in place: versions are immutable. New rows get sha256 /
+// revision backfilled from the definition when unset.
+func writeVersionRows(tx *gorm.DB, t *biz.Tool, mode versionConflictMode) error {
 	for ver, v := range t.Versions {
 		defJSON, err := json.Marshal(v.Definition)
 		if err != nil {
 			return fmt.Errorf("tool repo: marshal definition for version %q: %w", ver, err)
 		}
+		sha := v.SHA256
+		if sha == "" {
+			sha = toolSha256Hex(defJSON)
+		}
+		rev := v.Revision
+		if rev == "" {
+			rev = sha[:12]
+		}
 		row := aihubToolVersionModel{
 			ToolID:         t.ID,
 			Version:        v.Version,
-			Revision:       v.Revision,
-			SHA256:         v.SHA256,
+			Revision:       rev,
+			SHA256:         sha,
 			Author:         v.Author,
 			CommitMsg:      v.CommitMsg,
 			DefinitionJSON: defJSON,
 			CreatedAt:      v.CreateTime,
 		}
-		// Idempotent: skip if this (tool_id, version) already exists.
-		var count int64
-		if err := tx.Model(&aihubToolVersionModel{}).
-			Where("tool_id = ? AND version = ?", row.ToolID, row.Version).
-			Count(&count).Error; err != nil {
-			return err
-		}
-		if count > 0 {
-			// Update the definition in place so seed definitions stay current.
-			if err := tx.Model(&aihubToolVersionModel{}).
-				Where("tool_id = ? AND version = ?", row.ToolID, row.Version).
-				Updates(map[string]any{
-					"definition_json": defJSON,
-					"author":          row.Author,
-					"commit_msg":      row.CommitMsg,
-				}).Error; err != nil {
+		var existing aihubToolVersionModel
+		findErr := tx.Where("tool_id = ? AND version = ?", row.ToolID, row.Version).First(&existing).Error
+		switch {
+		case errors.Is(findErr, gorm.ErrRecordNotFound):
+			if err := tx.Create(&row).Error; err != nil {
 				return err
 			}
-			continue
-		}
-		if err := tx.Create(&row).Error; err != nil {
-			return err
+		case findErr != nil:
+			return findErr
+		default:
+			if mode == versionConflictSkip {
+				continue
+			}
+			// Strict mode: identical content is a no-op (adopt), different
+			// content violates version immutability.
+			if !jsonSemanticEqual(existing.DefinitionJSON, defJSON) {
+				return fmt.Errorf("%w: tool %q version %q", biz.ErrToolVersionConflict, t.ID, ver)
+			}
+			if existing.SHA256 == "" || existing.Revision == "" {
+				if err := tx.Model(&aihubToolVersionModel{}).
+					Where("tool_id = ? AND version = ?", row.ToolID, row.Version).
+					Updates(map[string]any{"sha256": sha, "revision": rev}).Error; err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
+}
+
+// toolSha256Hex returns the hex sha256 of b (used for version records).
+func toolSha256Hex(b []byte) string {
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
+// jsonSemanticEqual compares two JSON documents structurally. jsonb storage
+// reorders object keys, so a byte comparison against a freshly marshaled
+// definition would always report a difference.
+func jsonSemanticEqual(a, b []byte) bool {
+	var x, y any
+	if err := json.Unmarshal(a, &x); err != nil {
+		return false
+	}
+	if err := json.Unmarshal(b, &y); err != nil {
+		return false
+	}
+	return reflect.DeepEqual(x, y)
 }
 
 // --- model <-> biz conversion ---

@@ -59,7 +59,8 @@ func (s *ToolService) GetTool(ctx context.Context, req *toolv1.GetToolRequest) (
 
 func (s *ToolService) CreateTool(ctx context.Context, req *toolv1.CreateToolRequest) (*toolv1.CreateToolResponse, error) {
 	t, err := protoToTool(req.GetId(), req.GetDefinition(), req.GetVersion(), req.GetCommitMsg(),
-		req.GetDisplayName(), req.GetDescription(), req.GetStatus(), req.GetScope(), req.GetLabels())
+		req.GetDisplayName(), req.GetDescription(), req.GetStatus(), req.GetScope(), req.GetLabels(),
+		req.GetOrgId(), req.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func (s *ToolService) CreateTool(ctx context.Context, req *toolv1.CreateToolRequ
 
 func (s *ToolService) UpdateTool(ctx context.Context, req *toolv1.UpdateToolRequest) (*toolv1.UpdateToolResponse, error) {
 	t, err := protoToTool(req.GetId(), req.GetDefinition(), req.GetVersion(), req.GetCommitMsg(),
-		req.GetDisplayName(), req.GetDescription(), req.GetStatus(), req.GetScope(), req.GetLabels())
+		req.GetDisplayName(), req.GetDescription(), req.GetStatus(), req.GetScope(), req.GetLabels(), "", "")
 	if err != nil {
 		return nil, err
 	}
@@ -205,8 +206,12 @@ func toolRetryToProto(r biz.ToolRetryPolicy) *toolv1.ToolRetryPolicy {
 
 // protoToTool builds a biz.Tool from a create/update request. The version
 // defaults to "v1" when empty so the first definition is always addressable.
+// orgID/projectID come from CreateToolRequest (UpdateToolRequest has none and
+// passes ""); the biz layer reconciles org against the principal and persists
+// the project as-is.
 func protoToTool(id string, def *toolv1.ToolDefinition, version, commitMsg,
-	displayName, description, status, scope string, labels map[string]string) (*biz.Tool, error) {
+	displayName, description, status, scope string, labels map[string]string,
+	orgID, projectID string) (*biz.Tool, error) {
 	if def == nil {
 		return nil, errorx.BadRequest(errorx.Code("INVALID_ARGUMENT"), "definition is required")
 	}
@@ -225,6 +230,8 @@ func protoToTool(id string, def *toolv1.ToolDefinition, version, commitMsg,
 		Status:      status,
 		Scope:       scope,
 		Labels:      labels,
+		OrgID:       strings.TrimSpace(orgID),
+		ProjectID:   strings.TrimSpace(projectID),
 		LatestVersion: ver,
 		Versions: map[string]biz.ToolVersion{
 			ver: {Version: ver, CommitMsg: commitMsg, Definition: bd},

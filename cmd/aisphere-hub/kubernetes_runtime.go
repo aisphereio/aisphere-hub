@@ -27,6 +27,7 @@ func wireKubernetesRuntime(
 	bc conf.Bootstrap,
 	resources *data.Resources,
 	authzUsecase *biz.AuthzUsecase,
+	toolUsecase *biz.ToolUsecase,
 	logger logx.Logger,
 ) (*kubernetesRuntime, error) {
 	runtime := &kubernetesRuntime{close: func() error { return nil }}
@@ -93,6 +94,7 @@ func wireKubernetesRuntime(
 			sandboxProvider,
 			outboxRepo,
 			authzUsecase,
+			toolUsecase,
 			logger,
 			biz.ClusterUsecaseOptions{
 				MaxScan:          bc.Kubernetes.Reconcile.MaxScan,

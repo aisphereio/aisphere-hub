@@ -31,6 +31,12 @@ type SandboxUsecase struct {
 	provider   SandboxProvider
 	outbox     OutboxEnqueuer
 	rels       NamespaceRelationships
+	// tools is the Tool catalog usecase. When set, the sandbox tool surface
+	// (ListSandboxTools / CallSandboxTool validation) is projected from the
+	// catalog — the single source of truth — instead of the static
+	// sandboxToolRegistry. Nil falls back to the static registry (tests, K8s
+	// disabled wiring).
+	tools      *ToolUsecase
 	log        logx.Logger
 	opts       ClusterUsecaseOptions
 }
@@ -44,6 +50,7 @@ func NewSandboxUsecase(
 	provider SandboxProvider,
 	outbox OutboxEnqueuer,
 	rels NamespaceRelationships,
+	tools *ToolUsecase,
 	log logx.Logger,
 	opts ClusterUsecaseOptions,
 ) *SandboxUsecase {
@@ -63,6 +70,7 @@ func NewSandboxUsecase(
 		provider:   provider,
 		outbox:     outbox,
 		rels:       rels,
+		tools:      tools,
 		log:        log.Named("biz.sandbox"),
 		opts:       opts,
 	}
@@ -129,8 +137,11 @@ type SandboxToolSchema struct {
 }
 
 // sandboxToolRegistry is the V1 fixed tool surface exposed by every sandbox
-// (design §11). The exec implementation is stubbed in CallSandboxTool; this
-// registry is the source of truth for ListSandboxTools.
+// (design §11). The Tool catalog (aihub_tools) is now the source of truth and
+// the sandbox surface is projected from it via sandboxToolSurface; this static
+// registry is kept only as a fallback for wiring where the catalog usecase is
+// unavailable (tests, K8s disabled). Keep its entries mirrored with
+// builtinToolSeeds (tool.go) until the fallback is removed.
 var sandboxToolRegistry = []SandboxToolSchema{
 	{
 		Name:        "workspace.read",
@@ -218,6 +229,76 @@ func skillResourceFromInput(inputJSON string) (AuthzObjectRef, error) {
 		return AuthzObjectRef{}, fmt.Errorf("tool input missing required field: name")
 	}
 	return AuthzObjectRef{Type: "skill", ID: name}, nil
+}
+
+// sandboxSchemaFromCatalogTool projects a Tool catalog record into the sandbox
+// tool schema surface. It is the catalog-driven replacement for the static
+// sandboxToolRegistry: the catalog (aihub_tools) is the single source of truth
+// and the sandbox surface is a projection of it.
+//
+// Privileged metadata is derived from the definition's execution capabilities
+// (e.g. "skill:view" / "skill.publish" -> permission view/publish on the skill
+// resource extracted from the tool input). Tools without capabilities are
+// gated only by sandbox.use. Unknown capability resource kinds fail closed:
+// the call is rejected rather than silently downgraded to non-privileged.
+func sandboxSchemaFromCatalogTool(t *Tool) (SandboxToolSchema, error) {
+	def := t.Definition()
+	out := SandboxToolSchema{
+		Name:        t.ID,
+		Description: t.Description,
+		InputSchema: string(def.InputSchema),
+	}
+	if out.Description == "" {
+		out.Description = def.Runtime.Description
+	}
+	if def.Execution == nil {
+		return out, nil
+	}
+	for _, cap := range def.Execution.Capabilities {
+		kind, perm, ok := strings.Cut(strings.TrimSpace(cap), ":")
+		if !ok {
+			kind, perm, ok = strings.Cut(cap, ".")
+		}
+		if !ok || kind == "" || perm == "" {
+			return SandboxToolSchema{}, fmt.Errorf("tool %q: malformed capability %q", t.ID, cap)
+		}
+		if kind != "skill" {
+			return SandboxToolSchema{}, fmt.Errorf("tool %q: unsupported capability resource kind %q", t.ID, kind)
+		}
+		out.Privileged = true
+		out.Permission = perm
+		out.ResourceFromInput = skillResourceFromInput
+	}
+	return out, nil
+}
+
+// sandboxToolSurface returns the effective sandbox tool list for the caller.
+// When the Tool catalog usecase is wired, the surface is projected from the
+// catalog (visibility-filtered per principal); otherwise it falls back to the
+// static V1 registry so tests and K8s-disabled wiring keep working.
+func (uc *SandboxUsecase) sandboxToolSurface(ctx context.Context, principal authn.Principal) ([]SandboxToolSchema, error) {
+	if uc.tools == nil {
+		out := make([]SandboxToolSchema, len(sandboxToolRegistry))
+		copy(out, sandboxToolRegistry)
+		return out, nil
+	}
+	tools, _, err := uc.tools.ListTools(ctx, principal, ToolListOptions{Limit: 200})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]SandboxToolSchema, 0, len(tools))
+	for _, t := range tools {
+		schema, err := sandboxSchemaFromCatalogTool(t)
+		if err != nil {
+			// A malformed capability should not blank the whole surface; skip
+			// the offending tool and log instead of failing the list call.
+			uc.log.WithContext(ctx).Warn("skip tool with malformed capability in sandbox surface",
+				logx.String("tool_id", t.ID), logx.Err(err))
+			continue
+		}
+		out = append(out, schema)
+	}
+	return out, nil
 }
 
 // ===================== SandboxTemplate operations =====================
@@ -1737,8 +1818,12 @@ func (uc *SandboxUsecase) DeleteSandboxClaim(ctx context.Context, principal auth
 
 // ===================== Tool operations =====================
 
-// ListSandboxTools returns the V1 fixed tool surface for a sandbox. Authz `use`
-// on k8s_sandbox:{id} gates the call; the registry itself is static.
+// ListSandboxTools returns the tool surface for a sandbox, projected from the
+// Tool catalog (the single source of truth) so the Tools page, the Agent
+// editor, and the Sandbox tool list all show the same tools. Authz `use` on
+// k8s_sandbox:{id} gates the call; catalog visibility filtering applies per
+// principal. Falls back to the static V1 registry when the catalog usecase is
+// not wired (tests / K8s disabled).
 func (uc *SandboxUsecase) ListSandboxTools(ctx context.Context, principal authn.Principal, id string) ([]SandboxToolSchema, error) {
 	s, err := uc.sandboxes.GetSandbox(ctx, id)
 	if err != nil {
@@ -1760,10 +1845,7 @@ func (uc *SandboxUsecase) ListSandboxTools(ctx context.Context, principal authn.
 	if !dec.Allowed {
 		return nil, errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no use permission on sandbox")
 	}
-	// Return a copy so callers cannot mutate the package-level registry.
-	out := make([]SandboxToolSchema, len(sandboxToolRegistry))
-	copy(out, sandboxToolRegistry)
-	return out, nil
+	return uc.sandboxToolSurface(ctx, principal)
 }
 
 // CallSandboxTool invokes a tool inside a sandbox. Authz `use` on
@@ -1793,13 +1875,18 @@ func (uc *SandboxUsecase) CallSandboxTool(ctx context.Context, principal authn.P
 		return false, "", "", errorx.Forbidden(errorx.Code("PERMISSION_DENIED"), "forbidden: no use permission on sandbox")
 	}
 
-	// Validate the tool name against the registry.
+	// Validate the tool name against the sandbox tool surface (catalog
+	// projection, or the static registry when the catalog is not wired).
+	surface, err := uc.sandboxToolSurface(ctx, principal)
+	if err != nil {
+		return false, "", "", err
+	}
 	var toolSchema *SandboxToolSchema
 	known := false
-	for i := range sandboxToolRegistry {
-		if sandboxToolRegistry[i].Name == tool {
+	for i := range surface {
+		if surface[i].Name == tool {
 			known = true
-			toolSchema = &sandboxToolRegistry[i]
+			toolSchema = &surface[i]
 			break
 		}
 	}

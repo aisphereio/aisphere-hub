@@ -176,7 +176,7 @@ func main() {
 	// Kubernetes services, Redis-leased reconcilers, and the credential cleanup
 	// outbox consumer are assembled together so enabled=true is an operationally
 	// complete mode rather than API registration alone.
-	k8sRuntime, err := wireKubernetesRuntime(bootstrapCtx, bc, resources, authzUsecase, logger)
+	k8sRuntime, err := wireKubernetesRuntime(bootstrapCtx, bc, resources, authzUsecase, toolUsecase, logger)
 	if err != nil {
 		logger.Error("kubernetes runtime initialization failed", logx.Err(err))
 		panic(err)

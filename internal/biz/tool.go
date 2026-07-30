@@ -2,6 +2,8 @@ package biz
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +19,10 @@ var (
 	ErrToolNotFound        = errorx.NotFound(errorx.Code("TOOL_NOT_FOUND"), "tool not found")
 	ErrToolInvalidArgument = errorx.BadRequest(errorx.Code("INVALID_ARGUMENT"), "invalid tool argument")
 	ErrToolAlreadyExists   = errorx.Conflict(errorx.Code("TOOL_ALREADY_EXISTS"), "tool already exists")
+	// ErrToolVersionConflict is returned when a write targets an already-existing
+	// (tool_id, version) whose stored definition differs. Versions are
+	// immutable: a behavior-changing edit must use a new version label.
+	ErrToolVersionConflict = errorx.Conflict(errorx.Code("TOOL_VERSION_CONFLICT"), "tool version already exists and versions are immutable")
 )
 
 // toolIDPattern constrains tool identifiers (DNS-1123-ish, allowing dots for
@@ -203,6 +209,13 @@ func toolOwnerSubject(t *Tool) (AuthzSubjectRef, error) {
 func (uc *ToolUsecase) CreateTool(ctx context.Context, principal authn.Principal, t *Tool) (*Tool, error) {
 	if err := validateToolForCreate(t); err != nil {
 		return nil, err
+	}
+	// Tenant isolation: the tool always lands in the caller's org. A request
+	// may restate the org explicitly (the gateway authz interpolates
+	// tool_space:{org_id}); a mismatch is rejected rather than silently
+	// re-homed. project_id is caller-chosen and persisted as-is.
+	if reqOrg := strings.TrimSpace(t.OrgID); reqOrg != "" && reqOrg != principal.OrgID {
+		return nil, fmt.Errorf("%w: org_id %q does not match the caller's org %q", ErrToolInvalidArgument, reqOrg, principal.OrgID)
 	}
 	t.OwnerType = principal.SubjectType
 	t.OwnerID = principal.SubjectID
@@ -506,6 +519,8 @@ func builtinSeedToTool(s builtinToolSeed) *Tool {
 		// Privileged tools need restricted egress to the Hub git endpoint.
 		def.Execution.Network = "restricted"
 	}
+	ver := builtinSeedVersion(def)
+	sum := sha256Hex(mustMarshalJSON(def))
 	return &Tool{
 		ID:            s.id,
 		DisplayName:   s.displayName,
@@ -516,10 +531,12 @@ func builtinSeedToTool(s builtinToolSeed) *Tool {
 		OwnerType:     "service",
 		OwnerID:       "aisphere-hub",
 		OwnerName:     "AISphere Hub",
-		LatestVersion: "builtin-v1",
+		LatestVersion: ver,
 		Versions: map[string]ToolVersion{
-			"builtin-v1": {
-				Version:    "builtin-v1",
+			ver: {
+				Version:    ver,
+				Revision:   sum[:12],
+				SHA256:     sum,
 				Author:     "aisphere-hub",
 				CommitMsg:  "builtin tool seed",
 				CreateTime: time.Now().UTC(),
@@ -527,6 +544,28 @@ func builtinSeedToTool(s builtinToolSeed) *Tool {
 			},
 		},
 	}
+}
+
+// builtinSeedVersion computes the content-addressed version label for a builtin
+// seed definition. The label derives from the definition itself, so reseeding
+// an unchanged definition is a natural no-op and any behavior-changing edit
+// produces a NEW immutable version instead of overwriting the previous one in
+// place (the old "builtin-v1" in-place upsert violated version immutability).
+func builtinSeedVersion(def ToolDefinition) string {
+	return "builtin-" + sha256Hex(mustMarshalJSON(def))[:12]
+}
+
+func mustMarshalJSON(v any) []byte {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(fmt.Sprintf("builtin seed: marshal definition: %v", err))
+	}
+	return b
+}
+
+func sha256Hex(b []byte) string {
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
 }
 
 // EnsureErrors exposes sentinel errors for the data layer to wrap.
