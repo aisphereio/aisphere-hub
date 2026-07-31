@@ -190,7 +190,19 @@ func NewToolUsecase(tools ToolRepository, rels ToolRelationships) *ToolUsecase {
 }
 
 func toolResource(toolID string) AuthzObjectRef {
-	return AuthzObjectRef{Type: "tool", ID: toolID}
+	return AuthzObjectRef{Type: "tool", ID: ToolAuthzObjectID(toolID)}
+}
+
+// ToolAuthzObjectID encodes a tool id for use as a SpiceDB object id. SpiceDB
+// object ids must match ^(([a-zA-Z0-9/_|\-=+]{1,})|\*)$ — dots are NOT
+// allowed — while tool ids use dots for namespacing (workspace.read,
+// skill.fetch). Writing a dotted id fails with "object_id: does not match
+// regex pattern" at WriteRelationships time. Dots are encoded as '/', which
+// validToolID never permits in a tool id, so the mapping is collision-free.
+// Every SpiceDB ref for a tool (grants, checks, revokes) MUST go through this
+// so reads and writes stay consistent.
+func ToolAuthzObjectID(toolID string) string {
+	return strings.ReplaceAll(toolID, ".", "/")
 }
 
 func toolOwnerSubject(t *Tool) (AuthzSubjectRef, error) {
@@ -221,7 +233,7 @@ func (uc *ToolUsecase) CreateTool(ctx context.Context, principal authn.Principal
 	t.OwnerID = principal.SubjectID
 	t.OwnerName = principal.Name
 	t.OrgID = principal.OrgID
-	t.Object = "tool:" + t.ID
+	t.Object = "tool:" + ToolAuthzObjectID(t.ID)
 	if t.Status == "" {
 		t.Status = "active"
 	}
@@ -243,9 +255,11 @@ func (uc *ToolUsecase) CreateTool(ctx context.Context, principal authn.Principal
 		_ = uc.tools.Delete(ctx, t.ID)
 		return nil, fmt.Errorf("tool create: grant owner: %w", err)
 	}
-	if principal.OrgID != "" {
-		_ = uc.rels.GrantZone(ctx, toolResource(t.ID), AuthzSubjectRef{Type: "zone", ID: principal.OrgID})
-	}
+	// NOTE: no GrantZone here. The SpiceDB `tool` definition has no `zone`
+	// relation (zone governance for tools flows through the tool_space ->
+	// project parent chain), so writing tool#zone@zone would always be
+	// rejected by schema validation. The previous best-effort call produced a
+	// guaranteed-failing WriteRelationships RPC on every create.
 	return out, nil
 }
 
@@ -527,7 +541,7 @@ func builtinSeedToTool(s builtinToolSeed) *Tool {
 		Description:   s.description,
 		Status:        "builtin",
 		Scope:         "system",
-		Object:        "tool:" + s.id,
+		Object:        "tool:" + ToolAuthzObjectID(s.id),
 		OwnerType:     "service",
 		OwnerID:       "aisphere-hub",
 		OwnerName:     "AISphere Hub",

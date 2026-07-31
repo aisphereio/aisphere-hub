@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/errorx"
 	"gorm.io/gorm"
@@ -130,7 +131,8 @@ func (h *agentHTTPHandler) resolveTool(ctx context.Context, principal authn.Prin
 		return resolvedAgentTool{}, errorx.Conflict("AGENT_TOOL_DISABLED", "tool "+binding.Name+" is disabled")
 	}
 	if tool.Scope != "system" && tool.Status != "builtin" {
-		if err := h.requirePermission(ctx, principal, "tool", binding.Name, "execute"); err != nil {
+		// SpiceDB object ids encode dots ('.' -> '/'); see biz.ToolAuthzObjectID.
+		if err := h.requirePermission(ctx, principal, "tool", biz.ToolAuthzObjectID(binding.Name), "execute"); err != nil {
 			return resolvedAgentTool{}, errorx.Forbidden("AGENT_TOOL_EXECUTE_DENIED", "caller cannot bind or execute tool "+binding.Name)
 		}
 	}
