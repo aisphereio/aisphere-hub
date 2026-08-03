@@ -350,6 +350,7 @@ func (h *agentHTTPHandler) resolveEndpoint(ctx khttp.Context) error {
 			"agentId": id, "agentVersion": version.Version, "agentRevision": version.Revision,
 			"generatedAt": generatedAt, "policy": "principal_passthrough_iam_enforced",
 			"definition": json.RawMessage(resolvedDefinition), "tools": toolSnapshots,
+			"model":         plan["model"],
 			"skills":        plan["skills"],
 			"authorization": plan,
 		}, nil
