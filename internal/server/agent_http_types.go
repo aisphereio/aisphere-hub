@@ -98,6 +98,16 @@ type agentToolBinding struct {
 	ApprovalMode string `json:"approvalMode,omitempty"`
 }
 
+// agentSkillBinding is deliberately a reference, not an embedded payload.
+// Hub pins the reference into the runtime snapshot; the execution plane
+// decides whether it is already present in the worker image or must be
+// materialized from the Skill catalog.
+type agentSkillBinding struct {
+	Name    string `json:"name"`
+	Version string `json:"version,omitempty"`
+	Source  string `json:"source,omitempty"`
+}
+
 // agentModelBinding points to the AISphere-owned ModelProfile UUID. Revision is
 // optional: zero means resolve the latest revision when the Agent run snapshot
 // is created. The resolved revision is then frozen into that run snapshot.
@@ -111,6 +121,7 @@ type agentDefinitionProjection struct {
 	Files      map[string]string   `json:"files"`
 	Model      *agentModelBinding  `json:"model,omitempty"`
 	Tools      []agentToolBinding  `json:"tools"`
+	Skills     []agentSkillBinding `json:"skills,omitempty"`
 }
 
 type agentRunRequest struct {

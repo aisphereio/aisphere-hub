@@ -90,6 +90,33 @@ func normalizeAgentDefinition(raw json.RawMessage) (json.RawMessage, agentDefini
 			}
 		}
 	}
+	if skills, ok := doc["skills"].([]any); ok {
+		seen := map[string]struct{}{}
+		for _, value := range skills {
+			binding, ok := value.(map[string]any)
+			if !ok {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_DEFINITION_INVALID", "definition.skills entries must be objects")
+			}
+			name, _ := binding["name"].(string)
+			name = strings.TrimSpace(name)
+			if !agentIDRE.MatchString(name) {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_SKILL_INVALID", "definition.skills contains an invalid skill name")
+			}
+			if _, exists := seen[name]; exists {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_SKILL_DUPLICATE", "definition.skills contains duplicate skill "+name)
+			}
+			seen[name] = struct{}{}
+			version, _ := binding["version"].(string)
+			if strings.TrimSpace(version) == "" {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_SKILL_VERSION_REQUIRED", "definition.skills.version is required")
+			}
+			binding["name"] = name
+			binding["version"] = strings.TrimSpace(version)
+			if source, ok := binding["source"].(string); ok {
+				binding["source"] = strings.ToLower(strings.TrimSpace(source))
+			}
+		}
+	}
 	canonical, err := json.Marshal(doc)
 	if err != nil {
 		return nil, agentDefinitionProjection{}, errorx.Internal("AGENT_DEFINITION_ENCODE_FAILED", "failed to encode agent definition", errorx.WithCause(err))

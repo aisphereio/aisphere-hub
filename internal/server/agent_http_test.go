@@ -45,6 +45,37 @@ func TestNormalizeAgentDefinitionToolApproval(t *testing.T) {
 	}
 }
 
+func TestNormalizeAgentDefinitionSkillBinding(t *testing.T) {
+	raw := json.RawMessage(`{
+		"entryPoint":"root.yaml",
+		"files":{"root.yaml":"name: demo"},
+		"skills":[{"name":"sandbox-workspace-tools","version":"builtin-d9f6a0bea925"}]
+	}`)
+	canonical, projection, err := normalizeAgentDefinition(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(projection.Skills) != 1 || projection.Skills[0].Name != "sandbox-workspace-tools" || projection.Skills[0].Version != "builtin-d9f6a0bea925" {
+		t.Fatalf("unexpected projection: %+v", projection.Skills)
+	}
+	if !json.Valid(canonical) {
+		t.Fatal("canonical definition is not valid JSON")
+	}
+}
+
+func TestResolveAgentSkillSnapshotsOnlyAllowsPinnedBuiltin(t *testing.T) {
+	items, err := resolveAgentSkillSnapshots([]agentSkillBinding{{Name: "sandbox-workspace-tools", Version: "builtin-d9f6a0bea925"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 || items[0]["source"] != "builtin" || items[0]["revision"] != "builtin-d9f6a0bea925" {
+		t.Fatalf("unexpected skill snapshot: %+v", items)
+	}
+	if _, err := resolveAgentSkillSnapshots([]agentSkillBinding{{Name: "demo", Version: "latest"}}); err == nil {
+		t.Fatal("expected unsupported skill source to fail")
+	}
+}
+
 func TestParseAgentIAMCapability(t *testing.T) {
 	permission, ok := parseAgentIAMCapability("skill:publish")
 	if !ok {
