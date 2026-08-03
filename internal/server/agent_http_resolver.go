@@ -58,6 +58,9 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 	if _, err := h.resolveAgentModelSnapshot(ctx, principal, projection.Model); err != nil {
 		return err
 	}
+	if _, err := resolveAgentSkillSnapshots(projection.Skills); err != nil {
+		return err
+	}
 	for _, binding := range projection.Tools {
 		if normalizeApprovalMode(binding.ApprovalMode) == agentApprovalDisabled {
 			continue
@@ -67,6 +70,30 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 		}
 	}
 	return nil
+}
+
+// resolveAgentSkillSnapshots pins skills that are available in the worker
+// image. Catalog-backed skills will use the same snapshot shape once the
+// Hub-to-catalog download contract is enabled; they must not silently fall
+// back to an unpinned latest version.
+func resolveAgentSkillSnapshots(bindings []agentSkillBinding) ([]map[string]any, error) {
+	out := make([]map[string]any, 0, len(bindings))
+	for _, binding := range bindings {
+		name := strings.TrimSpace(binding.Name)
+		version := strings.TrimSpace(binding.Version)
+		source := strings.ToLower(strings.TrimSpace(binding.Source))
+		if source == "" && (version == "builtin" || strings.HasPrefix(version, "builtin-")) {
+			source = "builtin"
+		}
+		if source != "builtin" {
+			return nil, errorx.Unavailable("AGENT_SKILL_SOURCE_UNAVAILABLE", "skill "+name+" is not available from the configured snapshot source")
+		}
+		out = append(out, map[string]any{
+			"name": name, "version": version, "revision": version,
+			"source": source, "object": "aisphere://builtin-skills/" + name,
+		})
+	}
+	return out, nil
 }
 
 // resolveAgentModelSnapshot validates the Agent's ModelProfile binding and
@@ -270,6 +297,10 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 	if err != nil {
 		return nil, nil, err
 	}
+	skills, err := resolveAgentSkillSnapshots(projection.Skills)
+	if err != nil {
+		return nil, nil, err
+	}
 	modelSnapshot, err := h.resolveAgentModelSnapshot(ctx, principal, projection.Model)
 	if err != nil {
 		return nil, nil, err
@@ -304,6 +335,7 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 		"approvalConfirmed":    request.ApprovalConfirmed,
 		"model":                modelSnapshot,
 		"tools":                approvals,
+		"skills":               skills,
 	}
 	return plan, resolved, nil
 }
