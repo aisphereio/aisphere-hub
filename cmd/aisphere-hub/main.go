@@ -93,10 +93,10 @@ func main() {
 	)
 	authnService := service.NewAuthnService(authnUsecase)
 
-	// Wire the authz module.
+	// Wire the authorization runtime adapter. Hub consumes IAM's runtime API;
+	// it does not construct or expose an authorization control-plane service.
 	authzRepo := data.NewAuthzRepo(resources)
 	authzUsecase := biz.NewAuthzUsecase(authzRepo, logger, metrics)
-	authzService := service.NewAuthzService(authzUsecase)
 
 	// Wire the audit module. Audit persistence remains intentionally lightweight
 	// for now; audit hardening is deferred to the next phase.
@@ -194,7 +194,6 @@ func main() {
 		bc.Security,
 		gitEngine,
 		authnService,
-		authzService,
 		auditService,
 		skillService,
 		k8sRuntime.clusterService,
@@ -210,7 +209,6 @@ func main() {
 		resources,
 		bc.Security,
 		authnService,
-		authzService,
 		auditService,
 		skillService,
 		k8sRuntime.clusterService,
