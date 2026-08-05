@@ -3,7 +3,6 @@ package server
 import (
 	auditv1 "github.com/aisphereio/aisphere-hub/api/audit/v1"
 	authnv1 "github.com/aisphereio/aisphere-hub/api/authn/v1"
-	authzv1 "github.com/aisphereio/aisphere-hub/api/authz/v1"
 	kubernetesv1 "github.com/aisphereio/aisphere-hub/api/kubernetes/v1"
 	modelv1 "github.com/aisphereio/aisphere-hub/api/model/v1"
 	skillv1 "github.com/aisphereio/aisphere-hub/api/skill/v1"
@@ -15,13 +14,16 @@ import (
 // HubModules is the single generated-service catalog for request metadata,
 // access resolution, Gateway manifests, and transport registration hooks.
 //
+// IAM owns the authorization control plane. Hub deliberately does not publish
+// its legacy AuthzService module; Hub business services consume IAM's runtime
+// authorization API through the IAM gRPC client.
+//
 // Hand-written HTTP resources (Agent, SkillSet, and Model Management V2) are
 // deliberately not represented here because they do not have generated service
 // modules yet; they keep their explicit secured registration paths.
 func HubModules() []serverx.ServiceModule {
 	return []serverx.ServiceModule{
 		authnv1.AuthnServiceKernelModule(),
-		authzv1.AuthzServiceKernelModule(),
 		auditv1.AuditServiceKernelModule(),
 		skillv1.SkillServiceKernelModule(),
 		skillv1.SkillReleaseServiceKernelModule(),
@@ -42,9 +44,11 @@ func HubCatalog() serverx.ServiceCatalog {
 // transport behavior. Authn is registered separately because it adds browser
 // 302 login/logout routes. ModelProfile is intentionally gRPC-only while Model
 // Management V2 owns the public /v1/models, /v1/endpoints, and
-// /v1/model-profiles HTTP contract.
+// /v1/model-profiles HTTP contract. The legacy Hub AuthzService argument is
+// accepted only to preserve the constructor boundary during removal and is not
+// exposed as a transport binding.
 func HubHTTPBindings(
-	authzSvc *service.AuthzService,
+	_ *service.AuthzService,
 	auditSvc *service.AuditService,
 	skillSvc *service.SkillService,
 	clusterSvc *service.ClusterService,
@@ -53,10 +57,7 @@ func HubHTTPBindings(
 	fileSvc *service.FileService,
 	toolSvc *service.ToolService,
 ) []serverx.ServiceBinding {
-	bindings := make([]serverx.ServiceBinding, 0, 9)
-	if authzSvc != nil {
-		bindings = append(bindings, serverx.ServiceBinding{Module: authzv1.AuthzServiceKernelModule(), Implementation: authzSvc})
-	}
+	bindings := make([]serverx.ServiceBinding, 0, 8)
 	if auditSvc != nil {
 		bindings = append(bindings, serverx.ServiceBinding{Module: auditv1.AuditServiceKernelModule(), Implementation: auditSvc})
 	}
@@ -84,7 +85,7 @@ func HubHTTPBindings(
 	return bindings
 }
 
-// HubGRPCBindings returns all generated gRPC service bindings. Unlike HTTP,
+// HubGRPCBindings returns all generated gRPC service bindings owned by Hub.
 // Authn needs no custom gRPC routes and the legacy ModelProfile transport remains
 // available to internal clients during the Model Management V2 migration.
 func HubGRPCBindings(
@@ -99,7 +100,7 @@ func HubGRPCBindings(
 	toolSvc *service.ToolService,
 	modelProfileSvc *service.ModelProfileService,
 ) []serverx.ServiceBinding {
-	bindings := make([]serverx.ServiceBinding, 0, 11)
+	bindings := make([]serverx.ServiceBinding, 0, 10)
 	if authnSvc != nil {
 		bindings = append(bindings, serverx.ServiceBinding{Module: authnv1.AuthnServiceKernelModule(), Implementation: authnSvc})
 	}
