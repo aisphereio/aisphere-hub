@@ -233,9 +233,21 @@ func (h *agentHTTPHandler) requirePermission(ctx context.Context, principal auth
 	return nil
 }
 
-func (h *agentHTTPHandler) allowCreate(ctx context.Context, principal authn.Principal) error {
+// allowCreateInScope keeps Agent lifecycle authorization in the same IAM
+// vocabulary as the resource model. Publishing a public or system Agent is a
+// stronger operation than creating a private/project Agent because it changes
+// who can discover or launch it.
+func (h *agentHTTPHandler) allowCreateInScope(ctx context.Context, principal authn.Principal, projectID, scope string) error {
 	if strings.TrimSpace(principal.OrgID) == "" {
 		return errAgentZoneRequired
 	}
-	return h.requirePermission(ctx, principal, "zone", principal.OrgID, "create_skill")
+	scope = normalizeAgentScope(scope)
+	permission := "create_agent"
+	if scope == "public" || scope == "system" {
+		permission = "manage_agents"
+	}
+	if strings.TrimSpace(projectID) != "" && scope != "system" {
+		return h.requirePermission(ctx, principal, "project", strings.TrimSpace(projectID), permission)
+	}
+	return h.requirePermission(ctx, principal, "zone", principal.OrgID, permission)
 }

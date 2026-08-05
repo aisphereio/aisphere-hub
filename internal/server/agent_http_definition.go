@@ -27,8 +27,14 @@ func normalizeAgentScope(value string) string {
 		return "system"
 	case "private":
 		return "private"
-	default:
+	case "public":
+		return "public"
+	case "project":
 		return "project"
+	default:
+		// Fail closed: an omitted scope must not implicitly expose an Agent to
+		// project members. Project/public visibility must be explicit.
+		return "private"
 	}
 }
 
