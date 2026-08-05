@@ -41,7 +41,7 @@ import (
 // serverx/autowire mounts the standard authn middleware before access. Public
 // routes are configured through security.access.public_operations instead of a
 // Hub-specific authn filter.
-func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, authzSvc *service.AuthzService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, sandboxSvc *service.SandboxService, fileSvc *service.FileService, toolSvc *service.ToolService, modelProfileSvc *service.ModelProfileService) *khttp.Server {
+func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, sandboxSvc *service.SandboxService, fileSvc *service.FileService, toolSvc *service.ToolService, modelProfileSvc *service.ModelProfileService) *khttp.Server {
 	addr := cfg.HTTP.Addr
 	if addr == "" {
 		addr = "0.0.0.0:8000"
@@ -90,7 +90,6 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	// All other generated HTTP services are registered through the same
 	// ServiceModule/ServiceBinding contract used by HubCatalog.
 	if err := serverx.RegisterHTTPServices(srv, HubHTTPBindings(
-		authzSvc,
 		auditSvc,
 		skillSvc,
 		clusterSvc,
