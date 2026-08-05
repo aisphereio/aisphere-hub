@@ -44,7 +44,7 @@ func (h *agentHTTPHandler) listEndpoint(ctx khttp.Context) error {
 		}
 		items := make([]agentRow, 0, len(rows))
 		for _, row := range rows {
-			if row.Scope == "system" || row.OwnerID == principal.SubjectID {
+			if row.OwnerID == principal.SubjectID {
 				row.OwnerSubject = row.OwnerType + ":" + row.OwnerID
 				items = append(items, row)
 				continue
@@ -80,7 +80,8 @@ func (h *agentHTTPHandler) createEndpoint(ctx khttp.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		if err := h.allowCreate(c, principal); err != nil {
+		scope := normalizeAgentScope(req.Scope)
+		if err := h.allowCreateInScope(c, principal, req.ProjectID, scope); err != nil {
 			return nil, err
 		}
 		definition, projection, err := normalizeAgentDefinition(req.Definition)
@@ -99,7 +100,7 @@ func (h *agentHTTPHandler) createEndpoint(ctx khttp.Context) error {
 		row := agentRow{
 			AgentID: req.ID, DisplayName: strings.TrimSpace(req.DisplayName),
 			Description: strings.TrimSpace(req.Description), Status: normalizeAgentStatus(req.Status),
-			Scope: normalizeAgentScope(req.Scope), OwnerType: principal.SubjectType,
+			Scope: scope, OwnerType: principal.SubjectType,
 			OwnerID: principal.SubjectID, OwnerName: principal.Name, OrgID: principal.OrgID,
 			ProjectID:     strings.TrimSpace(req.ProjectID),
 			LatestVersion: version, LabelsJSON: labelsJSON(req.Labels), ObjectRef: "agent:" + req.ID,
@@ -118,11 +119,9 @@ func (h *agentHTTPHandler) createEndpoint(ctx khttp.Context) error {
 		}); err != nil {
 			return nil, agentDBErr(err)
 		}
-		_, relErr := h.authz.WriteRelationships(c, biz.AuthzRelationship{
-			Resource: biz.AuthzObjectRef{Type: "agent", ID: req.ID},
-			Relation: "owner", Subject: agentSubject(principal),
-		})
+		_, relErr := h.authz.WriteRelationships(c, agentAuthzRelationships(row)...)
 		if relErr != nil {
+			_ = h.db(c).Where("agent_id = ?", req.ID).Delete(&agentVersionRow{}).Error
 			_ = h.db(c).Model(&agentRow{}).Where("agent_id = ?", req.ID).Update("deleted_at", time.Now().UTC()).Error
 			return nil, errAgentAuthzUnavailable
 		}
@@ -179,6 +178,13 @@ func (h *agentHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 		if err != nil {
 			return nil, err
 		}
+		scope := normalizeAgentScope(req.Scope)
+		projectID := strings.TrimSpace(req.ProjectID)
+		if scope != existing.Scope || projectID != strings.TrimSpace(existing.ProjectID) {
+			if err := h.requirePermission(c, principal, "agent", id, "manage"); err != nil {
+				return nil, err
+			}
+		}
 		definition, projection, err := normalizeAgentDefinition(req.Definition)
 		if err != nil {
 			return nil, err
@@ -199,7 +205,7 @@ func (h *agentHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 		}
 		updates := map[string]any{
 			"display_name": strings.TrimSpace(req.DisplayName), "description": strings.TrimSpace(req.Description),
-			"status": normalizeAgentStatus(req.Status), "scope": normalizeAgentScope(req.Scope),
+			"status": normalizeAgentStatus(req.Status), "scope": scope, "project_id": projectID,
 			"labels_json": labelsJSON(req.Labels), "latest_version": version, "updated_at": now,
 		}
 		if err := h.db(c).Transaction(func(tx *gorm.DB) error {
@@ -213,6 +219,16 @@ func (h *agentHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 			return tx.Create(&versionRow).Error
 		}); err != nil {
 			return nil, agentDBErr(err)
+		}
+		// Reconcile only the relations owned by the Agent projection. Explicit
+		// grants made by IAM remain untouched.
+		for _, relation := range []string{"parent", "public_viewer", "public_executor"} {
+			if _, relErr := h.authz.DeleteRelationships(c, biz.AuthzRelationshipFilter{ResourceType: "agent", ResourceID: id, Relation: relation}); relErr != nil {
+				return nil, errAgentAuthzUnavailable
+			}
+		}
+		if _, relErr := h.authz.WriteRelationships(c, agentAuthzRelationships(agentRow{AgentID: id, Scope: scope, OrgID: existing.OrgID, ProjectID: projectID, OwnerType: existing.OwnerType, OwnerID: existing.OwnerID})...); relErr != nil {
+			return nil, errAgentAuthzUnavailable
 		}
 		updated, err := h.loadAgent(c, id, "")
 		if err != nil {
