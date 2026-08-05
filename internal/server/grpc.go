@@ -1,18 +1,12 @@
 package server
 
 import (
-	auditv1 "github.com/aisphereio/aisphere-hub/api/audit/v1"
-	authnv1 "github.com/aisphereio/aisphere-hub/api/authn/v1"
-	authzv1 "github.com/aisphereio/aisphere-hub/api/authz/v1"
-	kubernetesv1 "github.com/aisphereio/aisphere-hub/api/kubernetes/v1"
-	modelv1 "github.com/aisphereio/aisphere-hub/api/model/v1"
-	skillv1 "github.com/aisphereio/aisphere-hub/api/skill/v1"
-	toolv1 "github.com/aisphereio/aisphere-hub/api/tool/v1"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
 	"github.com/aisphereio/aisphere-hub/internal/service"
 
 	"github.com/aisphereio/kernel/logx"
+	"github.com/aisphereio/kernel/serverx"
 	kgrpc "github.com/aisphereio/kernel/transportx/grpc"
 )
 
@@ -46,38 +40,19 @@ func NewGRPCServer(c conf.ServerConfig, accessLog logx.AccessLogConfig, resource
 		opts = append(opts, kgrpc.StreamMiddleware(m...))
 	}
 	srv := kgrpc.NewServer(opts...)
-	if authnSvc != nil {
-		authnv1.RegisterAuthnServiceServer(srv, authnSvc)
-	}
-	if authzSvc != nil {
-		authzv1.RegisterAuthzServiceServer(srv, authzSvc)
-	}
-	if auditSvc != nil {
-		auditv1.RegisterAuditServiceServer(srv, auditSvc)
-	}
-	if skillSvc != nil {
-		skillv1.RegisterSkillServiceServer(srv, skillSvc)
-		if releaseSvc := skillSvc.ReleaseService(); releaseSvc != nil {
-			skillv1.RegisterSkillReleaseServiceServer(srv, releaseSvc)
-		}
-	}
-	if clusterSvc != nil {
-		kubernetesv1.RegisterClusterServiceServer(srv, clusterSvc)
-	}
-	if namespaceSvc != nil {
-		kubernetesv1.RegisterNamespaceServiceServer(srv, namespaceSvc)
-	}
-	if sandboxSvc != nil {
-		kubernetesv1.RegisterSandboxServiceServer(srv, sandboxSvc)
-	}
-	if fileSvc != nil {
-		skillv1.RegisterFileServiceServer(srv, fileSvc)
-	}
-	if toolSvc != nil {
-		toolv1.RegisterToolServiceServer(srv, toolSvc)
-	}
-	if modelProfileSvc != nil {
-		modelv1.RegisterModelProfileServiceServer(srv, modelProfileSvc)
+	if err := serverx.RegisterGRPCServices(srv, HubGRPCBindings(
+		authnSvc,
+		authzSvc,
+		auditSvc,
+		skillSvc,
+		clusterSvc,
+		namespaceSvc,
+		sandboxSvc,
+		fileSvc,
+		toolSvc,
+		modelProfileSvc,
+	)...); err != nil {
+		panic(err)
 	}
 	return srv
 }
