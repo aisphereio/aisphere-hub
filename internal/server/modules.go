@@ -44,11 +44,8 @@ func HubCatalog() serverx.ServiceCatalog {
 // transport behavior. Authn is registered separately because it adds browser
 // 302 login/logout routes. ModelProfile is intentionally gRPC-only while Model
 // Management V2 owns the public /v1/models, /v1/endpoints, and
-// /v1/model-profiles HTTP contract. The legacy Hub AuthzService argument is
-// accepted only to preserve the constructor boundary during removal and is not
-// exposed as a transport binding.
+// /v1/model-profiles HTTP contract.
 func HubHTTPBindings(
-	_ *service.AuthzService,
 	auditSvc *service.AuditService,
 	skillSvc *service.SkillService,
 	clusterSvc *service.ClusterService,
@@ -90,7 +87,6 @@ func HubHTTPBindings(
 // available to internal clients during the Model Management V2 migration.
 func HubGRPCBindings(
 	authnSvc *service.AuthnService,
-	authzSvc *service.AuthzService,
 	auditSvc *service.AuditService,
 	skillSvc *service.SkillService,
 	clusterSvc *service.ClusterService,
@@ -104,7 +100,7 @@ func HubGRPCBindings(
 	if authnSvc != nil {
 		bindings = append(bindings, serverx.ServiceBinding{Module: authnv1.AuthnServiceKernelModule(), Implementation: authnSvc})
 	}
-	bindings = append(bindings, HubHTTPBindings(authzSvc, auditSvc, skillSvc, clusterSvc, namespaceSvc, sandboxSvc, fileSvc, toolSvc)...)
+	bindings = append(bindings, HubHTTPBindings(auditSvc, skillSvc, clusterSvc, namespaceSvc, sandboxSvc, fileSvc, toolSvc)...)
 	if modelProfileSvc != nil {
 		bindings = append(bindings, serverx.ServiceBinding{Module: modelv1.ModelProfileServiceKernelModule(), Implementation: modelProfileSvc})
 	}
