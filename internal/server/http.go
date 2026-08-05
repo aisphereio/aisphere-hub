@@ -12,6 +12,7 @@ import (
 
 	"github.com/aisphereio/kernel/authz"
 	"github.com/aisphereio/kernel/logx"
+	"github.com/aisphereio/kernel/serverx"
 	khttp "github.com/aisphereio/kernel/transportx/http"
 )
 
@@ -79,39 +80,28 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 		opts = append(opts, khttp.Middleware(m...))
 	}
 	srv := khttp.NewServer(opts...)
-	// Register each service that is enabled. Services may be nil when
-	// their corresponding feature is disabled in config; in that case
-	// only the enabled services are mounted, plus /healthz and /readyz.
+
+	// Authn is the one generated service with additional transport behavior:
+	// its wrapper mounts the generated JSON routes plus browser-friendly 302
+	// login/logout handlers that cannot be represented by google.api.http.
 	if authnSvc != nil {
 		authnSvc.RegisterHTTPServer(srv)
 	}
-	if authzSvc != nil {
-		authzSvc.RegisterHTTPServer(srv)
+	// All other generated HTTP services are registered through the same
+	// ServiceModule/ServiceBinding contract used by HubCatalog.
+	if err := serverx.RegisterHTTPServices(srv, HubHTTPBindings(
+		authzSvc,
+		auditSvc,
+		skillSvc,
+		clusterSvc,
+		namespaceSvc,
+		sandboxSvc,
+		fileSvc,
+		toolSvc,
+	)...); err != nil {
+		panic(err)
 	}
-	if auditSvc != nil {
-		auditSvc.RegisterHTTPServer(srv)
-	}
-	if skillSvc != nil {
-		skillSvc.RegisterHTTPServer(srv)
-		if releaseSvc := skillSvc.ReleaseService(); releaseSvc != nil {
-			releaseSvc.RegisterHTTPServer(srv)
-		}
-	}
-	if clusterSvc != nil {
-		clusterSvc.RegisterHTTPServer(srv)
-	}
-	if namespaceSvc != nil {
-		namespaceSvc.RegisterHTTPServer(srv)
-	}
-	if sandboxSvc != nil {
-		sandboxSvc.RegisterHTTPServer(srv)
-	}
-	if fileSvc != nil {
-		fileSvc.RegisterHTTPServer(srv)
-	}
-	if toolSvc != nil {
-		toolSvc.RegisterHTTPServer(srv)
-	}
+
 	// Model management V2 owns the HTTP paths for models, endpoints and profiles.
 	// The legacy generated ModelProfile service remains available to gRPC callers
 	// during the migration, but is deliberately not mounted on HTTP to avoid two
