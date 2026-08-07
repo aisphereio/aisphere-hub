@@ -5,6 +5,7 @@
 ## 当前有效决策
 
 - [ADR-001: AISphere 平台边界与 Hub 控制面职责](ADR-001-platform-boundaries.md)
+- [ADR-002: Builtin Tool Catalog V1](ADR-002-builtin-tool-catalog-v1.md) — Builtin executable 归 Runtime，Hub 只做 system Tool catalog mirror/Agent binding；V1 登录用户可选择 Builtin，不做独立 Tool 资产 AuthZ。
 
 ## 解释优先级
 
