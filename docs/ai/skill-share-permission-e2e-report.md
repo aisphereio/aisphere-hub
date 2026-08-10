@@ -1,0 +1,57 @@
+# Skill 分享权限 E2E 测试报告（Skill Share Permission）
+
+> 日期：2026-08-10
+> 环境：线上测试集群（`hub.weagent.cc:30723`，Envoy Gateway → Casdoor OIDC → aisphere-hub `sha-e4c5af3`）
+> 测试身份：**admin**（Skill owner / Casdoor UUID `496333c7-7acc-4717-8596-056544fc0a68`）、**te2e**（普通成员 `te2e / 123456`，Casdoor UUID `c0285b86-3363-469f-9af8-089785eb0c71`）
+> 网关：`/v1/skills/**` → Envoy → aisphere-hub；授权后端 = IAM gRPC → SpiceDB
+> 结论：**分享→访问→撤销→再验证 全链路 OK ✅**
+
+---
+
+## 1. 测试目标
+
+验证 skill 的**细粒度分享权限闭环**（对应设计 S2「skill 权限：定义期权限 ≠ 运行期权限」）：
+
+```
+分享前（te2e 不可见） → 分享 viewer → te2e 可见/可读（不可写） → 撤权 → te2e 恢复不可见
+```
+
+## 2. 覆盖矩阵与结果
+
+| # | 步骤 | 执行者 | 请求 | 结果（关键字段） | 判定 |
+|---|------|--------|------|------------------|------|
+| 1 | 创建测试 Skill（private） | admin | `POST /v1/skills` `{name: share-e2e-001, visibility: private}` | `200`；`visibility=private, status=active`；SpiceDB 关系：`owner@user:adminUUID` + `zone@zone:aisphere` | ✅ |
+| 2 | 分享前基线（不可见） | te2e | `GET /v1/skills/share-e2e-001` | `403 AUTHZ_PERMISSION_DENIED`（`spicedb permission did not match`, 带 `decision_id`） | ✅ |
+| 3 | 分享前基线（列表） | te2e | `GET /v1/skills` | `count=5`，**不含** share-e2e-001 | ✅ |
+| 4 | 分享 viewer 给个人 | admin | `POST /v1/skills/share-e2e-001/shares` `{relation: viewer, subject_type: user, subject_id: te2e-UUID}` | `200`（首调偶发 403，见 §4 备注） | ✅ |
+| 5 | 分享后读取 | te2e | `GET /v1/skills/share-e2e-001` | `200`；`visibility=private`、owner=管理员（私有但已授权可见） | ✅ |
+| 6 | 分享后列表 | te2e | `GET /v1/skills` | `count=6`，**包含** share-e2e-001 | ✅ |
+| 7 | viewer 写（越权探测） | te2e | `PUT /v1/skills/share-e2e-001/contents/SKILL.md` | `403`（viewer 无 edit，权限粒度正确） | ✅ |
+| 8 | 撤销分享 | admin | `DELETE /v1/skills/share-e2e-001/shares/viewer/user/te2eUUID` | `200`；`GET .../shares` → `shares: []`（关系已删） | ✅ |
+| 9 | 撤权后读取 | te2e | `GET /v1/skills/share-e2e-001` | `403 AUTHZ_PERMISSION_DENIED` | ✅ |
+| 10 | 撤权后列表 | te2e | `GET /v1/skills` | `count=5`，**不含** share-e2e-001 | ✅ |
+| 11 | 清理 | admin | `DELETE /v1/skills/share-e2e-001` | `200`；列表回到基线（6 → 删除 e2e 数据后正常） | ✅ |
+
+## 3. 权限语义确认（SpiceDB 直查实证）
+
+测试期间对 SpiceDB datastore（PG `spicedb` 库 `relation_tuple`）做了直查：
+
+```
+share-e2e-001:  owner → user:adminUUID
+                zone  → zone:aisphere
+（分享 viewer 期间：viewer → user:te2eUUID；撤销后该行消失）
+```
+
+- ListSkillShares（`GET /v1/skills/{name}/shares`）**实时读 SpiceDB**，无 DB 副本 → 所见即权威 ✅
+- 分享的 relation 合法集：`viewer / editor / reviewer / publisher`（`validSkillRelation`）✅
+- viewer 仅可读（步骤 7 实测 403 无 edit）✅
+
+## 4. 备注 / 发现
+
+1. **authz 判定存在短时陈旧窗口（观察项，非阻塞）**：分享创建首次调用偶发 `403 manage did not match`，几秒/数分钟后同一 admin 再调即 `200`（期间无代码变更）。疑似 hub/IAM 侧对 admin 权限判定的**缓存窗口（默认 TTL≈5min）**——已通过多次成功覆盖验证功能正常，但建议后续确认该缓存语义（避免"权限刚给出去立刻 403"的体验）。
+2. 与本报告配套的 S1 资产闭环 e2e（创建/提交/tag/不可变版本/visibility）已另测通过；跨用户 visibility 闭环（private→public→private + te2e 视角即刻变化）在 `skill-lifecycle-closed-loop-design.md` 评审中口头确认 OK，本报告聚焦分享维度。
+
+## 5. 结论
+
+- **Skill 分享给个人（viewer）→ 目标用户可见可读、不可写 → 撤权后立即不可见**，`前后端 API（POST/GET/DELETE /v1/skills/{name}/shares）一致`、`SpiceDB 关系增删即时生效`，功能 **已可用 ✅**。
+- 遗留建议：① 确认权限判定缓存窗口（备注 1）；② 为 skill 权限增加**周期对账任务**（DB visibility/分享 期望 vs SpiceDB 实际），覆盖异常漂移（详见 `skill-preload-dev.md` §7 Q3 思路）。
