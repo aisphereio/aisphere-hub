@@ -125,7 +125,7 @@ func main() {
 
 	skillRepo := data.NewSkillRepo(resources)
 	pullRequestRepo := data.NewPullRequestRepo(resources)
-	skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase)
+	skillUsecase := biz.NewSkillUsecase(skillRepo, pullRequestRepo, gitEngine, authzUsecase).WithAgentReferenceReader(data.NewAgentSkillRefsRepo(resources))
 
 	// Attach optional project validator when authz is enabled.
 	if bc.Security.Authz.Enabled && !bc.Security.Authz.DevAllowAll {

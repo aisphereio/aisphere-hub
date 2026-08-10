@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aisphereio/kernel/authn"
+	"github.com/aisphereio/kernel/errorx"
 )
 
 // skillNamePattern restricts the Skill identifier to the SpiceDB-safe charset.
@@ -17,6 +18,20 @@ import (
 // keeps Catalog name == SpiceDB object id == git repo name identical with no
 // encoding layer (object_id regex rejects '.' anyway).
 var skillNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
+
+// AgentSkillReference is a lightweight projection of an Agent that binds a
+// Skill in its definition, used to refuse destructive operations while the
+// Skill is still in use.
+type AgentSkillReference struct {
+	AgentID       string `json:"agentId"`
+	DisplayName   string `json:"displayName"`
+	LatestVersion string `json:"latestVersion,omitempty"`
+}
+
+// AgentReferenceReader lists Agents whose definition references a skill.
+type AgentReferenceReader interface {
+	ListSkillReferences(ctx context.Context, skillName string) ([]AgentSkillReference, error)
+}
 
 type SkillGitEngine interface {
 	CreateSkill(context.Context, *GitSkill) (*GitSkill, error)
@@ -70,10 +85,20 @@ type SkillUsecase struct {
 	git              SkillGitEngine
 	rels             SkillRelationships
 	projectValidator ProjectValidator
+	// Agent reference check used by DeleteSkill. May be nil (unit tests /
+	// minimal setups) in which case the guard is skipped.
+	agentRefs AgentReferenceReader
 }
 
 func NewSkillUsecase(skills GitSkillRepository, pulls PullRequestRepository, git SkillGitEngine, rels SkillRelationships) *SkillUsecase {
 	return &SkillUsecase{skills: skills, pulls: pulls, git: git, rels: rels}
+}
+
+// WithAgentReferenceReader injects the Agent reference lookup used by
+// DeleteSkill to block deletion of a Skill that is still in use.
+func (uc *SkillUsecase) WithAgentReferenceReader(rr AgentReferenceReader) *SkillUsecase {
+	uc.agentRefs = rr
+	return uc
 }
 
 // WithProjectValidator sets an optional project validator. When set, non-empty
@@ -292,6 +317,27 @@ func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, name, visibil
 
 func (uc *SkillUsecase) DeleteSkill(ctx context.Context, name string) error {
 	name = strings.TrimSpace(name)
+	// Deletion guard: refuse to drop a Skill that Agents still bind. The error
+	// carries the referencing agents so the UI can tell the user to update or
+	// unbind them first (S2 §6.3).
+	if uc.agentRefs != nil {
+		refs, err := uc.agentRefs.ListSkillReferences(ctx, name)
+		if err != nil {
+			return fmt.Errorf("%w: check agent references: %v", ErrSkillDependencyFailed, err)
+		}
+		if len(refs) > 0 {
+			names := make([]string, 0, len(refs))
+			for _, ref := range refs {
+				if strings.TrimSpace(ref.DisplayName) != "" {
+					names = append(names, ref.DisplayName+"("+ref.AgentID+")")
+				} else {
+					names = append(names, ref.AgentID)
+				}
+			}
+			return errorx.Conflict("AGENT_SKILL_REFERENCED",
+				fmt.Sprintf("skill %q 正被 %d 个 Agent 使用: %s。请先更新这些 Agent 的绑定后再删除。", name, len(refs), strings.Join(names, ", ")))
+		}
+	}
 	if _, err := uc.skills.UpdateSkillStatus(ctx, name, SkillStatusActive, SkillStatusDeleting); err != nil {
 		return err
 	}
