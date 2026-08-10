@@ -95,3 +95,54 @@ alive
 - **现状风险**：某 agent 绑了该 skill → skill 被删（软删）→ 该 agent 后续 `resolve` 将失败（`AGENT_SKILL_RESOLVE_FAILED` 一类），**删除时没有任何警告**。
 - **建议（待开发功能点）**：删除前查询 `agents.definition_json->skills` 引用该 skill 的行，返回 `referencing_agents[]`；前端弹"该 Skill 正在被 N 个 Agent 使用，需先修改这些 Agent"确认/阻断（或 force 参数）。
 - **状态：当前缺失，标记为待办（S2 补充）**。
+
+---
+
+## 7. S2 权限模型确认 + M0（Catalog 技能可绑定/解析）+ Schema 同步修复（2026-08-10）
+
+### 7.1 S2 权限模型与文档推荐一致（代码实证）
+
+SpiceDB `definition skill` 的权限与文档 S2 完全一致：
+
+```
+manage  = owner + parent->manage + zone->manage_skills + custom_binding->manage
+edit    = manage + editor     + parent->edit   + custom_binding->edit
+review  = manage + reviewer   + custom_binding->review
+publish = manage + publisher  + custom_binding->publish
+view    = edit + reviewer + viewer + parent->view + zone->view_skills + custom_binding->view
+```
+
+Hub 22 个 Skill API 的菱形映射：`view`（列表/详情/文件读/refs/commits/release 查询/PR 查看）、`edit`（文件写/PR 新建/改 metadata）、`review`（ReviewPullRequest）、`publish`（CreateSkillRelease + MergePullRequest）、`manage`（Delete/Visibility/分享管理/RestoreRef）、创建走 `zone:{org_id}#create_skill`。V1 无 `execute`。
+
+### 7.2 ⚠️ 修复：线上 SpiceDB Schema 落后（Agent 创建全挂）
+
+**现象**：创建 Agent → `503 AGENT_AUTHZ_UNAVAILABLE`；IAM 日志 `relation/permission "create_agent" not found under definition "zone"`。
+
+**根因**：仓库 schema（`aisphere-iam/configs/spicedb/aisphere.schema.zed`）已含 `create_agent` 等新定义，但**线上 SpiceDB 从未被重新发布**（IAM 启动不会自动升级已存在的 schema）。
+
+**修复（运维手法）**：手动把仓库 schema 推送到线上 SpiceDB（gRPC `WriteSchema`，token=SpiceDB preshared key）：
+
+```bash
+# 临时小工具（authzed-go v1）：conn → spicedb.grpc → WriteSchema(schema.zed)
+schemapush <spicedb-addr>:<grpc-nodeport> <preshared-key> aisphere.schema.zed
+# 验证
+kubectl exec apps-postgre-0 -- psql -U postgres -d spicedb \
+  -c "SELECT relation FROM relation_tuple WHERE namespace='zone' AND object_id='aisphere' AND deleted_xid='9223372036854775807'"   # 无关；用 IAM CheckPermission 验证 create_agent 通过
+```
+
+**防再犯建议**：把 schema 发布纳入 IAM 部署/CI 流程（对比 SpiceDB `ReadSchema` revision 与仓库 schema，不一致即 `WriteSchema`）；否则每次新增权限都会出现"代码更新但授权模型没更新"的断链。
+
+### 7.3 ✅ Catalog 技能绑定闭环（M0 打通，已部署验证）
+
+- **后端**（hub `93811b5`）：`resolveAgentSkillSnapshots` 支持 catalog——`skill:{name}#view` 门控后 pin `{name,version,revision,source:catalog,object:"aihub:skill:name"}` 进快照；保存校验与 `:resolve` 共用。
+- **前端**（front `14e5f55`）：Agent skill 选择器解锁 catalog（移除 disabled）。
+- **线上 e2e**：创建 catalog skill → 发布 tag `v0.0.1` → 创建 Agent 绑定 `{name,version,source:catalog}` → `201` → `:resolve` 返回 `200` 且 `skills=[{source:catalog, version:v0.0.1, object:aihub:skill:cat-sk-0802}]` ✅（测试数据已清理）。
+- 运行期拉取（HTTP+zip / digest / URL）属于 **M1**（另一个闭环）。
+
+### 7.4 相关部署版本（线上）
+
+```
+hub    = sha-93811b5（catalog resolve + 命名规则 + 描述投影）
+front  = sha-14e5f55（catalog 选择器解锁 + 版本就地查看）
+iam    = sha-2c96389（+ schema 已手动同步到线上 SpiceDB）
+```
