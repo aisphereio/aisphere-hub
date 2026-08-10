@@ -55,3 +55,43 @@ share-e2e-001:  owner → user:adminUUID
 
 - **Skill 分享给个人（viewer）→ 目标用户可见可读、不可写 → 撤权后立即不可见**，`前后端 API（POST/GET/DELETE /v1/skills/{name}/shares）一致`、`SpiceDB 关系增删即时生效`，功能 **已可用 ✅**。
 - 遗留建议：① 确认权限判定缓存窗口（备注 1）；② 为 skill 权限增加**周期对账任务**（DB visibility/分享 期望 vs SpiceDB 实际），覆盖异常漂移（详见 `skill-preload-dev.md` §7 Q3 思路）。
+
+---
+
+## 6. Skill 删除的权限清理（E2E 补充验证）
+
+> 目标：删除一个 **public** skill 时，SpiceDB 上的权限（含公开 viewer 通配）是否会一并清掉；以及删除前是否提醒"有 agent 在用"。
+
+### 6.1 公开 skill 会写哪些 SpiceDB 权限（实测）
+
+创建 `del-e2e-public`（visibility=public）后直查 SpiceDB `relation_tuple`（活动行）：
+
+```
+owner    → user:496333c7-…（admin UUID）
+viewer   → user:*
+viewer   → service:*
+viewer   → service_account:*
+zone     → zone:aisphere
+```
+
+→ **公开权限 = 3 条 viewer 通配（`user:* / service:* / service_account:*`）+ owner + zone**，创建时即写入。
+
+### 6.2 删除后 SpiceDB 是否清理（实测）
+
+`DELETE /v1/skills/del-e2e-public` → `200`；随后查询活动行（`deleted_xid='9223372036854775807'`）：
+
+```
+alive
+-----
+0
+```
+
+→ **删除后 SpiceDB 权限全部清空**。机制：`SkillUsecase.DeleteSkill` 顺序为 `DB→Deleting → RevokeResource（删除该 skill 全部关系，含通配）→ 删仓库`；SpiceDB 采用 MVCC tombstone（物理行保留 `deleted_xid`），**权限视图已归零，无需手工操作**。结论：**公开 skill 删除不需要人工操作 SpiceDB，系统自动清理 ✅**。
+
+### 6.3 ⚠️ 缺口：删除前**不检查 agent 引用**
+
+当前 `DeleteSkill` **只清理权限 + 删除仓库，没有任何"哪些 agent 还绑定该 skill"的引用检查**（代码无 agent 引用查询）。
+
+- **现状风险**：某 agent 绑了该 skill → skill 被删（软删）→ 该 agent 后续 `resolve` 将失败（`AGENT_SKILL_RESOLVE_FAILED` 一类），**删除时没有任何警告**。
+- **建议（待开发功能点）**：删除前查询 `agents.definition_json->skills` 引用该 skill 的行，返回 `referencing_agents[]`；前端弹"该 Skill 正在被 N 个 Agent 使用，需先修改这些 Agent"确认/阻断（或 force 参数）。
+- **状态：当前缺失，标记为待办（S2 补充）**。
