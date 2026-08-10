@@ -279,3 +279,49 @@ func TestGetFileNotFound(t *testing.T) {
 		t.Errorf("error = %v, want ErrFileNotFound", err)
 	}
 }
+
+// TestUpdateSkillMetadataProjection locks the S1.2 "description single source
+// of truth" behavior: editing SKILL.md directly (bypassing PR merge) must
+// refresh the DB projection (repos.description), while writes to other
+// files must NOT touch it.
+func TestUpdateSkillMetadataProjection(t *testing.T) {
+	engine := newTestEngine(t)
+
+	projected := func(t *testing.T) string {
+		t.Helper()
+		var desc string
+		if err := engine.db.GetContext(context.Background(), &desc, "SELECT description FROM repos WHERE name = ?", "search"); err != nil {
+			t.Fatalf("read repos.description: %v", err)
+		}
+		return desc
+	}
+	if got := projected(t); got != "Search tools" {
+		t.Fatalf("initial description = %q, want %q", got, "Search tools")
+	}
+
+	newFrontmatter := `---
+name: search
+description: "Search tools over SQLite locally"
+version: "0.2.0"
+---
+
+# Search
+
+Search now syncs description on direct edits.
+`
+	if _, err := engine.UpdateFile(context.Background(), "search", "SKILL.md", newFrontmatter,
+		"e2e: update SKILL.md", "", biz.SkillDefaultBranch, "a", "a@a"); err != nil {
+		t.Fatalf("UpdateFile(SKILL.md): %v", err)
+	}
+	if got := projected(t); got != "Search tools over SQLite locally" {
+		t.Errorf("after SKILL.md edit, description = %q, want %q", got, "Search tools over SQLite locally")
+	}
+
+	// Control: writing a non-SKILL.md file must not clobber the projection.
+	if _, err := engine.CreateFile(context.Background(), "search", "README.md", "# Search\n", "add readme", biz.SkillDefaultBranch, "a", "t"); err != nil {
+		t.Fatalf("CreateFile(README.md): %v", err)
+	}
+	if got := projected(t); got != "Search tools over SQLite locally" {
+		t.Errorf("after non-metadata write, description = %q, want unchanged", got)
+	}
+}

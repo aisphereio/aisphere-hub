@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"path"
 	"sort"
 	"strings"
@@ -161,6 +162,28 @@ func (e *Engine) GetFileContent(ctx context.Context, name, filePath, ref string)
 	}, nil
 }
 
+// skillMetadataFile is the canonical identity document whose frontmatter
+// drives the repository description projection.
+const skillMetadataFile = "SKILL.md"
+
+// syncSkillMetadataOnWrite refreshes the PostgreSQL description/display_name
+// projection right after SKILL.md is written on the default branch. Without
+// this, edits that bypass PR merge (in-browser editor, direct push to main)
+// would leave the DB cache stale while the git frontmatter is authoritative.
+func (e *Engine) syncSkillMetadataOnWrite(ctx context.Context, name, filePath, branch, commitSHA string) error {
+	if filePath != skillMetadataFile || strings.TrimSpace(branch) != biz.SkillDefaultBranch {
+		return nil
+	}
+	repo, err := e.open(ctx, name)
+	if err != nil {
+		return errGit(err)
+	}
+	if err := e.syncSkillMetadata(ctx, name, commitSHA, repo.Path); err != nil {
+		return fmt.Errorf("gitengine: sync skill metadata after SKILL.md write: %w", err)
+	}
+	return nil
+}
+
 // --- writes (go-git PlainOpen) ---------------------------------------------
 
 // CreateFile writes a new blob and commits it at path. Refuses to
@@ -195,6 +218,9 @@ func (e *Engine) CreateFile(ctx context.Context, name, filePath, content, messag
 	}
 	if err := setBranchRef(r.Storer, refName, commitSHA, headCommit.Hash); err != nil {
 		return nil, errGit(err)
+	}
+	if err := e.syncSkillMetadataOnWrite(ctx, name, filePath, branch, commitSHA.String()); err != nil {
+		return nil, err
 	}
 	return &biz.FileContent{
 		Name: path.Base(filePath), Path: filePath, SHA: blobHash.String(),
@@ -243,6 +269,9 @@ func (e *Engine) UpdateFile(ctx context.Context, name, filePath, content, messag
 	}
 	if err := setBranchRef(r.Storer, refName, commitSHA, headCommit.Hash); err != nil {
 		return nil, errGit(err)
+	}
+	if err := e.syncSkillMetadataOnWrite(ctx, name, filePath, branch, commitSHA.String()); err != nil {
+		return nil, err
 	}
 	return &biz.FileContent{
 		Name: path.Base(filePath), Path: filePath, SHA: blobHash.String(),
