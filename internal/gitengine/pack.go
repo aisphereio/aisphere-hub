@@ -30,9 +30,16 @@ func (e *Engine) BuildSkillPackage(ctx context.Context, name, ref string) (*biz.
 	if ref == "" {
 		ref = "HEAD"
 	}
-	hashStr, err := softRepo.ShowRefVerify(normalizeRef(ref))
+	// Resolve branch-or-tag by delegating to git rev-parse (handles simple
+	// branch names, tags, and annotated tags: v1.0.0 -> commit). Output is
+	// "<hash>\n".
+	out, err := runGitRepo(ctx, softRepo.Path, nil, "rev-parse", ref+"^{commit}")
 	if err != nil {
 		return nil, fmt.Errorf("gitengine: resolve %s: %w", ref, err)
+	}
+	hashStr := strings.TrimSpace(string(out))
+	if len(hashStr) != 40 {
+		return nil, fmt.Errorf("gitengine: resolve %s: invalid rev output %q", ref, hashStr)
 	}
 	repo, err := gogit.PlainOpen(softRepo.Path)
 	if err != nil {
