@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aisphereio/aisphere-hub/internal/biz"
@@ -202,6 +203,7 @@ func main() {
 		fileService,
 		toolService,
 		modelProfileService,
+		biz.NewSkillPackageService(gitEngine, packSecret(bc.Skill.Pack.Secret), time.Duration(bc.Skill.Pack.TTLNS)*time.Nanosecond),
 	)
 	grpcServer := server.NewGRPCServer(
 		bc.Server,
@@ -250,6 +252,16 @@ func main() {
 		logger.Error("app run failed", logx.Err(err))
 		panic(err)
 	}
+}
+
+// packSecret returns the skill package signing secret, preferring the
+// SKILL_PACK_SECRET env var (kept out of the ConfigMap on K8s) over the
+// optional config value.
+func packSecret(configSecret string) string {
+	if v := strings.TrimSpace(os.Getenv("SKILL_PACK_SECRET")); v != "" {
+		return v
+	}
+	return strings.TrimSpace(configSecret)
 }
 
 func applyBuildInfo(bc *conf.Bootstrap) {

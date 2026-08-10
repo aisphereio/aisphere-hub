@@ -26,6 +26,10 @@ const (
 type agentHTTPHandler struct {
 	resources *data.Resources
 	authz     biz.AuthzRepo
+	// skillPackages gates the skill download contract: the resolver builds a
+	// package + signed download URL only while the launcher holds skill.view;
+	// the /packages endpoint verifies the signature at load time.
+	skillPackages biz.SkillPackageService
 }
 
 type agentRow struct {
@@ -173,11 +177,11 @@ type agentToolVersionCatalogRow struct {
 	DefinitionJSON json.RawMessage `gorm:"column:definition_json"`
 }
 
-func registerSecuredAgentHTTP(srv *khttp.Server, resources *data.Resources) {
+func registerSecuredAgentHTTP(srv *khttp.Server, resources *data.Resources, skillPacks biz.SkillPackageService) {
 	if srv == nil || resources == nil || resources.DB == nil {
 		return
 	}
-	h := &agentHTTPHandler{resources: resources, authz: data.NewAuthzRepo(resources)}
+	h := &agentHTTPHandler{resources: resources, authz: data.NewAuthzRepo(resources), skillPackages: skillPacks}
 	r := srv.Route("/")
 	r.Handle(http.MethodGet, "/v1/agents", h.listEndpoint)
 	r.Handle(http.MethodPost, "/v1/agents", h.createEndpoint)

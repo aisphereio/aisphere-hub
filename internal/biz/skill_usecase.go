@@ -53,6 +53,10 @@ type SkillGitEngine interface {
 	CreateFile(ctx context.Context, name, path, content, message, branch, committerName, committerEmail string) (*FileContent, error)
 	UpdateFile(ctx context.Context, name, path, content, message, sha, branch, committerName, committerEmail string) (*FileContent, error)
 	DeleteFile(ctx context.Context, name, path, message, sha, branch, committerName, committerEmail string) (commitSHA, commitMessage string, err error)
+
+	// BuildSkillPackage zips the repository tree at an immutable ref with
+	// package-level digests (used by the load-time download contract).
+	BuildSkillPackage(ctx context.Context, name, ref string) (*SkillPackageData, error)
 }
 
 // SkillMetadataSyncer is optional so existing git engine test doubles and

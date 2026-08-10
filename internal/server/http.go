@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/aisphere-hub/internal/conf"
 	"github.com/aisphereio/aisphere-hub/internal/data"
 	"github.com/aisphereio/aisphere-hub/internal/gitengine"
@@ -41,7 +42,7 @@ import (
 // serverx/autowire mounts the standard authn middleware before access. Public
 // routes are configured through security.access.public_operations instead of a
 // Hub-specific authn filter.
-func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, sandboxSvc *service.SandboxService, fileSvc *service.FileService, toolSvc *service.ToolService, modelProfileSvc *service.ModelProfileService) *khttp.Server {
+func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resources *data.Resources, securityCfg conf.SecurityConfig, git *gitengine.Engine, authnSvc *service.AuthnService, auditSvc *service.AuditService, skillSvc *service.SkillService, clusterSvc *service.ClusterService, namespaceSvc *service.NamespaceService, sandboxSvc *service.SandboxService, fileSvc *service.FileService, toolSvc *service.ToolService, modelProfileSvc *service.ModelProfileService, skillPacks biz.SkillPackageService) *khttp.Server {
 	addr := cfg.HTTP.Addr
 	if addr == "" {
 		addr = "0.0.0.0:8000"
@@ -110,7 +111,9 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	registerModelEndpointProbeHTTP(srv, resources)
 	// Agent is currently a lightweight versioned HTTP control-plane resource.
 	// Tool approval modes are human consent metadata; IAM remains authoritative.
-	registerSecuredAgentHTTP(srv, resources)
+	registerSecuredAgentHTTP(srv, resources, skillPacks)
+	// Skill package download (load-phase authorization) — see skill_pack_handler.
+	registerSkillPackHTTP(srv, skillPacks)
 	// SkillSet remains a lightweight HTTP resource. It stores ordered references
 	// to canonical Skills plus immutable release-resolution snapshots.
 	registerSecuredSkillSetHTTP(srv, resources, git)

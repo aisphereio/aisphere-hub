@@ -159,11 +159,23 @@ type MetricsConfig struct {
 
 // SkillConfig controls the embedded Git service used by native Skill repos.
 type SkillConfig struct {
-	Git SkillGitConfig `json:"git" yaml:"git"`
+	Git  SkillGitConfig  `json:"git" yaml:"git"`
+	Pack SkillPackConfig `json:"pack" yaml:"pack"`
 }
 
 type SkillGitConfig struct {
 	DataPath string `json:"data_path" yaml:"data_path"`
+}
+
+// SkillPackConfig controls the skill package download endpoint that backs the
+// Runtime "load" phase — the load-time authorization point. Once the package
+// is downloaded and verified the skill is treated as local content and is not
+// re-authorized at runtime (see skill-preload-design.md §7 Q3).
+type SkillPackConfig struct {
+	// Secret is the HMAC key used to sign download URLs (signature+expiry).
+	Secret string `json:"secret" yaml:"secret"`
+	// TTLNS limits download URL lifetime; 0 defaults to 10 minutes.
+	TTLNS int64 `json:"ttl_ns" yaml:"ttl_ns"`
 }
 
 // KubernetesConfig controls the Kubernetes cluster management plane

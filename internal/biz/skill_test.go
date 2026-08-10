@@ -334,6 +334,10 @@ type fakeSkillGitEngine struct {
 	refs         map[string]string
 }
 
+func (e *fakeSkillGitEngine) BuildSkillPackage(context.Context, string, string) (*SkillPackageData, error) {
+	return nil, nil
+}
+
 func (e *fakeSkillGitEngine) CreateSkill(ctx context.Context, in *GitSkill) (*GitSkill, error) {
 	if e.created == nil {
 		e.created = map[string]bool{}

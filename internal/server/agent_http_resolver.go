@@ -98,10 +98,28 @@ func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, princ
 		if err := h.requirePermission(ctx, principal, "skill", name, "view"); err != nil {
 			return nil, err
 		}
-		out = append(out, map[string]any{
+		entry := map[string]any{
 			"name": name, "version": version, "revision": version,
 			"source": "catalog", "object": "aihub:skill:" + name,
-		})
+		}
+		// Load-phase download contract: when package signing is configured,
+		// attach content digests + a short-lived signed URL so the Runtime
+		// can fetch (and verify) the immutable package.
+		if h.skillPackages != nil {
+			pkg, err := h.skillPackages.BuildSkillPackage(ctx, name, version)
+			if err != nil {
+				return nil, err
+			}
+			downloadURL, err := h.skillPackages.BuildDownloadURL(name, version, string(principal.SubjectID))
+			if err != nil {
+				return nil, err
+			}
+			entry["sha256"] = pkg.SHA256
+			entry["md5"] = pkg.MD5
+			entry["size"] = pkg.Size
+			entry["downloadUrl"] = downloadURL
+		}
+		out = append(out, entry)
 	}
 	return out, nil
 }
