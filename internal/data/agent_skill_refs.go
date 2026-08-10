@@ -32,8 +32,12 @@ func (r *agentSkillRefsRepo) ListSkillReferences(ctx context.Context, skillName 
 		FROM aihub_agents a
 		WHERE a.deleted_at IS NULL
 		  AND EXISTS (
-			SELECT 1 FROM jsonb_array_elements(a.definition_json -> 'skills') s
-			WHERE s ->> 'name' = ?
+			SELECT 1 FROM aihub_agent_versions v
+			WHERE v.agent_id = a.agent_id
+			  AND EXISTS (
+				SELECT 1 FROM jsonb_array_elements(v.definition_json -> 'skills') s
+				WHERE s ->> 'name' = ?
+			  )
 		  )
 	`, skillName).Scan(&rows).Error; err != nil {
 		return nil, err
