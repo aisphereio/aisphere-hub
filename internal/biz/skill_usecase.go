@@ -9,7 +9,14 @@ import (
 	"github.com/aisphereio/kernel/authn"
 )
 
-var skillNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
+// skillNamePattern restricts the Skill identifier to the SpiceDB-safe charset.
+// Kept identical to the frontend RESOURCE_ID_REGEX (src/lib/utils.ts) so the
+// rule is enforced consistently client-side and server-side:
+//   - lowercase alphanumeric start, then [a-z0-9_-], max 63 chars.
+// Dots, uppercase, slashes and other runs are NOT allowed; banning '.' here
+// keeps Catalog name == SpiceDB object id == git repo name identical with no
+// encoding layer (object_id regex rejects '.' anyway).
+var skillNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
 
 type SkillGitEngine interface {
 	CreateSkill(context.Context, *GitSkill) (*GitSkill, error)
