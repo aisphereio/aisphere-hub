@@ -30,15 +30,15 @@ func (e *Engine) BuildSkillPackage(ctx context.Context, name, ref string) (*biz.
 	if ref == "" {
 		ref = "HEAD"
 	}
+	hashStr, err := softRepo.ShowRefVerify(normalizeRef(ref))
+	if err != nil {
+		return nil, fmt.Errorf("gitengine: resolve %s: %w", ref, err)
+	}
 	repo, err := gogit.PlainOpen(softRepo.Path)
 	if err != nil {
 		return nil, errGit(err)
 	}
-	hash, err := repo.ResolveRevision(plumbing.Revision(normalizeRef(ref)))
-	if err != nil {
-		return nil, fmt.Errorf("gitengine: resolve %s: %w", ref, err)
-	}
-	commit, err := repo.CommitObject(*hash)
+	commit, err := repo.CommitObject(plumbing.NewHash(hashStr))
 	if err != nil {
 		return nil, errGit(err)
 	}
