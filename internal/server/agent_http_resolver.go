@@ -58,7 +58,7 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 	if _, err := h.resolveAgentModelSnapshot(ctx, principal, projection.Model); err != nil {
 		return err
 	}
-	if _, err := resolveAgentSkillSnapshots(projection.Skills); err != nil {
+	if _, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills); err != nil {
 		return err
 	}
 	for _, binding := range projection.Tools {
@@ -72,11 +72,13 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 	return nil
 }
 
-// resolveAgentSkillSnapshots pins skills that are available in the worker
-// image. Catalog-backed skills will use the same snapshot shape once the
-// Hub-to-catalog download contract is enabled; they must not silently fall
-// back to an unpinned latest version.
-func resolveAgentSkillSnapshots(bindings []agentSkillBinding) ([]map[string]any, error) {
+// resolveAgentSkillSnapshots pins skills into the immutable run snapshot.
+// Built-in skills come from the worker image; catalog skills are validated
+// against the Hub catalog (the launcher must hold `skill:{name}#view` so a
+// user cannot run an Agent whose definition binds a skill they cannot even
+// see) and are pinned by name+version — the download contract
+// (artifactRef/digest/URL) lands with the Runtime Skill Fetch work.
+func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, principal authn.Principal, bindings []agentSkillBinding) ([]map[string]any, error) {
 	out := make([]map[string]any, 0, len(bindings))
 	for _, binding := range bindings {
 		name := strings.TrimSpace(binding.Name)
@@ -85,12 +87,20 @@ func resolveAgentSkillSnapshots(bindings []agentSkillBinding) ([]map[string]any,
 		if source == "" && (version == "builtin" || strings.HasPrefix(version, "builtin-")) {
 			source = "builtin"
 		}
-		if source != "builtin" {
-			return nil, errorx.Unavailable("AGENT_SKILL_SOURCE_UNAVAILABLE", "skill "+name+" is not available from the configured snapshot source")
+		if source == "builtin" {
+			out = append(out, map[string]any{
+				"name": name, "version": version, "revision": version,
+				"source": "builtin", "object": "aisphere://builtin-skills/" + name,
+			})
+			continue
+		}
+		// Catalog skill: the launcher must be able to see it first.
+		if err := h.requirePermission(ctx, principal, "skill", name, "view"); err != nil {
+			return nil, err
 		}
 		out = append(out, map[string]any{
 			"name": name, "version": version, "revision": version,
-			"source": source, "object": "aisphere://builtin-skills/" + name,
+			"source": "catalog", "object": "aihub:skill:" + name,
 		})
 	}
 	return out, nil
@@ -297,7 +307,7 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 	if err != nil {
 		return nil, nil, err
 	}
-	skills, err := resolveAgentSkillSnapshots(projection.Skills)
+	skills, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills)
 	if err != nil {
 		return nil, nil, err
 	}

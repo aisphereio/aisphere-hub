@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
+
+	"github.com/aisphereio/kernel/authn"
 )
 
 func TestNormalizeApprovalMode(t *testing.T) {
@@ -63,16 +66,14 @@ func TestNormalizeAgentDefinitionSkillBinding(t *testing.T) {
 	}
 }
 
-func TestResolveAgentSkillSnapshotsOnlyAllowsPinnedBuiltin(t *testing.T) {
-	items, err := resolveAgentSkillSnapshots([]agentSkillBinding{{Name: "sandbox-workspace-tools", Version: "builtin-d9f6a0bea925"}})
+func TestResolveAgentSkillSnapshotsBuiltinOnly(t *testing.T) {
+	h := &agentHTTPHandler{}
+	items, err := h.resolveAgentSkillSnapshots(context.Background(), authn.Principal{}, []agentSkillBinding{{Name: "sandbox-workspace-tools", Version: "builtin-d9f6a0bea925"}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(items) != 1 || items[0]["source"] != "builtin" || items[0]["revision"] != "builtin-d9f6a0bea925" {
 		t.Fatalf("unexpected skill snapshot: %+v", items)
-	}
-	if _, err := resolveAgentSkillSnapshots([]agentSkillBinding{{Name: "demo", Version: "latest"}}); err == nil {
-		t.Fatal("expected unsupported skill source to fail")
 	}
 }
 
