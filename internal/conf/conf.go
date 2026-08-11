@@ -94,13 +94,19 @@ type SecurityConfig struct {
 }
 
 type AuthnConfig struct {
-	Enabled      bool                     `json:"enabled" yaml:"enabled"`
-	Provider     string                   `json:"provider" yaml:"provider"`
-	Mode         string                   `json:"mode" yaml:"mode"`
-	PrincipalJWT authn.PrincipalJWTConfig `json:"principal_jwt" yaml:"principal_jwt"`
-	OIDC         oidcx.Config             `json:"oidc" yaml:"oidc"`
-	Casdoor      casdoor.Config           `json:"casdoor" yaml:"casdoor"`
-	CacheTTL     time.Duration            `json:"cache_ttl_ns" yaml:"cache_ttl_ns"`
+	Enabled      bool                              `json:"enabled" yaml:"enabled"`
+	Provider     string                            `json:"provider" yaml:"provider"`
+	Mode         string                            `json:"mode" yaml:"mode"`
+	PrincipalJWT authn.PrincipalJWTConfig          `json:"principal_jwt" yaml:"principal_jwt"`
+	OIDC         oidcx.Config                      `json:"oidc" yaml:"oidc"`
+	Casdoor      casdoor.Config                    `json:"casdoor" yaml:"casdoor"`
+	// Internal is the shared-secret for trusted service-to-service calls
+	// (Runtime -> Hub). When present and validated, Hub treats the forwarded
+	// X-Aisphere-* identity headers as gateway-verified. This is the
+	// load-time authorization path for catalog skills: Runtime can resolve
+	// and download only with its own service identity.
+	Internal authn.InternalServiceTokenConfig `json:"internal" yaml:"internal"`
+	CacheTTL time.Duration                    `json:"cache_ttl_ns" yaml:"cache_ttl_ns"`
 }
 
 type AuthzConfig struct {

@@ -11,11 +11,30 @@ import (
 	"github.com/aisphereio/aisphere-hub/internal/gitengine"
 	"github.com/aisphereio/aisphere-hub/internal/service"
 
+	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authz"
 	"github.com/aisphereio/kernel/logx"
 	"github.com/aisphereio/kernel/serverx"
 	khttp "github.com/aisphereio/kernel/transportx/http"
 )
+
+// internalServiceTrustFilter validates the internal service token (Runtime →
+// Hub) at the net/http layer, before the Kernel security chain runs. On
+// success it marks the forwarded X-Aisphere-* identity headers as verified
+// (and strips the shared secret), which lets authn reconstruct the caller's
+// forwarded service principal and authorize the skill load.
+func internalServiceTrustFilter(sc authn.InternalServiceTokenConfig) khttp.FilterFunc {
+	cfg := sc.Normalized()
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if cfg.ValidateToken(r.Header.Get(cfg.Header())) {
+				r.Header.Set(authn.TrustedHeaderVerified, "true")
+				r.Header.Del(authn.InternalServiceTokenHeader)
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
 
 // NewHTTPServer builds the HTTP server and registers all enabled services.
 //
@@ -79,6 +98,14 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	// serverx/autowire owns the actual middleware order.
 	if m := hubServerMiddlewares(resources, securityCfg); len(m) > 0 {
 		opts = append(opts, khttp.Middleware(m...))
+	}
+	// Internal service trust (Runtime → Hub). Shared-secret filter placed
+	// OUTSIDE the router (net/http Filter chain) so it runs before the authn
+	// middleware: on valid token it marks the forwarded X-Aisphere-* identity
+	// headers verified, enabling the load-time authorization for Runtime
+	// skill resolution/download.
+	if sc := securityCfg.Authn.Internal; sc.Enabled && sc.Token != "" {
+		opts = append(opts, khttp.Filter(internalServiceTrustFilter(sc)))
 	}
 	srv := khttp.NewServer(opts...)
 

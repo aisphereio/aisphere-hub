@@ -50,6 +50,12 @@ func main() {
 		panic(err)
 	}
 	applyBuildInfo(&bc)
+	// Env-based internal service token (Runtime↔Hub). Keeps the shared secret
+	// out of the ConfigMap; when set it enables the internal trust filter.
+	if v := strings.TrimSpace(os.Getenv("AISPHERE_INTERNAL_TOKEN")); v != "" {
+		bc.Security.Authn.Internal.Enabled = true
+		bc.Security.Authn.Internal.Token = v
+	}
 
 	logger, err := newLogger(bc.Log)
 	if err != nil {
