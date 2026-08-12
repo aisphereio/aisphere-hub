@@ -34,7 +34,7 @@ type FileServiceHTTPServer interface {
 func RegisterFileServiceHTTPServer(s *http.Server, srv FileServiceHTTPServer) {
 	r := s.Route("/")
 	r.Handle("DELETE", "/v1/skills/{skill_name}/contents/{path:.*}", _FileService_DeleteFile0_HTTP_Handler(srv))
-	r.Handle("GET", "/v1/skills/{skill_name}/contents/**", _FileService_ListFiles0_HTTP_Handler(srv))
+	r.Handle("GET", "/v1/skills/{skill_name}/contents", _FileService_ListFiles0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/skills/{skill_name}/raw/{path:.*}", _FileService_GetFile0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{skill_name}/contents/{path:.*}", _FileService_CreateFile0_HTTP_Handler(srv))
 	r.Handle("PUT", "/v1/skills/{skill_name}/contents/{path:.*}", _FileService_UpdateFile0_HTTP_Handler(srv))
@@ -232,7 +232,7 @@ func (c *FileServiceHTTPClientImpl) GetFile(ctx context.Context, in *GetFileRequ
 
 func (c *FileServiceHTTPClientImpl) ListFiles(ctx context.Context, in *ListFilesRequest, opts ...http.CallOption) (*FileContents, error) {
 	var out FileContents
-	pattern := "/v1/skills/{skill_name}/contents/**"
+	pattern := "/v1/skills/{skill_name}/contents"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),

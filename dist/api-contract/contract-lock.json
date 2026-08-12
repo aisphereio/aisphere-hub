@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/aisphereio/aisphere-hub.git",
-  "git_sha": "f025784a8b25e816942375855ea06bfce27182f1",
-  "ref": "feat/model-connection-console",
-  "sha256": "c29cd06d2065e7bfe66d636ac8c1edd8a6e789235ca9549bb8c9c0b86d1046e3",
+  "git_sha": "a16627b95a4d56afe581c8ec17fe9cc958cd84f2",
+  "ref": "fix/skill-http-routes-20260812",
+  "sha256": "0fe06582fe17b1977d55ec3e4c21e8d189fed8a89d90fba4e9ce45bfb8391af7",
   "kernel_version": "v0.4.19",
   "generator": "protoc-gen-openapiv2@v2.29.0"
 }
