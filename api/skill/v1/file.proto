@@ -17,7 +17,10 @@ option go_package = "github.com/aisphereio/aisphere-hub/api/skill/v1;skillv1";
 // enforces authz (Require) since writes bypass the update hook.
 service FileService {
   rpc ListFiles(ListFilesRequest) returns (FileContents) {
-    option (google.api.http) = { get: "/v1/skills/{skill_name}/contents/**" };
+    // path is intentionally a query parameter. It is optional for listing the
+    // repository root, so binding it as a wildcard path segment would make the
+    // generated router register a literal /contents/** route.
+    option (google.api.http) = { get: "/v1/skills/{skill_name}/contents" };
     option (aisphere.access.v1.policy) = {
       exposure: AUTHORIZED
       authz: { action: "view" resource: "skill:{skill_name}" audience: "hub-service" mode: CHECK_ONLY }
