@@ -353,3 +353,16 @@ skill rt-fn-1 v1.0.0 落地证据：
 ### 遗留（待清理）
 - 测试产物：agent `skillset-ag-1`（v1/v2）、skillset `agent-e2e-set`、session `skillset-s1`
 - `xxxx`/`ttt` skillsets 成员未固定 release → UI 显示"需先为全部成员固定 Release"（isRunnableSkillSet 拦截）——正确行为，留作演示
+
+---
+
+## 状态更新（2026-08-12）— SkillSet Agent 运行时实测 + 非 SSE run 模型回落修复
+
+### 实测（skillset-ag-1，绑定 agent-e2e-set→rt-fn-1@v1.0.0）
+- **自动拉取**：每次新 session（skillset-s2/s3/s4）都会触发 skill 下载，落盘 `/opt/agentkit/skills/.aihub/sessions/<sid>/runtime-skills/rt-fn-1/SKILL.md` + 缓存 `.aihub/skills/rt-fn-1/versions/v1.0.0/`（sha256 校验）✅
+- **skill 工具注册**：run 响应中 `Available tools: load_skill_resource, list_skills, load_skill` —— 三个 skill 工具已注册进模型可见列表（由 session materialize 的 SkillSource 派生）✅
+- **默认模型回落修复**：Agent 未绑定 ModelProfile 时，非 SSE `/api/run` 因缺 `runtimeconfig` ctx 注入，`modelruntime.NewModel` 拿不到 default `deepseek_gateway` → 打到 api.openai.com 超时。SSE 路径有 `runtimeContext` 包裹、非 SSE 没有。修复：`RunNativeOnlyHandler` 也走 `c.runtimeContext(...)`（agentkit 118dc04，已部署）。修后 run 200、`modelVersion: deepseek-v4-agent`（内网 stub 网关）。
+
+### Prompt 注入设计（回答"是否该注入 skill 部分信息"）
+- **是，已实现（S12/S13）**：ADK `skilltoolset.ProcessRequest` 每次 LLM 请求把 `<available_skills><skill><name>/<description>…` 注入系统指令 —— 只投 frontmatter 的 name+description（一句话），**不投完整 SKILL.md**；模型按需 `load_skill("<name>")` 才读完整指令 → 省 token 且防上下文膨胀。
+- 但 SkillSet 场景下注入源 = 展开后的成员 skills（Agent 的 SkillSet 绑定的 skill）。验证了一个被 stub 网关掩盖的细节：真实返回的 LLM 仍然只看到 3 个 skill 工具与 available_skills 摘要，不会看到 SKILL.md 全文。
