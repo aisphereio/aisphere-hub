@@ -88,7 +88,8 @@ func (h *agentHTTPHandler) createEndpoint(ctx khttp.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		if err := h.validateToolBindings(c, principal, projection); err != nil {
+		warnings, err := h.validateToolBindings(c, principal, projection)
+		if err != nil {
 			return nil, err
 		}
 		version := strings.TrimSpace(req.Version)
@@ -129,7 +130,7 @@ func (h *agentHTTPHandler) createEndpoint(ctx khttp.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"agent": created, "object": created.ObjectRef, "latestVersion": created.LatestVersion}, nil
+		return map[string]any{"agent": created, "object": created.ObjectRef, "latestVersion": created.LatestVersion, "warnings": warnings}, nil
 	})
 	if err != nil {
 		return err
@@ -189,7 +190,8 @@ func (h *agentHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		if err := h.validateToolBindings(c, principal, projection); err != nil {
+		warnings, err := h.validateToolBindings(c, principal, projection)
+		if err != nil {
 			return nil, err
 		}
 		version := strings.TrimSpace(req.Version)
@@ -234,7 +236,7 @@ func (h *agentHTTPHandler) updateEndpoint(ctx khttp.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"agent": updated, "object": updated.ObjectRef, "latestVersion": updated.LatestVersion}, nil
+		return map[string]any{"agent": updated, "object": updated.ObjectRef, "latestVersion": updated.LatestVersion, "warnings": warnings}, nil
 	})
 	if err != nil {
 		return err

@@ -38,6 +38,7 @@ type agentHTTPHandler struct {
 	// through resolveAgentSkillSnapshots, so a single check covers them.
 	skillRepo       biz.GitSkillRepository
 	releaseResolver agentSkillReleaseResolver
+	skillManifests  agentSkillManifestResolver
 }
 
 type agentRow struct {
@@ -130,6 +131,13 @@ type agentSkillSetBinding struct {
 	Revision int64  `json:"revision"`
 }
 
+type agentCompatibilityWarning struct {
+	Code         string   `json:"code"`
+	Skill        string   `json:"skill"`
+	MissingTools []string `json:"missingTools"`
+	Message      string   `json:"message"`
+}
+
 // agentModelBinding points to the AISphere-owned ModelProfile UUID. Revision is
 // optional: zero means resolve the latest revision when the Agent run snapshot
 // is created. The resolved revision is then frozen into that run snapshot.
@@ -139,11 +147,11 @@ type agentModelBinding struct {
 }
 
 type agentDefinitionProjection struct {
-	EntryPoint string               `json:"entryPoint"`
-	Files      map[string]string    `json:"files"`
-	Model      *agentModelBinding   `json:"model,omitempty"`
-	Tools      []agentToolBinding   `json:"tools"`
-	Skills     []agentSkillBinding  `json:"skills,omitempty"`
+	EntryPoint string                 `json:"entryPoint"`
+	Files      map[string]string      `json:"files"`
+	Model      *agentModelBinding     `json:"model,omitempty"`
+	Tools      []agentToolBinding     `json:"tools"`
+	Skills     []agentSkillBinding    `json:"skills,omitempty"`
 	SkillSets  []agentSkillSetBinding `json:"skillsets,omitempty"`
 }
 
@@ -204,6 +212,10 @@ type agentSkillReleaseResolver interface {
 	GetRelease(ctx context.Context, skill, version string) (*biz.SkillRelease, error)
 }
 
+type agentSkillManifestResolver interface {
+	GetFileContent(ctx context.Context, name, filePath, ref string) (*biz.FileContent, error)
+}
+
 func registerSecuredAgentHTTP(srv *khttp.Server, resources *data.Resources, skillPacks biz.SkillPackageService, skillRepo biz.GitSkillRepository, releases agentSkillReleaseResolver) {
 	if srv == nil || resources == nil || resources.DB == nil {
 		return
@@ -214,6 +226,9 @@ func registerSecuredAgentHTTP(srv *khttp.Server, resources *data.Resources, skil
 		skillPackages:   skillPacks,
 		skillRepo:       skillRepo,
 		releaseResolver: releases,
+	}
+	if manifests, ok := releases.(agentSkillManifestResolver); ok {
+		h.skillManifests = manifests
 	}
 	r := srv.Route("/")
 	r.Handle(http.MethodGet, "/v1/agents", h.listEndpoint)

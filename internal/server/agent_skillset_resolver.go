@@ -9,15 +9,6 @@ import (
 	"github.com/aisphereio/kernel/errorx"
 )
 
-// agentSkillSetBinding is always exact. Agent revisions must never point at the
-// mutable "latest" SkillSet projection because that would make an old Agent
-// revision drift when somebody edits the set later.
-type agentSkillSetBinding struct {
-	Name     string `json:"name"`
-	Revision int64  `json:"revision"`
-	Required bool   `json:"required,omitempty"`
-}
-
 type agentSkillSetRevisionItem struct {
 	SkillName   string `gorm:"column:skill_name"`
 	Order       int    `gorm:"column:sort_order"`
@@ -27,18 +18,18 @@ type agentSkillSetRevisionItem struct {
 	ManifestSHA string `gorm:"column:manifest_sha256"`
 }
 
+// loadAgentSkillSetRevision returns an immutable SkillSet member list. Current
+// visibility is checked first so historical rows never become an authorization
+// bypass after a SkillSet is deleted or hidden from the launcher.
 func (h *agentHTTPHandler) loadAgentSkillSetRevision(ctx context.Context, principal authn.Principal, binding agentSkillSetBinding) ([]agentSkillSetRevisionItem, error) {
 	name := strings.TrimSpace(binding.Name)
 	if !skillSetNameRE.MatchString(name) {
-		return nil, errorx.BadRequest("AGENT_SKILLSET_INVALID", "definition.skillSets contains an invalid skillset name")
+		return nil, errorx.BadRequest("AGENT_SKILLSET_INVALID", "definition.skillsets contains an invalid skillset name")
 	}
 	if binding.Revision <= 0 {
-		return nil, errorx.BadRequest("AGENT_SKILLSET_REVISION_REQUIRED", "definition.skillSets.revision must be a positive exact revision")
+		return nil, errorx.BadRequest("AGENT_SKILLSET_REVISION_REQUIRED", "definition.skillsets.revision must be a positive exact revision")
 	}
 
-	// Visibility is evaluated against the current SkillSet projection. A deleted
-	// or no-longer-visible SkillSet cannot be newly bound/resolved merely because
-	// an old immutable snapshot still exists.
 	var visible int64
 	if err := h.db(ctx).Table("aihub_skillsets").
 		Where("name = ? AND deleted_at IS NULL", name).
@@ -68,6 +59,9 @@ func (h *agentHTTPHandler) loadAgentSkillSetRevision(ctx context.Context, princi
 		Find(&items).Error; err != nil {
 		return nil, agentDBErr(err)
 	}
+	if len(items) == 0 {
+		return nil, errorx.Conflict("AGENT_SKILLSET_EMPTY", fmt.Sprintf("skillset revision has no members: %s@%d", name, binding.Revision))
+	}
 	for _, item := range items {
 		if strings.TrimSpace(item.SkillName) == "" || strings.TrimSpace(item.Version) == "" ||
 			strings.TrimSpace(item.CommitSHA) == "" || strings.TrimSpace(item.TreeSHA) == "" ||
@@ -79,117 +73,4 @@ func (h *agentHTTPHandler) loadAgentSkillSetRevision(ctx context.Context, princi
 		}
 	}
 	return items, nil
-}
-
-func skillSnapshotString(snapshot map[string]any, key string) string {
-	if snapshot == nil {
-		return ""
-	}
-	value, ok := snapshot[key]
-	if !ok || value == nil {
-		return ""
-	}
-	return strings.TrimSpace(fmt.Sprint(value))
-}
-
-func appendSkillProvenance(snapshot map[string]any, provenance map[string]any) {
-	if snapshot == nil {
-		return
-	}
-	values, _ := snapshot["provenance"].([]any)
-	values = append(values, provenance)
-	snapshot["provenance"] = values
-}
-
-// mergeAgentSkillSnapshot deduplicates the same exact Skill coming from direct
-// binding and/or one or more SkillSets. Different immutable versions of the
-// same Skill are rejected instead of relying on ordering to silently choose one.
-func mergeAgentSkillSnapshot(out *[]map[string]any, index map[string]int, snapshot map[string]any, provenance map[string]any) error {
-	name := skillSnapshotString(snapshot, "name")
-	if previousIndex, ok := index[name]; ok {
-		previous := (*out)[previousIndex]
-		if skillSnapshotString(previous, "version") != skillSnapshotString(snapshot, "version") ||
-			skillSnapshotString(previous, "revision") != skillSnapshotString(snapshot, "revision") ||
-			skillSnapshotString(previous, "source") != skillSnapshotString(snapshot, "source") {
-			return errorx.Conflict(
-				"AGENT_SKILL_VERSION_CONFLICT",
-				fmt.Sprintf("skill %s resolves to multiple immutable versions (%s/%s vs %s/%s)",
-					name,
-					skillSnapshotString(previous, "version"), skillSnapshotString(previous, "revision"),
-					skillSnapshotString(snapshot, "version"), skillSnapshotString(snapshot, "revision")),
-			)
-		}
-		appendSkillProvenance(previous, provenance)
-		return nil
-	}
-	appendSkillProvenance(snapshot, provenance)
-	index[name] = len(*out)
-	*out = append(*out, snapshot)
-	return nil
-}
-
-// resolveAgentSkills expands direct Skill + SkillSet bindings into one exact,
-// deduplicated runtime list. Every SkillSet member is re-authorized through the
-// same catalog path as a direct binding, so a historical snapshot never becomes
-// an authorization bypass.
-func (h *agentHTTPHandler) resolveAgentSkills(
-	ctx context.Context,
-	principal authn.Principal,
-	direct []agentSkillBinding,
-	sets []agentSkillSetBinding,
-	runtimeID string,
-) ([]map[string]any, error) {
-	out := make([]map[string]any, 0, len(direct))
-	index := make(map[string]int, len(direct))
-
-	directSnapshots, err := h.resolveAgentSkillSnapshots(ctx, principal, direct, runtimeID)
-	if err != nil {
-		return nil, err
-	}
-	for _, snapshot := range directSnapshots {
-		if err := mergeAgentSkillSnapshot(&out, index, snapshot, map[string]any{"type": "direct"}); err != nil {
-			return nil, err
-		}
-	}
-
-	seenSets := make(map[string]struct{}, len(sets))
-	for _, set := range sets {
-		set.Name = strings.TrimSpace(set.Name)
-		setKey := fmt.Sprintf("%s@%d", set.Name, set.Revision)
-		if _, duplicate := seenSets[setKey]; duplicate {
-			return nil, errorx.BadRequest("AGENT_SKILLSET_DUPLICATE", "definition.skillSets contains duplicate "+setKey)
-		}
-		seenSets[setKey] = struct{}{}
-
-		members, err := h.loadAgentSkillSetRevision(ctx, principal, set)
-		if err != nil {
-			return nil, err
-		}
-		for _, member := range members {
-			snapshots, err := h.resolveAgentSkillSnapshots(ctx, principal, []agentSkillBinding{{
-				Name: member.SkillName, Version: member.Version, Source: "catalog",
-			}}, runtimeID)
-			if err != nil {
-				return nil, err
-			}
-			if len(snapshots) != 1 {
-				return nil, errorx.Internal("AGENT_SKILLSET_RESOLVE_FAILED", "skillset member did not resolve to exactly one skill")
-			}
-			snapshot := snapshots[0]
-			if skillSnapshotString(snapshot, "revision") != member.CommitSHA ||
-				skillSnapshotString(snapshot, "treeSha") != member.TreeSHA ||
-				skillSnapshotString(snapshot, "manifestSha256") != member.ManifestSHA {
-				return nil, errorx.Conflict(
-					"AGENT_SKILLSET_REVISION_STALE",
-					fmt.Sprintf("immutable skillset member changed unexpectedly: %s@%s", member.SkillName, member.Version),
-				)
-			}
-			if err := mergeAgentSkillSnapshot(&out, index, snapshot, map[string]any{
-				"type": "skillset", "name": set.Name, "revision": set.Revision,
-			}); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return out, nil
 }

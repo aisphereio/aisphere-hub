@@ -42,6 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_aihub_skillset_revision_items_skill
 -- Snapshot helper is deliberately insert-only. Once (name, revision) exists,
 -- neither metadata nor member rows are overwritten. This makes a revision a
 -- durable execution input rather than a label pointing at mutable rows.
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION aihub_snapshot_skillset_revision(
     p_skillset_name VARCHAR,
     p_revision BIGINT
@@ -73,6 +74,7 @@ BEGIN
     ON CONFLICT (skillset_name, revision, skill_name) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Existing rows get one immutable baseline at their current revision.
 SELECT aihub_snapshot_skillset_revision(name, revision)
@@ -82,6 +84,7 @@ SELECT aihub_snapshot_skillset_revision(name, revision)
 -- Existing mutation endpoints update members first and increment revision as
 -- the final statement of the same transaction. An AFTER UPDATE trigger thus
 -- observes the complete new member set and freezes it atomically.
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION aihub_skillset_revision_updated() RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.revision IS DISTINCT FROM OLD.revision THEN
@@ -90,6 +93,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 DROP TRIGGER IF EXISTS trg_aihub_skillset_revision_updated ON aihub_skillsets;
 CREATE TRIGGER trg_aihub_skillset_revision_updated
@@ -99,12 +103,14 @@ EXECUTE FUNCTION aihub_skillset_revision_updated();
 
 -- CreateSkillSet inserts the set before its member rows. Defer the initial
 -- snapshot until transaction end so revision=1 contains the complete members.
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION aihub_skillset_initial_revision() RETURNS TRIGGER AS $$
 BEGIN
     PERFORM aihub_snapshot_skillset_revision(NEW.name, NEW.revision);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 DROP TRIGGER IF EXISTS trg_aihub_skillset_initial_revision ON aihub_skillsets;
 CREATE CONSTRAINT TRIGGER trg_aihub_skillset_initial_revision

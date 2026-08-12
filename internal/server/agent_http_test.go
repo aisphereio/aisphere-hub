@@ -2,12 +2,24 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"testing"
 
+	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/errorx"
 )
+
+type fakeAgentSkillManifestResolver struct {
+	content string
+	ref     string
+}
+
+func (f *fakeAgentSkillManifestResolver) GetFileContent(_ context.Context, _, _, ref string) (*biz.FileContent, error) {
+	f.ref = ref
+	return &biz.FileContent{Content: base64.StdEncoding.EncodeToString([]byte(f.content)), Encoding: "base64"}, nil
+}
 
 func TestNormalizeApprovalMode(t *testing.T) {
 	cases := map[string]string{
@@ -152,6 +164,70 @@ func TestAppendResolvedSkillSnapshotRejectsVersionConflict(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected conflicting versions to fail")
+	}
+}
+
+func TestResolveSkillSnapshotEntryUsesReleaseCommitAsRevision(t *testing.T) {
+	entry := catalogSkillSnapshotEntry("release-notes", &biz.SkillRelease{
+		Tag: "v1.2.0", CommitSHA: "commit-123", TreeSHA: "tree-123", ManifestSHA256: "manifest-123",
+	})
+	if entry["version"] != "v1.2.0" || entry["revision"] != "commit-123" || entry["commitSHA"] != "commit-123" {
+		t.Fatalf("catalog snapshot does not use release commit: %+v", entry)
+	}
+}
+
+func TestSkillToolCompatibilityWarningDoesNotGrantTools(t *testing.T) {
+	manifest := &fakeAgentSkillManifestResolver{content: "---\nname: k8s-debug\ndescription: Debug Kubernetes\nallowed-tools:\n  - k8s.logs\n  - k8s.get_pods\n---\n# K8s\n"}
+	h := &agentHTTPHandler{skillManifests: manifest}
+	skills := []map[string]any{{"name": "k8s-debug", "source": "catalog", "revision": "commit-123"}}
+	tools := []resolvedAgentTool{{Binding: agentToolBinding{Name: "k8s.get_pods"}}}
+
+	warnings := h.skillToolCompatibilityWarnings(context.Background(), skills, tools)
+	if len(warnings) != 1 || warnings[0].Code != "SKILL_TOOL_COMPATIBILITY_MISSING" || len(warnings[0].MissingTools) != 1 || warnings[0].MissingTools[0] != "k8s.logs" {
+		t.Fatalf("unexpected warnings: %+v", warnings)
+	}
+	if len(tools) != 1 || tools[0].Binding.Name != "k8s.get_pods" {
+		t.Fatalf("compatibility warning mutated Agent tools: %+v", tools)
+	}
+	if manifest.ref != "commit-123" {
+		t.Fatalf("manifest ref = %q, want immutable commit", manifest.ref)
+	}
+}
+
+func TestParseAgentSkillAllowedTools(t *testing.T) {
+	got, err := parseAgentSkillAllowedTools("---\nname: demo\nallowed-tools: [tool.b, tool.a, tool.a]\n---\n# Demo\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0] != "tool.a" || got[1] != "tool.b" {
+		t.Fatalf("allowed tools = %+v", got)
+	}
+}
+
+func TestMergeAgentSkillSnapshotDeduplicatesExactPinAndKeepsProvenance(t *testing.T) {
+	items := []map[string]any{}
+	index := map[string]int{}
+	first := map[string]any{"name": "k8s-debug", "version": "v1.2.0", "revision": "commit-1", "source": "catalog"}
+	second := map[string]any{"name": "k8s-debug", "version": "v1.2.0", "revision": "commit-1", "source": "catalog", "viaSkillSet": "ops", "viaSkillSetRevision": int64(3)}
+	if err := appendResolvedSkillSnapshot(&items, index, first); err != nil {
+		t.Fatal(err)
+	}
+	if err := appendResolvedSkillSnapshot(&items, index, second); err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0]["viaSkillSet"] != nil {
+		t.Fatalf("direct exact pin should win without duplication: %+v", items)
+	}
+}
+
+func TestAppendResolvedSkillSnapshotRejectsSameVersionDifferentRevision(t *testing.T) {
+	items := []map[string]any{{"name": "release-notes", "version": "v1.0.0", "revision": "commit-1", "source": "catalog"}}
+	index := map[string]int{"release-notes": 0}
+	err := appendResolvedSkillSnapshot(&items, index, map[string]any{
+		"name": "release-notes", "version": "v1.0.0", "revision": "commit-2", "source": "catalog", "viaSkillSet": "ops",
+	})
+	if err == nil {
+		t.Fatal("expected same label with different immutable commits to fail")
 	}
 }
 

@@ -199,3 +199,29 @@ func TestKubernetesMigrationHasExpectedTablesAndConstraints(t *testing.T) {
 		t.Fatal("k8s_outbox missing status CHECK constraint")
 	}
 }
+
+func TestSkillSetImmutableRevisionMigrationContract(t *testing.T) {
+	path := filepath.Join("..", "..", "migrations", "postgres", "202608120001_skillset_immutable_revisions.sql")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(data)
+	for _, fragment := range []string{
+		"CREATE TABLE IF NOT EXISTS aihub_skillset_revisions",
+		"PRIMARY KEY (skillset_name, revision)",
+		"CREATE TABLE IF NOT EXISTS aihub_skillset_revision_items",
+		"FOREIGN KEY (skillset_name, revision)",
+		"CREATE OR REPLACE FUNCTION aihub_snapshot_skillset_revision",
+		"-- +goose StatementBegin",
+		"-- +goose StatementEnd",
+		"ON CONFLICT (skillset_name, revision) DO NOTHING",
+		"CREATE TRIGGER trg_aihub_skillset_revision_updated",
+		"CREATE CONSTRAINT TRIGGER trg_aihub_skillset_initial_revision",
+		"DEFERRABLE INITIALLY DEFERRED",
+	} {
+		if !strings.Contains(sql, fragment) {
+			t.Fatalf("immutable SkillSet revision migration missing %q", fragment)
+		}
+	}
+}
