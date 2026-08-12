@@ -138,7 +138,9 @@ func NewHTTPServer(cfg conf.ServerConfig, accessLog logx.AccessLogConfig, resour
 	registerModelEndpointProbeHTTP(srv, resources)
 	// Agent is currently a lightweight versioned HTTP control-plane resource.
 	// Tool approval modes are human consent metadata; IAM remains authoritative.
-	registerSecuredAgentHTTP(srv, resources, skillPacks)
+	// Catalog skill bindings are validated at save AND resolve time (skill
+	// must be active; pinned version must be a published release).
+	registerSecuredAgentHTTP(srv, resources, skillPacks, data.NewSkillRepo(resources), git)
 	// Skill package download (load-phase authorization) — see skill_pack_handler.
 	registerSkillPackHTTP(srv, skillPacks)
 	// SkillSet remains a lightweight HTTP resource. It stores ordered references

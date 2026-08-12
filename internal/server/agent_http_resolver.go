@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 
@@ -97,6 +98,29 @@ func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, princ
 		// Catalog skill: the launcher must be able to see it first.
 		if err := h.requirePermission(ctx, principal, "skill", name, "view"); err != nil {
 			return nil, err
+		}
+		// S7/S22: the catalog binding must still hold at definition-save time
+		// and again at resolve time. The skill must exist and be active
+		// (disabled/archived skills reject new runs), and the pinned version
+		// must be a published release — hand-crafted JSON cannot bypass the
+		// UI and pin a version that never shipped.
+		if h.skillRepo != nil {
+			skill, err := h.skillRepo.GetSkill(ctx, name)
+			if err != nil {
+				return nil, err
+			}
+			if strings.TrimSpace(skill.Status) != "active" {
+				return nil, errorx.New(
+					errorx.Code("SKILL_DISABLED"),
+					errorx.WithHTTPStatus(http.StatusConflict),
+					errorx.WithMessage("skill "+name+" is not active"),
+				)
+			}
+		}
+		if h.releaseResolver != nil {
+			if _, err := h.releaseResolver.GetRelease(ctx, name, version); err != nil {
+				return nil, err
+			}
 		}
 		entry := map[string]any{
 			"name": name, "version": version, "revision": version,

@@ -40,7 +40,11 @@ type Skill struct {
 	// Human-readable owner name (e.g. Casdoor displayName). Populated at skill
 	// creation from the authenticated principal; empty for skills created before
 	// this field existed (clients fall back to owner_id).
-	OwnerName     string `protobuf:"bytes,12,opt,name=owner_name,json=ownerName,proto3" json:"owner_name,omitempty"`
+	OwnerName string `protobuf:"bytes,12,opt,name=owner_name,json=ownerName,proto3" json:"owner_name,omitempty"`
+	// Latest stable released version (canonical git tag, e.g. "v1.2.0").
+	// Empty when the skill has no published release; clients can still pin a
+	// specific version or fall back to a draft/default branch workflow.
+	LatestVersion string `protobuf:"bytes,13,opt,name=latest_version,json=latestVersion,proto3" json:"latest_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -155,6 +159,13 @@ func (x *Skill) GetUpdateTime() *timestamppb.Timestamp {
 func (x *Skill) GetOwnerName() string {
 	if x != nil {
 		return x.OwnerName
+	}
+	return ""
+}
+
+func (x *Skill) GetLatestVersion() string {
+	if x != nil {
+		return x.LatestVersion
 	}
 	return ""
 }
@@ -2455,7 +2466,7 @@ var File_skill_v1_skill_proto protoreflect.FileDescriptor
 
 const file_skill_v1_skill_proto_rawDesc = "" +
 	"\n" +
-	"\x14skill/v1/skill.proto\x12\bskill.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa9\x03\n" +
+	"\x14skill/v1/skill.proto\x12\bskill.v1\x1a\x1faisphere/access/v1/access.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd0\x03\n" +
 	"\x05Skill\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
@@ -2475,7 +2486,8 @@ const file_skill_v1_skill_proto_rawDesc = "" +
 	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"updateTime\x12\x1d\n" +
 	"\n" +
-	"owner_name\x18\f \x01(\tR\townerName\"\xcd\x01\n" +
+	"owner_name\x18\f \x01(\tR\townerName\x12%\n" +
+	"\x0elatest_version\x18\r \x01(\tR\rlatestVersion\"\xcd\x01\n" +
 	"\x12CreateSkillRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	skillv1 "github.com/aisphereio/aisphere-hub/api/skill/v1"
 	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/kernel/authn"
@@ -33,7 +34,7 @@ func (s *SkillService) CreateSkill(ctx context.Context, req *skillv1.CreateSkill
 	if err != nil {
 		return nil, err
 	}
-	return &skillv1.CreateSkillResponse{Skill: skillToProto(out)}, nil
+	return &skillv1.CreateSkillResponse{Skill: skillToProto(out, s.latestStableReleaseVersion(ctx, out.Name))}, nil
 }
 
 func (s *SkillService) ImportSkillArchive(ctx context.Context, req *skillv1.ImportSkillArchiveRequest) (*skillv1.ImportSkillArchiveResponse, error) {
@@ -43,7 +44,7 @@ func (s *SkillService) ImportSkillArchive(ctx context.Context, req *skillv1.Impo
 	if err != nil {
 		return nil, err
 	}
-	return &skillv1.ImportSkillArchiveResponse{Skill: skillToProto(out), Metadata: archiveMetadataToProto(meta)}, nil
+	return &skillv1.ImportSkillArchiveResponse{Skill: skillToProto(out, s.latestStableReleaseVersion(ctx, out.Name)), Metadata: archiveMetadataToProto(meta)}, nil
 }
 
 func (s *SkillService) ListSkills(ctx context.Context, req *skillv1.ListSkillsRequest) (*skillv1.ListSkillsResponse, error) {
@@ -60,7 +61,7 @@ func (s *SkillService) ListSkills(ctx context.Context, req *skillv1.ListSkillsRe
 	}
 	out := &skillv1.ListSkillsResponse{Skills: make([]*skillv1.Skill, 0, len(result.Items))}
 	for _, item := range result.Items {
-		out.Skills = append(out.Skills, skillToProto(item))
+		out.Skills = append(out.Skills, skillToProto(item, s.latestStableReleaseVersion(ctx, item.Name)))
 	}
 	if result.HasMore {
 		out.NextPageToken = strconv.Itoa(result.NextOffset)
@@ -73,7 +74,7 @@ func (s *SkillService) GetSkill(ctx context.Context, req *skillv1.GetSkillReques
 	if err != nil {
 		return nil, err
 	}
-	return &skillv1.GetSkillResponse{Skill: skillToProto(out)}, nil
+	return &skillv1.GetSkillResponse{Skill: skillToProto(out, s.latestStableReleaseVersion(ctx, out.Name))}, nil
 }
 
 func (s *SkillService) UpdateSkill(ctx context.Context, req *skillv1.UpdateSkillRequest) (*skillv1.UpdateSkillResponse, error) {
@@ -83,7 +84,7 @@ func (s *SkillService) UpdateSkill(ctx context.Context, req *skillv1.UpdateSkill
 	if err != nil {
 		return nil, err
 	}
-	return &skillv1.UpdateSkillResponse{Skill: skillToProto(out)}, nil
+	return &skillv1.UpdateSkillResponse{Skill: skillToProto(out, s.latestStableReleaseVersion(ctx, out.Name))}, nil
 }
 
 func (s *SkillService) UpdateSkillVisibility(ctx context.Context, req *skillv1.UpdateSkillVisibilityRequest) (*skillv1.UpdateSkillVisibilityResponse, error) {
@@ -91,7 +92,7 @@ func (s *SkillService) UpdateSkillVisibility(ctx context.Context, req *skillv1.U
 	if err != nil {
 		return nil, err
 	}
-	return &skillv1.UpdateSkillVisibilityResponse{Skill: skillToProto(out)}, nil
+	return &skillv1.UpdateSkillVisibilityResponse{Skill: skillToProto(out, s.latestStableReleaseVersion(ctx, out.Name))}, nil
 }
 
 func (s *SkillService) DeleteSkill(ctx context.Context, req *skillv1.DeleteSkillRequest) (*skillv1.DeleteSkillResponse, error) {
@@ -218,7 +219,7 @@ func (s *SkillService) ListSkillReleases(ctx context.Context, req *skillv1.ListS
 	return out, nil
 }
 
-func skillToProto(item *biz.GitSkill) *skillv1.Skill {
+func skillToProto(item *biz.GitSkill, latestVersion string) *skillv1.Skill {
 	if item == nil {
 		return nil
 	}
@@ -227,7 +228,38 @@ func skillToProto(item *biz.GitSkill) *skillv1.Skill {
 		Visibility: item.Visibility, OwnerId: item.OwnerID, OwnerName: item.OwnerName,
 		OrgId: item.OrgID, ProjectId: item.ProjectID, DefaultBranch: item.DefaultBranch,
 		Status: item.Status, CreateTime: timestamp(item.CreateTime), UpdateTime: timestamp(item.UpdateTime),
+		LatestVersion: latestVersion,
 	}
+}
+
+// latestStableReleaseVersion returns the highest published stable (non
+// pre-release) canonical version for the skill, or "" when none exists.
+// Pre-release tags (e.g. v1.1.0-rc.1) are skipped so an Agent never pins a
+// moving pre-release as its "latest".
+func (s *SkillService) latestStableReleaseVersion(ctx context.Context, skill string) string {
+	releases, err := s.uc.ListReleases(ctx, skill)
+	if err != nil {
+		return ""
+	}
+	releases = filterSkillReleaseVersions(releases)
+	return latestStableReleaseVersion(releases)
+}
+
+func latestStableReleaseVersion(releases []biz.SkillRelease) string {
+	var latest *semver.Version
+	for i := range releases {
+		v, err := semver.StrictNewVersion(strings.TrimPrefix(strings.TrimSpace(releases[i].Tag), "v"))
+		if err != nil || v.Prerelease() != "" {
+			continue
+		}
+		if latest == nil || v.GreaterThan(latest) {
+			latest = v
+		}
+	}
+	if latest == nil {
+		return ""
+	}
+	return "v" + latest.String()
 }
 
 func archiveMetadataToProto(item *biz.SkillArchiveMetadata) *skillv1.SkillArchiveMetadata {

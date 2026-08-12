@@ -30,6 +30,14 @@ type agentHTTPHandler struct {
 	// package + signed download URL only while the launcher holds skill.view;
 	// the /packages endpoint verifies the signature at load time.
 	skillPackages biz.SkillPackageService
+	// skillRepo + releaseResolver validate catalog bindings at definition
+	// save time and again at resolve time: the skill must still exist and be
+	// active, and the pinned version must be a published release. This is
+	// S7 (definition persistence validation) and S22 (disabled/version
+	// existence) of the skill lifecycle plan. Both save and resolve funnel
+	// through resolveAgentSkillSnapshots, so a single check covers them.
+	skillRepo       biz.GitSkillRepository
+	releaseResolver agentSkillReleaseResolver
 }
 
 type agentRow struct {
@@ -177,11 +185,25 @@ type agentToolVersionCatalogRow struct {
 	DefinitionJSON json.RawMessage `gorm:"column:definition_json"`
 }
 
-func registerSecuredAgentHTTP(srv *khttp.Server, resources *data.Resources, skillPacks biz.SkillPackageService) {
+// agentSkillReleaseResolver resolves a specific named release of a catalog
+// skill. It mirrors skillSetReleaseResolver; both are satisfied by
+// *gitengine.Engine.GetRelease. Kept narrow so the agent handler does not
+// depend on the full git engine surface.
+type agentSkillReleaseResolver interface {
+	GetRelease(ctx context.Context, skill, version string) (*biz.SkillRelease, error)
+}
+
+func registerSecuredAgentHTTP(srv *khttp.Server, resources *data.Resources, skillPacks biz.SkillPackageService, skillRepo biz.GitSkillRepository, releases agentSkillReleaseResolver) {
 	if srv == nil || resources == nil || resources.DB == nil {
 		return
 	}
-	h := &agentHTTPHandler{resources: resources, authz: data.NewAuthzRepo(resources), skillPackages: skillPacks}
+	h := &agentHTTPHandler{
+		resources:       resources,
+		authz:           data.NewAuthzRepo(resources),
+		skillPackages:   skillPacks,
+		skillRepo:       skillRepo,
+		releaseResolver: releases,
+	}
 	r := srv.Route("/")
 	r.Handle(http.MethodGet, "/v1/agents", h.listEndpoint)
 	r.Handle(http.MethodPost, "/v1/agents", h.createEndpoint)

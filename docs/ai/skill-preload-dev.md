@@ -252,3 +252,46 @@ GET /v1/skills/{skill}/packages?version={v}&sig={hmac}&exp={unix}&rt={runtimeId}
 - [ ] SpiceDB：`agent 执行授权`（service_account subject）与 `skill` 下载授权链路核对
 - [ ] 端到端复验：session 建 → 下载+sha 校验 → 提取 → 沙箱 `.aisphere/skills` 落地 → `load_skill` 可用
 
+
+---
+
+## 状态更新（2026-08-12）— S5 Direct Skill 闭环完成 ✅（端到端验证通过）
+
+### 本轮修复的问题链（按 E2E 实测逐步触发的顺序）
+
+1. **runtime→hub 内部可信身份**（上轮已定方案，本轮落地）
+   - hub 新增 `internal_service_trusted` Filter：持有 `AISPHERE_INTERNAL_TOKEN`（env 注入 conf.Authn.Internal）的请求被标记 `X-Aisphere-Auth-Verified: true` 并清除携带 token 头，进入 trusted-headers principal 解析 → resolve 403 解决。
+   - runtime ConfigMap `extra_headers` 带 `X-Aisphere-Internal-Token: aisphere-internal-token-2026`（测试环境值）。
+
+2. **model 快照 shape（`json: cannot unmarshal object ... of type string`）**
+   - Hub v1 resolve 的 `model` 是 v2 资源快照 `{model:{code}, profile:{id,code}, endpoint:{baseUrl,adapter,apiFormat,providerModelId,credentialRef}, reasoning}`。
+   - runtime `resolveAgentResponse.Model` 改 `json.RawMessage` + `normalizeModelSpec` 支持 flat / nested / **v2 endpoint** 三种 shape：`endpoint.providerModelId` 覆盖内部 UUID、`baseUrl/adapter` 进连接、`credential_ref` 经 metadata 透传给 adapter 作 API key。
+
+3. **execution plan ledger 安全校验误伤**（`forbidden credential field $.authorization`）
+   - Hub resolve 返回 `authorization` 子树（principalSubject/tool approvals）是执行上下文，但键名与 HTTP `Authorization` 头同名触发 credential scanner。
+   - 修复：运行时内存中保留子树做强制；归档 source spec 前 `stripExecutionPlanAuthorization` 剥离该键（新增剥离函数 + 单测），ledger 只落不敏感字段。
+
+### 端到端验证证据（线上 agent-runtime）
+
+```
+POST /api/apps/close-ag-1/users/admin/sessions/close-s1        → 200（sandbox profile default-python-offline 分配）
+POST /api/run {appName:close-ag-1, sessionId:close-s1, ...}  → 200
+  modelVersion: deepseek-v4-flash   finishReason: STOP（真实模型调用）
+```
+skill rt-fn-1 v1.0.0 落地证据：
+```
+/opt/agentkit/skills/.aihub/skills/rt-fn-1/versions/v1.0.0/SKILL.md
+/opt/agentkit/skills/.aihub/skills/rt-fn-1/versions/v1.0.0/.aihub-version.json
+  { sha256:0d25d536..., md5:2ae206920f..., size:226,
+    downloadUrl:"/v1/skills/rt-fn-1/packages?name=rt-fn-1&ref=v1.0.0&rt=<uid>&exp=...&sig=..." }
+/opt/agentkit/skills/.aihub/sessions/close-s1/runtime-skills/rt-fn-1/SKILL.md   （会话级隔离挂载）
+```
+
+### runtime 侧交付（agentkit main，均已 CI→ACR→k8s rollout）
+- `8dd5b30` normalizeModelSpec（v2 endpoint shape）
+- `5694a3c` execution plan authorization 剥离
+- `1efc5ab` endpoint.providerModelId 覆盖内部 UUID
+
+### 收尾
+- 测试资源（skill rt-fn-1 / agent close-ag-1 / session）保留待清理
+- 下一步候选：S4/Skillset（按计划暂停）、或 frontend catalog skill 绑定 UI 全链路复验

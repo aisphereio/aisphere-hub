@@ -184,6 +184,10 @@ message Skill {
   // creation from the authenticated principal; empty for skills created before
   // this field existed (clients fall back to owner_id).
   string owner_name = 12;
+  // Latest stable released version (canonical git tag, e.g. "v1.2.0").
+  // Empty when the skill has no published release; clients can still pin a
+  // specific version or fall back to a draft/default branch workflow.
+  string latest_version = 13;
 }
 
 message CreateSkillRequest {
