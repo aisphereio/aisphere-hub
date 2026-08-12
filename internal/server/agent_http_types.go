@@ -129,11 +129,12 @@ type agentModelBinding struct {
 }
 
 type agentDefinitionProjection struct {
-	EntryPoint string              `json:"entryPoint"`
-	Files      map[string]string   `json:"files"`
-	Model      *agentModelBinding  `json:"model,omitempty"`
-	Tools      []agentToolBinding  `json:"tools"`
-	Skills     []agentSkillBinding `json:"skills,omitempty"`
+	EntryPoint string                 `json:"entryPoint"`
+	Files      map[string]string      `json:"files"`
+	Model      *agentModelBinding     `json:"model,omitempty"`
+	Tools      []agentToolBinding     `json:"tools"`
+	Skills     []agentSkillBinding    `json:"skills,omitempty"`
+	SkillSets  []agentSkillSetBinding `json:"skillSets,omitempty"`
 }
 
 type agentRunRequest struct {
