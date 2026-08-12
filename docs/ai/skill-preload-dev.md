@@ -295,3 +295,28 @@ skill rt-fn-1 v1.0.0 落地证据：
 ### 收尾
 - 测试资源（skill rt-fn-1 / agent close-ag-1 / session）保留待清理
 - 下一步候选：S4/Skillset（按计划暂停）、或 frontend catalog skill 绑定 UI 全链路复验
+
+---
+
+## 状态更新（2026-08-12）— S7/S22 落地 + catalog 前端绑定恢复
+
+### 问题
+- **S7**：AgentDefinition 保存期只校验格式 + skill:view，不校验 skill/version 存在 → 手工 JSON 可写不存在版本，运行期才炸。
+- **S22**：disable/已删除的 skill 新 run resolve 不 fail（builtin/catalog 分支都没有 status/version 检查，对比 tool 有 AGENT_TOOL_DISABLED、model 有 AGENT_MODEL_PROFILE_DISABLED）。
+- **前端 catalog 绑定断链**：`/v1/skills` 列表不返回版本字段 → `agent-skill-prompt-editor` 中 catalog 项的 `version` 恒为 `''` → 被 `.filter(skill => skill.name && skill.version)` 全滤掉 → UI 只能绑 builtin skill。
+
+### 修复（hub commit 1eb041f + front ab85b32，均已部署）
+| 项 | 实现 |
+|---|---|
+| S7+S22 | `resolveAgentSkillSnapshots` catalog 分支补：`GetSkill(name)` 存在 + `status=active`（否则 SKILL_DISABLED）；`GetRelease(name, version)` 校验发布版本存在（否则 SKILL_RELEASE_NOT_FOUND）。save（create/update → validateToolBindings）与 resolve 同路径，一处覆盖两头。注入 `data.NewSkillRepo` + `git`（agentSkillReleaseResolver）。 |
+| latestVersion | proto Skill 加 `latest_version=13`；service 层 `latestStableReleaseVersion` 取最高非 prerelease canonical tag（Masterminds/semver）；前端 V1Skill 补字段 + 已有 normalizeSkill 透传。 |
+
+### 验证证据（线上）
+- API：`GET /v1/skills/rt-fn-1` → `"latestVersion":"v1.0.0"` ✅
+- S22：POST agent 绑定 `rt-fn-1@v9.9.9` → **404 SKILL_RELEASE_NOT_FOUND** ✅
+- S7：POST agent 绑定 `rt-fn-1@v1.0.0` → **201** ✅；不存在的 skill → 403（view 先行）✅
+- UI（hub.weagent.cc, admin 会话）：Agent Editor 显示 `cccc v1.0.1 · catalog` 等全部 catalog 选项；勾选 cccc 保存成功 → `Agent close-ag-1 updated`（v1→v2，definition 含 `{name:cccc, source:catalog, version:v1.0.1}`）✅
+
+### 遗留小瑕疵（非本次引入）
+- Skill 列表页"最新"列显示 `vv1.0.0` 双前缀（前端渲染往 release tag 前又加了一次 v）——纯展示层，可选修。
+- Agent close-ag-1 目前在测试中加了 `cccc@v1.0.1` 绑定（UI 验证产物，待清理）。
