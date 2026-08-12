@@ -360,7 +360,7 @@ func RegisterFileServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/skill.v1.FileService/ListFiles", runtime.WithHTTPPathPattern("/v1/skills/{skill_name}/contents/**"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/skill.v1.FileService/ListFiles", runtime.WithHTTPPathPattern("/v1/skills/{skill_name}/contents"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -498,7 +498,7 @@ func RegisterFileServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/skill.v1.FileService/ListFiles", runtime.WithHTTPPathPattern("/v1/skills/{skill_name}/contents/**"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/skill.v1.FileService/ListFiles", runtime.WithHTTPPathPattern("/v1/skills/{skill_name}/contents"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -583,7 +583,7 @@ func RegisterFileServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 }
 
 var (
-	pattern_FileService_ListFiles_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 3, 0}, []string{"v1", "skills", "skill_name", "contents"}, ""))
+	pattern_FileService_ListFiles_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "skills", "skill_name", "contents"}, ""))
 	pattern_FileService_GetFile_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 3, 0, 4, 1, 5, 4}, []string{"v1", "skills", "skill_name", "raw", "path"}, ""))
 	pattern_FileService_CreateFile_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 3, 0, 4, 1, 5, 4}, []string{"v1", "skills", "skill_name", "contents", "path"}, ""))
 	pattern_FileService_UpdateFile_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 3, 0, 4, 1, 5, 4}, []string{"v1", "skills", "skill_name", "contents", "path"}, ""))

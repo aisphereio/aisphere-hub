@@ -3307,6 +3307,10 @@
         "displayName": {
           "type": "string"
         },
+        "latestVersion": {
+          "description": "Latest stable released version (canonical git tag, e.g. \"v1.2.0\").\nEmpty when the skill has no published release; clients can still pin a\nspecific version or fall back to a draft/default branch workflow.",
+          "type": "string"
+        },
         "name": {
           "type": "string"
         },
@@ -7757,7 +7761,7 @@
         ]
       }
     },
-    "/v1/skills/{skillName}/contents/**": {
+    "/v1/skills/{skillName}/contents": {
       "get": {
         "operationId": "FileService_ListFiles",
         "parameters": [

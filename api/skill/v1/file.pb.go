@@ -1206,10 +1206,10 @@ const file_skill_v1_file_proto_rawDesc = "" +
 	"\x12DeleteFileResponse\x12\x1d\n" +
 	"\n" +
 	"commit_sha\x18\x01 \x01(\tR\tcommitSha\x12%\n" +
-	"\x0ecommit_message\x18\x02 \x01(\tR\rcommitMessage2\x86\b\n" +
-	"\vFileService\x12\xbb\x01\n" +
-	"\tListFiles\x12\x1a.skill.v1.ListFilesRequest\x1a\x16.skill.v1.FileContents\"z\x92\xf4\x18K\b\x03\x12)\n" +
-	"\x04view\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x13hub.skill.file.list\x1a\x03low\x82\xd3\xe4\x93\x02%\x12#/v1/skills/{skill_name}/contents/**\x12\xbb\x01\n" +
+	"\x0ecommit_message\x18\x02 \x01(\tR\rcommitMessage2\x83\b\n" +
+	"\vFileService\x12\xb8\x01\n" +
+	"\tListFiles\x12\x1a.skill.v1.ListFilesRequest\x1a\x16.skill.v1.FileContents\"w\x92\xf4\x18K\b\x03\x12)\n" +
+	"\x04view\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a\x1c\b\x01\x12\x13hub.skill.file.list\x1a\x03low\x82\xd3\xe4\x93\x02\"\x12 /v1/skills/{skill_name}/contents\x12\xbb\x01\n" +
 	"\aGetFile\x12\x18.skill.v1.GetFileRequest\x1a\x19.skill.v1.GetFileResponse\"{\x92\xf4\x18J\b\x03\x12)\n" +
 	"\x04view\x12\x12skill:{skill_name}\x1a\vhub-service \x01\x1a\x1b\b\x01\x12\x12hub.skill.file.get\x1a\x03low\x82\xd3\xe4\x93\x02'\x12%/v1/skills/{skill_name}/raw/{path=**}\x12\xd3\x01\n" +
 	"\n" +

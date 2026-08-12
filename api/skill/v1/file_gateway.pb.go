@@ -18,7 +18,7 @@ func FileServiceGatewayManifest() gatewayx.Manifest {
 			{
 				ID:       "file.list.files",
 				Method:   "GET",
-				Path:     "/v1/skills/{skill_name}/contents/**",
+				Path:     "/v1/skills/{skill_name}/contents",
 				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.FileService/ListFiles"},
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
