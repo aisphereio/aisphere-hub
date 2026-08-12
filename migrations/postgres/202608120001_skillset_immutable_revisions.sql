@@ -58,10 +58,10 @@ BEGIN
        AND revision = p_revision
     ON CONFLICT (skillset_name, revision) DO NOTHING;
 
-    -- Only copy fully pinned rows. Legacy unresolved members are intentionally
-    -- omitted; callers resolving such a revision fail closed because the
-    -- immutable member count will not match the mutable projection at backfill
-    -- time and new writes already require exact releases.
+    -- Preserve every member row, including legacy rows that predate exact
+    -- release pinning. An incomplete historical row is still evidence of what
+    -- existed at that revision; the resolver rejects it explicitly instead of
+    -- silently dropping it and producing a different member set.
     INSERT INTO aihub_skillset_revision_items(
         skillset_name, revision, skill_name, sort_order, version,
         commit_sha, tree_sha, manifest_sha256, resolved_at
@@ -70,10 +70,6 @@ BEGIN
            i.commit_sha, i.tree_sha, i.manifest_sha256, i.resolved_at
       FROM aihub_skillset_items i
      WHERE i.skillset_name = p_skillset_name
-       AND i.version <> ''
-       AND i.commit_sha <> ''
-       AND i.tree_sha <> ''
-       AND i.manifest_sha256 <> ''
     ON CONFLICT (skillset_name, revision, skill_name) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
