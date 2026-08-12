@@ -200,7 +200,7 @@ func (h *agentHTTPHandler) resolveAgentSkillSet(ctx context.Context, principal a
 		       i.manifest_sha256, i.resolved_at,
 		       COALESCE(p.display_name, '') AS display_name
 		FROM aihub_skillset_items i
-		JOIN repo r ON r.name = i.skill_name
+		JOIN repos r ON r.name = i.skill_name
 		JOIN hub_skill_profiles p ON p.repository_id = r.id
 		WHERE i.skillset_name = ? AND p.lifecycle_status = 'active'
 		ORDER BY i.sort_order ASC, i.skill_name ASC`, name).Scan(&members).Error; err != nil {
