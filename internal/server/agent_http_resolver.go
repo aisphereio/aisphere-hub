@@ -59,7 +59,7 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 	if _, err := h.resolveAgentModelSnapshot(ctx, principal, projection.Model); err != nil {
 		return err
 	}
-	if _, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills); err != nil {
+	if _, err := h.resolveAgentSkills(ctx, principal, projection.Skills, projection.SkillSets, ""); err != nil {
 		return err
 	}
 	for _, binding := range projection.Tools {
@@ -73,13 +73,12 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 	return nil
 }
 
-// resolveAgentSkillSnapshots pins skills into the immutable run snapshot.
-// Built-in skills come from the worker image; catalog skills are validated
-// against the Hub catalog (the launcher must hold `skill:{name}#view` so a
-// user cannot run an Agent whose definition binds a skill they cannot even
-// see) and are pinned by name+version — the download contract
-// (artifactRef/digest/URL) lands with the Runtime Skill Fetch work.
-func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, principal authn.Principal, bindings []agentSkillBinding) ([]map[string]any, error) {
+// resolveAgentSkillSnapshots pins direct catalog/builtin bindings into an
+// immutable execution snapshot. Catalog versions are resolved through the
+// published-release index; revision is the Git commit SHA, never the SemVer
+// label itself. A signed package URL is emitted only for an actual Runtime
+// scope, so launcher identity and Runtime capability identity stay separate.
+func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, principal authn.Principal, bindings []agentSkillBinding, runtimeID string) ([]map[string]any, error) {
 	out := make([]map[string]any, 0, len(bindings))
 	for _, binding := range bindings {
 		name := strings.TrimSpace(binding.Name)
@@ -95,6 +94,7 @@ func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, princ
 			})
 			continue
 		}
+
 		// Catalog skill: the launcher must be able to see it first.
 		if err := h.requirePermission(ctx, principal, "skill", name, "view"); err != nil {
 			return nil, err
@@ -102,8 +102,7 @@ func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, princ
 		// S7/S22: the catalog binding must still hold at definition-save time
 		// and again at resolve time. The skill must exist and be active
 		// (disabled/archived skills reject new runs), and the pinned version
-		// must be a published release — hand-crafted JSON cannot bypass the
-		// UI and pin a version that never shipped.
+		// must be a published release — hand-crafted JSON cannot bypass the UI.
 		if h.skillRepo != nil {
 			skill, err := h.skillRepo.GetSkill(ctx, name)
 			if err != nil {
@@ -117,31 +116,45 @@ func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, princ
 				)
 			}
 		}
-		if h.releaseResolver != nil {
-			if _, err := h.releaseResolver.GetRelease(ctx, name, version); err != nil {
-				return nil, err
-			}
+		if h.releaseResolver == nil {
+			return nil, errorx.New(
+				errorx.Code("AGENT_SKILL_RELEASE_UNAVAILABLE"),
+				errorx.WithHTTPStatus(http.StatusServiceUnavailable),
+				errorx.WithMessage("skill release resolver is unavailable"),
+			)
 		}
+		release, err := h.releaseResolver.GetRelease(ctx, name, version)
+		if err != nil {
+			return nil, err
+		}
+		version = release.Tag
 		entry := map[string]any{
-			"name": name, "version": version, "revision": version,
-			"source": "catalog", "object": "aihub:skill:" + name,
+			"name":           name,
+			"version":        version,
+			"revision":       release.CommitSHA,
+			"treeSha":        release.TreeSHA,
+			"manifestSha256": release.ManifestSHA256,
+			"source":         "catalog",
+			"object":         "aihub:skill:" + name,
 		}
-		// Load-phase download contract: when package signing is configured,
-		// attach content digests + a short-lived signed URL so the Runtime
-		// can fetch (and verify) the immutable package.
+		// Load-phase download contract: content digest is independent from
+		// authorization. The signed URL is scoped to Runtime identity only when
+		// a Runtime is actually resolving the execution plan.
 		if h.skillPackages != nil {
 			pkg, err := h.skillPackages.BuildSkillPackage(ctx, name, version)
-			if err != nil {
-				return nil, err
-			}
-			downloadURL, err := h.skillPackages.BuildDownloadURL(name, version, string(principal.SubjectID))
 			if err != nil {
 				return nil, err
 			}
 			entry["sha256"] = pkg.SHA256
 			entry["md5"] = pkg.MD5
 			entry["size"] = pkg.Size
-			entry["downloadUrl"] = downloadURL
+			if runtimeID = strings.TrimSpace(runtimeID); runtimeID != "" {
+				downloadURL, err := h.skillPackages.BuildDownloadURL(name, version, runtimeID)
+				if err != nil {
+					return nil, err
+				}
+				entry["downloadUrl"] = downloadURL
+			}
 		}
 		out = append(out, entry)
 	}
@@ -349,7 +362,7 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 	if err != nil {
 		return nil, nil, err
 	}
-	skills, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills)
+	skills, err := h.resolveAgentSkills(ctx, principal, projection.Skills, projection.SkillSets, request.RuntimeID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -388,6 +401,7 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 		"model":                modelSnapshot,
 		"tools":                approvals,
 		"skills":               skills,
+		"skillSets":            projection.SkillSets,
 	}
 	return plan, resolved, nil
 }
