@@ -320,3 +320,36 @@ skill rt-fn-1 v1.0.0 落地证据：
 ### 遗留小瑕疵（非本次引入）
 - Skill 列表页"最新"列显示 `vv1.0.0` 双前缀（前端渲染往 release tag 前又加了一次 v）——纯展示层，可选修。
 - Agent close-ag-1 目前在测试中加了 `cccc@v1.0.1` 绑定（UI 验证产物，待清理）。
+
+---
+
+## 状态更新（2026-08-12）— Agent 绑定/展开 SkillSet 闭环（S4 定义已闭合，S6/S8/S20 Agent 侧补齐）
+
+### 背景
+总计划缺口：AgentDefinition 只有 `skills`，没有 `skillsets` 声明；Agent 无法绑定 SkillSet。SkillSet 管理 API（CRUD/成员固定 Release/revision/resolve）此前已完整。
+
+### 后端交付（hub 01b8d96 + 12e300c）
+- `definition.skillsets:[{name,revision}]` 声明：`normalizeAgentDefinition` 校验 name 合法 + revision 为正整数（`AGENT_SKILLSET_INVALID/DUPLICATE/REVISION_REQUIRED`）。
+- resolve 展开：`resolveAgentSkillSnapshots` 增加 SkillSet 展开 —— 每个成员复用 `resolveSkillSnapshotEntry`（skill.view(launcher) + active + 发布 release + 下载契约），所以 SkillSet **不是权限包**（成员独立过 view）。展开条目带 `viaSkillSet` provenance + commitSHA/treeSHA/manifestSHA256。
+- S20 revision 不漂移：绑定 revision 后 skillset 变更 → resolve 409 `AGENT_SKILLSET_REVISION_MISMATCH`（需保存新 Agent 版本再固定）。缺失/空/未 resolve 成员分别 `AGENT_SKILLSET_NOT_FOUND/EMPTY/MEMBER_UNRESOLVED`。
+- S7 保存期校验顺带覆盖：create/update → validateToolBindings → resolveAgentSkillSnapshots 同路径。
+
+### 前端交付（front 0339a6c）
+- AgentSkillPromptEditor 新增 SkillSet 区块：list 版本固定集合、展开成员预览（useSkillSetSkills）、勾选写入 `skillSets:[{name,revision,required}]`。
+- `AgentSkillSetRef` 增加 revision 字段。
+
+### 后端验证证据（线上，internal token）
+- `POST /v1/agents` 带 `skillsets:[{agent-e2e-set,revision:2}]` → **201**
+- `POST /v1/agents/skillset-ag-1:resolve` → skills 含 `{name:rt-fn-1, v1.0.0, viaSkillSet:agent-e2e-set, commitSHA/treeSHA/manifestSHA256, downloadUrl+sig}` ✅
+- 成员变更后（revision 3）resolve revision 2 绑定 → **409 AGENT_SKILLSET_REVISION_MISMATCH** ✅
+
+### 遗留
+- Agent `skillset-ag-1`、SkillSet `agent-e2e-set` 为测试产物（待清理）
+
+### 前端字段名修复（front 6a0a548）—— 已部署验证
+- 发现 bug：编辑器写入路径用 `skillSets`（camelCase），而 `AgentDefinition` 契约字段是 `skillsets`（小写，后端 projection `json:"skillsets"`），导致保存时绑定被静默丢弃。修复 setSkillSets + agents-page 初始化 + types.ts 字段名；`useSkillSetSkills` 返回 `members`。
+- UI 验证：勾选 `agent-e2e-set`（revision 4）→ Save → "Agent skillset-ag-1 updated"（v1→v2），definition 存 `skillsets:[{name,revision:4,required:true}]`（小写 ✓）；resolve v2 → 200，skills 含 `{rt-fn-1@v1.0.0, viaSkillSet:agent-e2e-set}` ✅
+
+### 遗留（待清理）
+- 测试产物：agent `skillset-ag-1`（v1/v2）、skillset `agent-e2e-set`、session `skillset-s1`
+- `xxxx`/`ttt` skillsets 成员未固定 release → UI 显示"需先为全部成员固定 Release"（isRunnableSkillSet 拦截）——正确行为，留作演示
