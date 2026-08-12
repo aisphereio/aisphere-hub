@@ -2,13 +2,11 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/errorx"
-	"gorm.io/gorm"
 )
 
 // agentSkillSetBinding is always exact. Agent revisions must never point at the
@@ -68,10 +66,17 @@ func (h *agentHTTPHandler) loadAgentSkillSetRevision(ctx context.Context, princi
 		Where("skillset_name = ? AND revision = ?", name, binding.Revision).
 		Order("sort_order ASC, skill_name ASC").
 		Find(&items).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errorx.NotFound("AGENT_SKILLSET_REVISION_NOT_FOUND", fmt.Sprintf("skillset revision not found: %s@%d", name, binding.Revision))
-		}
 		return nil, agentDBErr(err)
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.SkillName) == "" || strings.TrimSpace(item.Version) == "" ||
+			strings.TrimSpace(item.CommitSHA) == "" || strings.TrimSpace(item.TreeSHA) == "" ||
+			strings.TrimSpace(item.ManifestSHA) == "" {
+			return nil, errorx.Conflict(
+				"AGENT_SKILLSET_REVISION_INCOMPLETE",
+				fmt.Sprintf("skillset revision contains an incompletely pinned historical member: %s@%d/%s", name, binding.Revision, item.SkillName),
+			)
+		}
 	}
 	return items, nil
 }
@@ -80,7 +85,11 @@ func skillSnapshotString(snapshot map[string]any, key string) string {
 	if snapshot == nil {
 		return ""
 	}
-	return strings.TrimSpace(fmt.Sprint(snapshot[key]))
+	value, ok := snapshot[key]
+	if !ok || value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
 }
 
 func appendSkillProvenance(snapshot map[string]any, provenance map[string]any) {
