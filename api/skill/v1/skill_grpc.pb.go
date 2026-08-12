@@ -25,6 +25,7 @@ const (
 	SkillService_GetSkill_FullMethodName              = "/skill.v1.SkillService/GetSkill"
 	SkillService_UpdateSkill_FullMethodName           = "/skill.v1.SkillService/UpdateSkill"
 	SkillService_UpdateSkillVisibility_FullMethodName = "/skill.v1.SkillService/UpdateSkillVisibility"
+	SkillService_UpdateSkillLifecycle_FullMethodName  = "/skill.v1.SkillService/UpdateSkillLifecycle"
 	SkillService_DeleteSkill_FullMethodName           = "/skill.v1.SkillService/DeleteSkill"
 	SkillService_ListSkillShares_FullMethodName       = "/skill.v1.SkillService/ListSkillShares"
 	SkillService_CreateSkillShare_FullMethodName      = "/skill.v1.SkillService/CreateSkillShare"
@@ -52,6 +53,7 @@ type SkillServiceClient interface {
 	GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*GetSkillResponse, error)
 	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
 	UpdateSkillVisibility(ctx context.Context, in *UpdateSkillVisibilityRequest, opts ...grpc.CallOption) (*UpdateSkillVisibilityResponse, error)
+	UpdateSkillLifecycle(ctx context.Context, in *UpdateSkillLifecycleRequest, opts ...grpc.CallOption) (*UpdateSkillLifecycleResponse, error)
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error)
 	ListSkillShares(ctx context.Context, in *ListSkillSharesRequest, opts ...grpc.CallOption) (*ListSkillSharesResponse, error)
 	CreateSkillShare(ctx context.Context, in *CreateSkillShareRequest, opts ...grpc.CallOption) (*CreateSkillShareResponse, error)
@@ -127,6 +129,16 @@ func (c *skillServiceClient) UpdateSkillVisibility(ctx context.Context, in *Upda
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateSkillVisibilityResponse)
 	err := c.cc.Invoke(ctx, SkillService_UpdateSkillVisibility_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillServiceClient) UpdateSkillLifecycle(ctx context.Context, in *UpdateSkillLifecycleRequest, opts ...grpc.CallOption) (*UpdateSkillLifecycleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSkillLifecycleResponse)
+	err := c.cc.Invoke(ctx, SkillService_UpdateSkillLifecycle_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -257,6 +269,7 @@ type SkillServiceServer interface {
 	GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
 	UpdateSkillVisibility(context.Context, *UpdateSkillVisibilityRequest) (*UpdateSkillVisibilityResponse, error)
+	UpdateSkillLifecycle(context.Context, *UpdateSkillLifecycleRequest) (*UpdateSkillLifecycleResponse, error)
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
 	ListSkillShares(context.Context, *ListSkillSharesRequest) (*ListSkillSharesResponse, error)
 	CreateSkillShare(context.Context, *CreateSkillShareRequest) (*CreateSkillShareResponse, error)
@@ -295,6 +308,9 @@ func (UnimplementedSkillServiceServer) UpdateSkill(context.Context, *UpdateSkill
 }
 func (UnimplementedSkillServiceServer) UpdateSkillVisibility(context.Context, *UpdateSkillVisibilityRequest) (*UpdateSkillVisibilityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkillVisibility not implemented")
+}
+func (UnimplementedSkillServiceServer) UpdateSkillLifecycle(context.Context, *UpdateSkillLifecycleRequest) (*UpdateSkillLifecycleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkillLifecycle not implemented")
 }
 func (UnimplementedSkillServiceServer) DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSkill not implemented")
@@ -454,6 +470,24 @@ func _SkillService_UpdateSkillVisibility_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SkillServiceServer).UpdateSkillVisibility(ctx, req.(*UpdateSkillVisibilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillService_UpdateSkillLifecycle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSkillLifecycleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillServiceServer).UpdateSkillLifecycle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillService_UpdateSkillLifecycle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillServiceServer).UpdateSkillLifecycle(ctx, req.(*UpdateSkillLifecycleRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -686,6 +720,10 @@ var SkillService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSkillVisibility",
 			Handler:    _SkillService_UpdateSkillVisibility_Handler,
+		},
+		{
+			MethodName: "UpdateSkillLifecycle",
+			Handler:    _SkillService_UpdateSkillLifecycle_Handler,
 		},
 		{
 			MethodName: "DeleteSkill",

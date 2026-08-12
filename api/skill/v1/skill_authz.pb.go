@@ -74,6 +74,17 @@ var SkillServiceAuthzRules = authz.Rules{
 		AuditEvent: "hub.skill.visibility.update",
 		AuditRisk:  "high",
 	},
+	"/skill.v1.SkillService/UpdateSkillLifecycle": {
+		Service:    "skill.v1.SkillService",
+		Method:     "UpdateSkillLifecycle",
+		FullMethod: "/skill.v1.SkillService/UpdateSkillLifecycle",
+		Action:     "manage",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.lifecycle.update",
+		AuditRisk:  "high",
+	},
 	"/skill.v1.SkillService/DeleteSkill": {
 		Service:    "skill.v1.SkillService",
 		Method:     "DeleteSkill",
@@ -252,6 +263,17 @@ const SkillServiceAuthzManifestJSON = `{
       "audience": "hub-service",
       "mode": "CHECK_ONLY",
       "audit_event": "hub.skill.visibility.update",
+      "audit_risk": "high"
+    },
+    {
+      "service": "skill.v1.SkillService",
+      "method": "UpdateSkillLifecycle",
+      "full_method": "/skill.v1.SkillService/UpdateSkillLifecycle",
+      "action": "manage",
+      "resource": "skill:{name}",
+      "audience": "hub-service",
+      "mode": "CHECK_ONLY",
+      "audit_event": "hub.skill.lifecycle.update",
       "audit_risk": "high"
     },
     {
@@ -452,6 +474,8 @@ func _SkillServiceNormalizeOperation(operation string) string {
 		return "/skill.v1.SkillService/UpdateSkill"
 	case "UpdateSkillVisibility", "skill.v1.SkillService/UpdateSkillVisibility":
 		return "/skill.v1.SkillService/UpdateSkillVisibility"
+	case "UpdateSkillLifecycle", "skill.v1.SkillService/UpdateSkillLifecycle":
+		return "/skill.v1.SkillService/UpdateSkillLifecycle"
 	case "DeleteSkill", "skill.v1.SkillService/DeleteSkill":
 		return "/skill.v1.SkillService/DeleteSkill"
 	case "ListSkillShares", "skill.v1.SkillService/ListSkillShares":
@@ -688,6 +712,45 @@ func (c *SkillServiceSecureClient) UpdateSkillVisibility(ctx context.Context, in
 		}
 	}
 	return c.raw.UpdateSkillVisibility(ctx, in, opts...)
+}
+
+func (c *SkillServiceSecureClient) UpdateSkillLifecycle(ctx context.Context, in *UpdateSkillLifecycleRequest, opts ...grpc.CallOption) (*UpdateSkillLifecycleResponse, error) {
+	if c != nil && c.guard != nil {
+		rule := SkillServiceAuthzRules["/skill.v1.SkillService/UpdateSkillLifecycle"]
+		resource, err := c.resolver.ResolveResource(rule, in)
+		if err != nil {
+			return nil, err
+		}
+		subject := _SkillServiceAuthzSubjectFromContext(ctx)
+		switch rule.Mode {
+		case authz.RuleModeScopedToken:
+			token, decision, err := c.guard.RequireScopedToken(ctx, authz.ScopedTokenRequest{Subject: subject, Action: rule.Action, Resource: resource, Audience: rule.Audience, Rule: rule, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+			if token != "" {
+				ctx = contextx.WithScopedToken(ctx, token)
+			}
+		case authz.RuleModeCheckOnly:
+			decision, err := c.guard.Require(ctx, authz.CheckRequest{Subject: subject, Resource: resource, Permission: rule.Action, TenantID: contextx.TenantFromContext(ctx)})
+			if err != nil {
+				return nil, err
+			}
+			if decision.ConsistencyToken != "" {
+				ctx = contextx.WithAuthzDecisionID(ctx, decision.ConsistencyToken)
+			}
+		case authz.RuleModeSelfCheck:
+		// SELF_CHECK means the target resource service performs the final check.
+		case authz.RuleModeUnspecified:
+			return nil, authz.ErrInvalidRequest("authz rule mode must not be UNSPECIFIED")
+		default:
+			return nil, authz.ErrInvalidRequest("unsupported authz rule mode: " + string(rule.Mode))
+		}
+	}
+	return c.raw.UpdateSkillLifecycle(ctx, in, opts...)
 }
 
 func (c *SkillServiceSecureClient) DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error) {

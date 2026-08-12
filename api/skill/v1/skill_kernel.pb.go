@@ -107,6 +107,17 @@ var SkillServiceKernelAuthzRules = authz.Rules{
 		AuditEvent: "hub.skill.visibility.update",
 		AuditRisk:  "high",
 	},
+	"/skill.v1.SkillService/UpdateSkillLifecycle": {
+		Service:    "skill.v1.SkillService",
+		Method:     "UpdateSkillLifecycle",
+		FullMethod: "/skill.v1.SkillService/UpdateSkillLifecycle",
+		Action:     "manage",
+		Resource:   "skill:{name}",
+		Audience:   "hub-service",
+		Mode:       authz.RuleMode("CHECK_ONLY"),
+		AuditEvent: "hub.skill.lifecycle.update",
+		AuditRisk:  "high",
+	},
 	"/skill.v1.SkillService/DeleteSkill": {
 		Service:    "skill.v1.SkillService",
 		Method:     "DeleteSkill",
@@ -322,6 +333,21 @@ func SkillServiceKernelRequestInfoResolver(ctx context.Context, operation string
 		info.Labels["audit_event"] = "hub.skill.visibility.update"
 		info.Labels["audit_risk"] = "high"
 		return info.Normalize(), true, nil
+	case "/skill.v1.SkillService/UpdateSkillLifecycle":
+		info := requestx.Info{
+			Service:       "skill.v1.SkillService",
+			Method:        "UpdateSkillLifecycle",
+			Operation:     "/skill.v1.SkillService/UpdateSkillLifecycle",
+			Exposure:      v1.Exposure_AUTHORIZED,
+			Action:        "manage",
+			Resource:      "skill:{name}",
+			TargetService: "hub-service",
+			Labels:        map[string]string{},
+		}
+		info.Labels["authz_mode"] = "CHECK_ONLY"
+		info.Labels["audit_event"] = "hub.skill.lifecycle.update"
+		info.Labels["audit_risk"] = "high"
+		return info.Normalize(), true, nil
 	case "/skill.v1.SkillService/DeleteSkill":
 		info := requestx.Info{
 			Service:       "skill.v1.SkillService",
@@ -529,6 +555,8 @@ func _SkillServiceKernelNormalizeOperation(operation string) string {
 		return "/skill.v1.SkillService/UpdateSkill"
 	case "UpdateSkillVisibility", "skill.v1.SkillService/UpdateSkillVisibility":
 		return "/skill.v1.SkillService/UpdateSkillVisibility"
+	case "UpdateSkillLifecycle", "skill.v1.SkillService/UpdateSkillLifecycle":
+		return "/skill.v1.SkillService/UpdateSkillLifecycle"
 	case "DeleteSkill", "skill.v1.SkillService/DeleteSkill":
 		return "/skill.v1.SkillService/DeleteSkill"
 	case "ListSkillShares", "skill.v1.SkillService/ListSkillShares":

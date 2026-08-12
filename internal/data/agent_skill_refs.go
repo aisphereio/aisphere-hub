@@ -9,7 +9,7 @@ import (
 
 // agentSkillRefsRepo implements biz.AgentReferenceReader against the Hub
 // Agent catalog. It finds Agents whose immutable definition binds a given
-// skill (definition_json.skills[].name), so SkillUsecase.DeleteSkill can
+// skill directly or through a pinned SkillSet, so SkillUsecase.DeleteSkill can
 // refuse to delete a skill that is still in use.
 type agentSkillRefsRepo struct {
 	db dbx.DB
@@ -31,15 +31,23 @@ func (r *agentSkillRefsRepo) ListSkillReferences(ctx context.Context, skillName 
 		SELECT a.agent_id, a.display_name, a.latest_version
 		FROM aihub_agents a
 		WHERE a.deleted_at IS NULL
-		  AND EXISTS (
+		  AND (
+			EXISTS (
 			SELECT 1 FROM aihub_agent_versions v
 			WHERE v.agent_id = a.agent_id
 			  AND EXISTS (
 				SELECT 1 FROM jsonb_array_elements(v.definition_json -> 'skills') s
 				WHERE s ->> 'name' = ?
 			  )
+			)
+			OR EXISTS (
+			  SELECT 1 FROM aihub_agent_versions v
+			  JOIN LATERAL jsonb_array_elements(COALESCE(v.definition_json -> 'skillsets', v.definition_json -> 'skillSets', '[]'::jsonb)) ss ON TRUE
+			  JOIN aihub_skillset_items i ON i.skillset_name = ss ->> 'name'
+			  WHERE v.agent_id = a.agent_id AND i.skill_name = ?
+			)
 		  )
-	`, skillName).Scan(&rows).Error; err != nil {
+	`, skillName, skillName).Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 	out := make([]biz.AgentSkillReference, 0, len(rows))

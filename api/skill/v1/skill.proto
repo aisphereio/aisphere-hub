@@ -68,6 +68,15 @@ option (aisphere.access.v1.policy) = {
     };
   }
 
+  rpc UpdateSkillLifecycle(UpdateSkillLifecycleRequest) returns (UpdateSkillLifecycleResponse) {
+    option (google.api.http) = { post: "/v1/skills/{name}:lifecycle" body: "*" response_body: "skill" };
+    option (aisphere.access.v1.policy) = {
+      exposure: AUTHORIZED
+      authz: { action: "manage" resource: "skill:{name}" audience: "hub-service" mode: CHECK_ONLY }
+      audit: { enabled: true event: "hub.skill.lifecycle.update" risk: "high" }
+    };
+  }
+
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse) {
     option (google.api.http) = { delete: "/v1/skills/{name}" };
     option (aisphere.access.v1.policy) = {
@@ -223,6 +232,9 @@ message ListSkillsRequest {
   string page_token = 2;
   string query = 3;
   string visibility = 4;
+  // Catalog consumers omit this and receive active Skills only. Management
+  // screens opt in so disabled/archived assets remain recoverable.
+  bool include_inactive = 5;
 }
 message ListSkillsResponse {
   repeated Skill skills = 1;
@@ -244,6 +256,13 @@ message UpdateSkillVisibilityRequest {
   string visibility = 2 [(google.api.field_behavior) = REQUIRED];
 }
 message UpdateSkillVisibilityResponse { Skill skill = 1; }
+
+message UpdateSkillLifecycleRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  // Mutable lifecycle states are active, disabled and archived.
+  string status = 2 [(google.api.field_behavior) = REQUIRED];
+}
+message UpdateSkillLifecycleResponse { Skill skill = 1; }
 
 message DeleteSkillRequest { string name = 1 [(google.api.field_behavior) = REQUIRED]; }
 message DeleteSkillResponse {}

@@ -52,9 +52,13 @@ func (s *SkillService) ListSkills(ctx context.Context, req *skillv1.ListSkillsRe
 	if err != nil {
 		return nil, err
 	}
+	status := biz.SkillStatusActive
+	if req.GetIncludeInactive() {
+		status = ""
+	}
 	result, err := s.uc.ListSkills(ctx, principalFromContext(ctx), biz.GitSkillListOptions{
 		Limit: int(req.GetPageSize()), Offset: offset, Query: req.GetQuery(),
-		Visibility: req.GetVisibility(), Status: biz.SkillStatusActive,
+		Visibility: req.GetVisibility(), Status: status,
 	})
 	if err != nil {
 		return nil, err
@@ -93,6 +97,14 @@ func (s *SkillService) UpdateSkillVisibility(ctx context.Context, req *skillv1.U
 		return nil, err
 	}
 	return &skillv1.UpdateSkillVisibilityResponse{Skill: skillToProto(out, s.latestStableReleaseVersion(ctx, out.Name))}, nil
+}
+
+func (s *SkillService) UpdateSkillLifecycle(ctx context.Context, req *skillv1.UpdateSkillLifecycleRequest) (*skillv1.UpdateSkillLifecycleResponse, error) {
+	out, err := s.uc.UpdateSkillLifecycle(ctx, req.GetName(), req.GetStatus())
+	if err != nil {
+		return nil, err
+	}
+	return &skillv1.UpdateSkillLifecycleResponse{Skill: skillToProto(out, s.latestStableReleaseVersion(ctx, out.Name))}, nil
 }
 
 func (s *SkillService) DeleteSkill(ctx context.Context, req *skillv1.DeleteSkillRequest) (*skillv1.DeleteSkillResponse, error) {

@@ -253,6 +253,51 @@ func local_request_SkillService_UpdateSkillVisibility_0(ctx context.Context, mar
 	return msg, metadata, err
 }
 
+func request_SkillService_UpdateSkillLifecycle_0(ctx context.Context, marshaler runtime.Marshaler, client SkillServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateSkillLifecycleRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+	protoReq.Name, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+	msg, err := client.UpdateSkillLifecycle(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_SkillService_UpdateSkillLifecycle_0(ctx context.Context, marshaler runtime.Marshaler, server SkillServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateSkillLifecycleRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+	protoReq.Name, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+	msg, err := server.UpdateSkillLifecycle(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_SkillService_DeleteSkill_0(ctx context.Context, marshaler runtime.Marshaler, client SkillServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq DeleteSkillRequest
@@ -964,6 +1009,26 @@ func RegisterSkillServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		}
 		forward_SkillService_UpdateSkillVisibility_0(annotatedContext, mux, outboundMarshaler, w, req, response_SkillService_UpdateSkillVisibility_0{resp.(*UpdateSkillVisibilityResponse)}, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_SkillService_UpdateSkillLifecycle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/skill.v1.SkillService/UpdateSkillLifecycle", runtime.WithHTTPPathPattern("/v1/skills/{name}:lifecycle"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SkillService_UpdateSkillLifecycle_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SkillService_UpdateSkillLifecycle_0(annotatedContext, mux, outboundMarshaler, w, req, response_SkillService_UpdateSkillLifecycle_0{resp.(*UpdateSkillLifecycleResponse)}, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodDelete, pattern_SkillService_DeleteSkill_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1326,6 +1391,23 @@ func RegisterSkillServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		}
 		forward_SkillService_UpdateSkillVisibility_0(annotatedContext, mux, outboundMarshaler, w, req, response_SkillService_UpdateSkillVisibility_0{resp.(*UpdateSkillVisibilityResponse)}, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_SkillService_UpdateSkillLifecycle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/skill.v1.SkillService/UpdateSkillLifecycle", runtime.WithHTTPPathPattern("/v1/skills/{name}:lifecycle"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SkillService_UpdateSkillLifecycle_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_SkillService_UpdateSkillLifecycle_0(annotatedContext, mux, outboundMarshaler, w, req, response_SkillService_UpdateSkillLifecycle_0{resp.(*UpdateSkillLifecycleResponse)}, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodDelete, pattern_SkillService_DeleteSkill_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1561,6 +1643,15 @@ func (m response_SkillService_UpdateSkillVisibility_0) XXX_ResponseBody() interf
 	return response.Skill
 }
 
+type response_SkillService_UpdateSkillLifecycle_0 struct {
+	*UpdateSkillLifecycleResponse
+}
+
+func (m response_SkillService_UpdateSkillLifecycle_0) XXX_ResponseBody() interface{} {
+	response := m.UpdateSkillLifecycleResponse
+	return response.Skill
+}
+
 type response_SkillService_CreateSkillShare_0 struct {
 	*CreateSkillShareResponse
 }
@@ -1622,6 +1713,7 @@ var (
 	pattern_SkillService_GetSkill_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "skills", "name"}, ""))
 	pattern_SkillService_UpdateSkill_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "skills", "name"}, ""))
 	pattern_SkillService_UpdateSkillVisibility_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "skills", "name"}, "visibility"))
+	pattern_SkillService_UpdateSkillLifecycle_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "skills", "name"}, "lifecycle"))
 	pattern_SkillService_DeleteSkill_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "skills", "name"}, ""))
 	pattern_SkillService_ListSkillShares_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "skills", "name", "shares"}, ""))
 	pattern_SkillService_CreateSkillShare_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "skills", "name", "shares"}, ""))
@@ -1642,6 +1734,7 @@ var (
 	forward_SkillService_GetSkill_0              = runtime.ForwardResponseMessage
 	forward_SkillService_UpdateSkill_0           = runtime.ForwardResponseMessage
 	forward_SkillService_UpdateSkillVisibility_0 = runtime.ForwardResponseMessage
+	forward_SkillService_UpdateSkillLifecycle_0  = runtime.ForwardResponseMessage
 	forward_SkillService_DeleteSkill_0           = runtime.ForwardResponseMessage
 	forward_SkillService_ListSkillShares_0       = runtime.ForwardResponseMessage
 	forward_SkillService_CreateSkillShare_0      = runtime.ForwardResponseMessage

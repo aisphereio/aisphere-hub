@@ -10,6 +10,7 @@ import (
 	"github.com/aisphereio/aisphere-hub/internal/biz"
 	"github.com/aisphereio/kernel/authn"
 	"github.com/aisphereio/kernel/authz"
+	softweb "github.com/aisphereio/soft-serve/pkg/web"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -125,6 +126,26 @@ func TestRequiredPermissionForRefUpdate(t *testing.T) {
 				t.Fatalf("RequiredPermissionForRefUpdate() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAllowGitLifecycle(t *testing.T) {
+	tests := []struct {
+		status string
+		action softweb.Action
+		want   bool
+	}{
+		{biz.SkillStatusActive, softweb.ActionRead, true},
+		{biz.SkillStatusActive, softweb.ActionWrite, true},
+		{biz.SkillStatusArchived, softweb.ActionRead, true},
+		{biz.SkillStatusArchived, softweb.ActionWrite, false},
+		{biz.SkillStatusDisabled, softweb.ActionRead, false},
+		{biz.SkillStatusDisabled, softweb.ActionWrite, false},
+	}
+	for _, tc := range tests {
+		if got := allowGitLifecycle(tc.status, tc.action); got != tc.want {
+			t.Fatalf("allowGitLifecycle(%q, %q) = %v, want %v", tc.status, tc.action, got, tc.want)
+		}
 	}
 }
 

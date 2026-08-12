@@ -48,6 +48,7 @@ func (skillSetRow) TableName() string { return "aihub_skillsets" }
 
 type skillSetMember struct {
 	SkillName   string     `gorm:"column:skill_name" json:"skillName"`
+	Status      string     `gorm:"column:lifecycle_status" json:"status,omitempty"`
 	Order       int        `gorm:"column:sort_order" json:"order"`
 	Version     string     `gorm:"column:version" json:"version,omitempty"`
 	CommitSHA   string     `gorm:"column:commit_sha" json:"commitSha,omitempty"`
@@ -163,11 +164,12 @@ func (h *skillSetHTTPHandler) members(ctx context.Context, name string) ([]skill
 	err := h.db(ctx).Raw(`
 		SELECT i.skill_name, i.sort_order, i.version, i.commit_sha, i.tree_sha,
 		       i.manifest_sha256, i.resolved_at,
-		       COALESCE(p.display_name, '') AS display_name
+		       COALESCE(p.display_name, '') AS display_name,
+		       p.lifecycle_status
 		FROM aihub_skillset_items i
 		JOIN repos r ON r.name = i.skill_name
 		JOIN hub_skill_profiles p ON p.repository_id = r.id
-		WHERE i.skillset_name = ? AND p.lifecycle_status = 'active'
+		WHERE i.skillset_name = ? AND p.lifecycle_status <> 'deleting'
 		ORDER BY i.sort_order ASC, i.skill_name ASC`, name).Scan(&members).Error
 	return members, err
 }
@@ -317,12 +319,12 @@ func positiveInt(value string, fallback int) int {
 // ─── Error sentinels (mapped to errorx for transport encoding) ────────────
 
 var (
-	errSkillSetUnauthenticated      = errorx.Unauthorized("UNAUTHENTICATED", "authentication required")
-	errSkillSetForbidden            = errorx.Forbidden("SKILLSET_PERMISSION_DENIED", "zone membership is required to create a skillset")
-	errSkillSetZoneRequired         = errorx.BadRequest("SKILLSET_ZONE_REQUIRED", "authenticated principal has no zone")
-	errSkillSetAuthzUnavailable     = errorx.New("SKILLSET_AUTHZ_UNAVAILABLE", errorx.WithHTTPStatus(http.StatusServiceUnavailable), errorx.WithMessage("authorization service is unavailable"))
-	errSkillSetInvalidName          = errorx.BadRequest("SKILLSET_INVALID_NAME", "invalid skillset name")
-	errSkillSetMemberInvalid        = errorx.BadRequest("SKILLSET_MEMBER_INVALID", "valid skillName is required")
+	errSkillSetUnauthenticated       = errorx.Unauthorized("UNAUTHENTICATED", "authentication required")
+	errSkillSetForbidden             = errorx.Forbidden("SKILLSET_PERMISSION_DENIED", "zone membership is required to create a skillset")
+	errSkillSetZoneRequired          = errorx.BadRequest("SKILLSET_ZONE_REQUIRED", "authenticated principal has no zone")
+	errSkillSetAuthzUnavailable      = errorx.New("SKILLSET_AUTHZ_UNAVAILABLE", errorx.WithHTTPStatus(http.StatusServiceUnavailable), errorx.WithMessage("authorization service is unavailable"))
+	errSkillSetInvalidName           = errorx.BadRequest("SKILLSET_INVALID_NAME", "invalid skillset name")
+	errSkillSetMemberInvalid         = errorx.BadRequest("SKILLSET_MEMBER_INVALID", "valid skillName is required")
 	errSkillSetMemberVersionRequired = errorx.BadRequest("SKILLSET_MEMBER_VERSION_REQUIRED", "an exact Skill release version is required")
 	errSkillSetMemberUnresolved      = errorx.Conflict("SKILLSET_MEMBER_UNRESOLVED", "all SkillSet members must be pinned to immutable releases")
 	errSkillSetMemberForbidden       = errorx.Forbidden("SKILLSET_MEMBER_FORBIDDEN", "the referenced Skill is not visible to the caller")
@@ -705,9 +707,9 @@ func (h *skillSetHTTPHandler) resolveEndpoint(ctx khttp.Context) error {
 		}
 		return map[string]any{
 			"schemaVersion": 1,
-			"skillSet": map[string]any{"name": row.Name, "revision": row.Revision, "updatedAt": row.UpdatedAt},
-			"skills": members,
-			"resolvedAt": time.Now().UTC(),
+			"skillSet":      map[string]any{"name": row.Name, "revision": row.Revision, "updatedAt": row.UpdatedAt},
+			"skills":        members,
+			"resolvedAt":    time.Now().UTC(),
 		}, nil
 	})
 	if err != nil {

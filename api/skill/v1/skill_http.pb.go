@@ -33,6 +33,7 @@ const OperationSkillServiceListSkills = "/skill.v1.SkillService/ListSkills"
 const OperationSkillServiceMergePullRequest = "/skill.v1.SkillService/MergePullRequest"
 const OperationSkillServiceReviewPullRequest = "/skill.v1.SkillService/ReviewPullRequest"
 const OperationSkillServiceUpdateSkill = "/skill.v1.SkillService/UpdateSkill"
+const OperationSkillServiceUpdateSkillLifecycle = "/skill.v1.SkillService/UpdateSkillLifecycle"
 const OperationSkillServiceUpdateSkillVisibility = "/skill.v1.SkillService/UpdateSkillVisibility"
 
 type SkillServiceHTTPServer interface {
@@ -52,6 +53,7 @@ type SkillServiceHTTPServer interface {
 	MergePullRequest(context.Context, *MergePullRequestRequest) (*MergePullRequestResponse, error)
 	ReviewPullRequest(context.Context, *ReviewPullRequestRequest) (*ReviewPullRequestResponse, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
+	UpdateSkillLifecycle(context.Context, *UpdateSkillLifecycleRequest) (*UpdateSkillLifecycleResponse, error)
 	UpdateSkillVisibility(context.Context, *UpdateSkillVisibilityRequest) (*UpdateSkillVisibilityResponse, error)
 }
 
@@ -69,6 +71,7 @@ func RegisterSkillServiceHTTPServer(s *http.Server, srv SkillServiceHTTPServer) 
 	r.Handle("POST", "/v1/skills:importArchive", _SkillService_ImportSkillArchive0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/pull-requests", _SkillService_CreatePullRequest0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/shares", _SkillService_CreateSkillShare0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/skills/{name}:lifecycle", _SkillService_UpdateSkillLifecycle0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}:visibility", _SkillService_UpdateSkillVisibility0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/pull-requests/{id}:close", _SkillService_ClosePullRequest0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/skills/{name}/pull-requests/{id}:merge", _SkillService_MergePullRequest0_HTTP_Handler(srv))
@@ -367,6 +370,31 @@ func _SkillService_CreateSkillShare0_HTTP_Handler(srv SkillServiceHTTPServer) fu
 	}
 }
 
+func _SkillService_UpdateSkillLifecycle0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpdateSkillLifecycleRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		if err := http.ValidateRequest(ctx, &in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationSkillServiceUpdateSkillLifecycle)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateSkillLifecycle(ctx, req.(*UpdateSkillLifecycleRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*UpdateSkillLifecycleResponse)
+		return ctx.Result(200, reply.Skill)
+	}
+}
+
 func _SkillService_UpdateSkillVisibility0_HTTP_Handler(srv SkillServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in UpdateSkillVisibilityRequest
@@ -509,6 +537,7 @@ type SkillServiceHTTPClient interface {
 	MergePullRequest(ctx context.Context, req *MergePullRequestRequest, opts ...http.CallOption) (rsp *MergePullRequestResponse, err error)
 	ReviewPullRequest(ctx context.Context, req *ReviewPullRequestRequest, opts ...http.CallOption) (rsp *ReviewPullRequestResponse, err error)
 	UpdateSkill(ctx context.Context, req *UpdateSkillRequest, opts ...http.CallOption) (rsp *UpdateSkillResponse, err error)
+	UpdateSkillLifecycle(ctx context.Context, req *UpdateSkillLifecycleRequest, opts ...http.CallOption) (rsp *UpdateSkillLifecycleResponse, err error)
 	UpdateSkillVisibility(ctx context.Context, req *UpdateSkillVisibilityRequest, opts ...http.CallOption) (rsp *UpdateSkillVisibilityResponse, err error)
 }
 
@@ -778,6 +807,23 @@ func (c *SkillServiceHTTPClientImpl) UpdateSkill(ctx context.Context, in *Update
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PUT", path, in, &out.Skill, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *SkillServiceHTTPClientImpl) UpdateSkillLifecycle(ctx context.Context, in *UpdateSkillLifecycleRequest, opts ...http.CallOption) (*UpdateSkillLifecycleResponse, error) {
+	var out UpdateSkillLifecycleResponse
+	pattern := "/v1/skills/{name}:lifecycle"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationSkillServiceUpdateSkillLifecycle),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out.Skill, opts...)
 	if err != nil {
 		return nil, err
 	}

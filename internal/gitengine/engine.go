@@ -171,12 +171,22 @@ func (e *Engine) Handler() http.Handler {
 			http.Error(w, "repository state unavailable", http.StatusServiceUnavailable)
 			return
 		}
-		if status != biz.SkillStatusActive {
+		if !allowGitLifecycle(status, described.Action) {
 			http.Error(w, "repository is not active", http.StatusConflict)
 			return
 		}
 		e.handler.ServeHTTP(w, r)
 	})
+}
+
+func allowGitLifecycle(status string, action softweb.Action) bool {
+	if status == biz.SkillStatusActive {
+		return true
+	}
+	// Archived Skills are immutable but remain inspectable and runnable by
+	// existing pinned Agent revisions. Disabled Skills fail closed until an
+	// administrator explicitly re-enables them.
+	return status == biz.SkillStatusArchived && action == softweb.ActionRead
 }
 
 // CreateSkill creates the canonical Soft Serve repository row and the Hub

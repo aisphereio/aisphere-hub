@@ -58,6 +58,13 @@ func SkillServiceGatewayManifest() gatewayx.Manifest {
 				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
 			},
 			{
+				ID:       "skill.update.skill.lifecycle",
+				Method:   "POST",
+				Path:     "/v1/skills/{name}:lifecycle",
+				Upstream: gatewayx.UpstreamRef{Service: "hub-service", Namespace: "aisphere", Protocol: "grpc", Operation: "/skill.v1.SkillService/UpdateSkillLifecycle"},
+				Gateway:  gatewayx.GatewayPolicy{Exposure: v1.Exposure_AUTHORIZED, AuthnMode: gatewayx.AuthnModePassive, ForwardAuthorization: true},
+			},
+			{
 				ID:       "skill.delete.skill",
 				Method:   "DELETE",
 				Path:     "/v1/skills/{name}",
@@ -205,6 +212,20 @@ func SkillServiceGatewayBindUpdateSkillVisibility(req gatewayx.DispatchRequest, 
 		out = v
 	}
 	if v, ok := req.Body.(UpdateSkillVisibilityRequest); ok {
+		out = &v
+	}
+	if v := match.Params["name"]; v != "" {
+		out.Name = v
+	}
+	return out, nil
+}
+
+func SkillServiceGatewayBindUpdateSkillLifecycle(req gatewayx.DispatchRequest, match gatewayx.RouteMatch) (*UpdateSkillLifecycleRequest, error) {
+	out := &UpdateSkillLifecycleRequest{}
+	if v, ok := req.Body.(*UpdateSkillLifecycleRequest); ok && v != nil {
+		out = v
+	}
+	if v, ok := req.Body.(UpdateSkillLifecycleRequest); ok {
 		out = &v
 	}
 	if v := match.Params["name"]; v != "" {
@@ -405,6 +426,9 @@ func RegisterSkillServiceGatewayInvokers(registry *gatewayx.InvokerRegistry, cli
 		return err
 	}
 	if err := registry.Register("/skill.v1.SkillService/UpdateSkillVisibility", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindUpdateSkillVisibility, client.UpdateSkillVisibility)); err != nil {
+		return err
+	}
+	if err := registry.Register("/skill.v1.SkillService/UpdateSkillLifecycle", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindUpdateSkillLifecycle, client.UpdateSkillLifecycle)); err != nil {
 		return err
 	}
 	if err := registry.Register("/skill.v1.SkillService/DeleteSkill", gatewayx.GRPCUnaryInvoker(SkillServiceGatewayBindDeleteSkill, client.DeleteSkill)); err != nil {

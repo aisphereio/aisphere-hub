@@ -123,7 +123,17 @@ func normalizeAgentDefinition(raw json.RawMessage) (json.RawMessage, agentDefini
 			}
 		}
 	}
-	if sets, ok := doc["skillsets"].([]any); ok {
+	setsValue, hasCanonicalSets := doc["skillsets"]
+	legacySetsValue, hasLegacySets := doc["skillSets"]
+	if hasCanonicalSets && hasLegacySets {
+		return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_SKILLSET_FIELD_CONFLICT", "definition must not contain both skillsets and legacy skillSets")
+	}
+	if hasLegacySets {
+		setsValue = legacySetsValue
+		doc["skillsets"] = legacySetsValue
+		delete(doc, "skillSets")
+	}
+	if sets, ok := setsValue.([]any); ok {
 		seen := map[string]struct{}{}
 		for _, value := range sets {
 			binding, ok := value.(map[string]any)

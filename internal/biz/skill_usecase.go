@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -14,6 +15,7 @@ import (
 // Kept identical to the frontend RESOURCE_ID_REGEX (src/lib/utils.ts) so the
 // rule is enforced consistently client-side and server-side:
 //   - lowercase alphanumeric start, then [a-z0-9_-], max 63 chars.
+//
 // Dots, uppercase, slashes and other runs are NOT allowed; banning '.' here
 // keeps Catalog name == SpiceDB object id == git repo name identical with no
 // encoding layer (object_id regex rejects '.' anyway).
@@ -260,6 +262,57 @@ func (uc *SkillUsecase) UpdateSkill(ctx context.Context, in *GitSkill) (*GitSkil
 	return uc.skills.UpdateSkill(ctx, in)
 }
 
+// UpdateSkillLifecycle applies the public management states without changing
+// ownership or IAM tuples. Runtime independently enforces each state:
+// disabled rejects new runs; archived remains runnable only by existing pins.
+func (uc *SkillUsecase) UpdateSkillLifecycle(ctx context.Context, name, next string) (*GitSkill, error) {
+	name = strings.TrimSpace(name)
+	next = strings.ToLower(strings.TrimSpace(next))
+	if name == "" || !mutableSkillLifecycle(next) {
+		return nil, ErrSkillLifecycleInvalid
+	}
+	current, err := uc.skills.GetSkill(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == next {
+		return current, nil
+	}
+	if !allowedSkillLifecycleTransition(current.Status, next) {
+		return nil, ErrSkillLifecycleInvalid
+	}
+	updated, err := uc.skills.UpdateSkillStatus(ctx, name, current.Status, next)
+	if err != nil {
+		if errors.Is(err, ErrSkillNotFound) {
+			return nil, ErrSkillLifecycleConflict
+		}
+		return nil, err
+	}
+	return updated, nil
+}
+
+func mutableSkillLifecycle(status string) bool {
+	switch status {
+	case SkillStatusActive, SkillStatusDisabled, SkillStatusArchived:
+		return true
+	default:
+		return false
+	}
+}
+
+func allowedSkillLifecycleTransition(current, next string) bool {
+	switch current {
+	case SkillStatusActive:
+		return next == SkillStatusDisabled || next == SkillStatusArchived
+	case SkillStatusDisabled:
+		return next == SkillStatusActive || next == SkillStatusArchived
+	case SkillStatusArchived:
+		return next == SkillStatusActive
+	default:
+		return false
+	}
+}
+
 func (uc *SkillUsecase) UpdateSkillVisibility(ctx context.Context, name, visibility string) (*GitSkill, error) {
 	if visibility != SkillVisibilityPrivate && visibility != SkillVisibilityInternal && visibility != SkillVisibilityPublic {
 		return nil, ErrSkillInvalidArgument
@@ -342,7 +395,14 @@ func (uc *SkillUsecase) DeleteSkill(ctx context.Context, name string) error {
 				fmt.Sprintf("skill %q 正被 %d 个 Agent 使用: %s。请先更新这些 Agent 的绑定后再删除。", name, len(refs), strings.Join(names, ", ")))
 		}
 	}
-	if _, err := uc.skills.UpdateSkillStatus(ctx, name, SkillStatusActive, SkillStatusDeleting); err != nil {
+	current, err := uc.skills.GetSkill(ctx, name)
+	if err != nil {
+		return err
+	}
+	if !mutableSkillLifecycle(current.Status) {
+		return ErrSkillLifecycleInvalid
+	}
+	if _, err := uc.skills.UpdateSkillStatus(ctx, name, current.Status, SkillStatusDeleting); err != nil {
 		return err
 	}
 	// Revoke authorization before deleting repository files so receive-pack and

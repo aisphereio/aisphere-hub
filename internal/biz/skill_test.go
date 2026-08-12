@@ -150,6 +150,39 @@ func TestSkillUsecaseListReturnsOnlySkillsViewableByPrincipal(t *testing.T) {
 	}
 }
 
+func TestSkillUsecaseLifecycleTransitions(t *testing.T) {
+	skills := newMemoryGitSkillRepo()
+	skills.items["release-notes"] = &GitSkill{Name: "release-notes", Status: SkillStatusActive}
+	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), &fakeSkillGitEngine{}, &fakeSkillRelationships{})
+
+	disabled, err := uc.UpdateSkillLifecycle(context.Background(), "release-notes", SkillStatusDisabled)
+	if err != nil || disabled.Status != SkillStatusDisabled {
+		t.Fatalf("disable = %+v, err = %v", disabled, err)
+	}
+	archived, err := uc.UpdateSkillLifecycle(context.Background(), "release-notes", SkillStatusArchived)
+	if err != nil || archived.Status != SkillStatusArchived {
+		t.Fatalf("archive = %+v, err = %v", archived, err)
+	}
+	restored, err := uc.UpdateSkillLifecycle(context.Background(), "release-notes", SkillStatusActive)
+	if err != nil || restored.Status != SkillStatusActive {
+		t.Fatalf("restore = %+v, err = %v", restored, err)
+	}
+}
+
+func TestSkillUsecaseLifecycleRejectsInternalStates(t *testing.T) {
+	skills := newMemoryGitSkillRepo()
+	skills.items["release-notes"] = &GitSkill{Name: "release-notes", Status: SkillStatusActive}
+	uc := NewSkillUsecase(skills, newMemoryPullRequestRepo(), &fakeSkillGitEngine{}, &fakeSkillRelationships{})
+
+	if _, err := uc.UpdateSkillLifecycle(context.Background(), "release-notes", SkillStatusDeleting); !errors.Is(err, ErrSkillLifecycleInvalid) {
+		t.Fatalf("deleting transition error = %v", err)
+	}
+	skills.items["release-notes"].Status = SkillStatusProvisioning
+	if _, err := uc.UpdateSkillLifecycle(context.Background(), "release-notes", SkillStatusActive); !errors.Is(err, ErrSkillLifecycleInvalid) {
+		t.Fatalf("provisioning transition error = %v", err)
+	}
+}
+
 func TestPullRequestMergeRequiresApprovalAndFreshTarget(t *testing.T) {
 	skills := newMemoryGitSkillRepo()
 	_, _ = skills.CreateSkill(context.Background(), &GitSkill{Name: "search", Status: SkillStatusActive})

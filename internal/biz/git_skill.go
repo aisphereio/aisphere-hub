@@ -14,6 +14,8 @@ const (
 	SkillVisibilityPublic   = "public"
 	SkillStatusProvisioning = "provisioning"
 	SkillStatusActive       = "active"
+	SkillStatusDisabled     = "disabled"
+	SkillStatusArchived     = "archived"
 	SkillStatusDeleting     = "deleting"
 
 	PullRequestStateOpen   = "open"
@@ -30,6 +32,8 @@ var (
 	ErrSkillInvalidArgument      = errorx.BadRequest(errorx.Code("SKILL_INVALID_ARGUMENT"), "invalid skill argument")
 	ErrSkillMetadataManagedByGit = errorx.Conflict(errorx.Code("SKILL_METADATA_MANAGED_BY_GIT"), "skill name and description are managed by SKILL.md")
 	ErrSkillDependencyFailed     = errorx.Unavailable(errorx.Code("SKILL_DEPENDENCY_FAILED"), "skill dependency failed")
+	ErrSkillLifecycleInvalid     = errorx.BadRequest(errorx.Code("SKILL_LIFECYCLE_INVALID"), "invalid skill lifecycle transition")
+	ErrSkillLifecycleConflict    = errorx.Conflict(errorx.Code("SKILL_LIFECYCLE_CONFLICT"), "skill lifecycle changed concurrently")
 	ErrSkillArchiveInvalid       = errorx.BadRequest(errorx.Code("SKILL_ARCHIVE_INVALID"), "invalid skill archive")
 	ErrSkillArchiveTooLarge      = errorx.BadRequest(errorx.Code("SKILL_ARCHIVE_TOO_LARGE"), "skill archive is too large")
 	ErrSkillArchiveMissingMeta   = errorx.BadRequest(errorx.Code("SKILL_ARCHIVE_SKILL_MD_MISSING"), "skill archive root SKILL.md is required")
@@ -146,10 +150,10 @@ type SkillGitRef struct {
 }
 
 type SkillCommit struct {
-	CommitSHA, TreeSHA, Subject        string
-	ParentSHAs                        []string
-	AuthorName, AuthorEmail            string
-	CreateTime                        time.Time
+	CommitSHA, TreeSHA, Subject string
+	ParentSHAs                  []string
+	AuthorName, AuthorEmail     string
+	CreateTime                  time.Time
 }
 
 type SkillDiffFile struct {
@@ -159,11 +163,11 @@ type SkillDiffFile struct {
 }
 
 type SkillComparison struct {
-	BaseRef, TargetRef                   string
-	BaseCommitSHA, TargetCommitSHA       string
-	MergeBaseSHA, Patch                  string
-	PatchTruncated                       bool
-	Files                                []SkillDiffFile
+	BaseRef, TargetRef             string
+	BaseCommitSHA, TargetCommitSHA string
+	MergeBaseSHA, Patch            string
+	PatchTruncated                 bool
+	Files                          []SkillDiffFile
 }
 
 type RestoreSkillRef struct {
