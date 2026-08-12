@@ -225,3 +225,21 @@ func TestSkillSetImmutableRevisionMigrationContract(t *testing.T) {
 		}
 	}
 }
+
+func TestSkillLifecycleMigrationIncludesManagementStates(t *testing.T) {
+	path := filepath.Join("..", "..", "migrations", "postgres", "202608120002_skill_lifecycle_management_states.sql")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(content)
+	for _, state := range []string{"'active'", "'disabled'", "'archived'", "'provisioning'", "'failed'", "'deleting'"} {
+		if !strings.Contains(sql, state) {
+			t.Fatalf("lifecycle migration is missing %s", state)
+		}
+	}
+	if !strings.Contains(sql, "DROP CONSTRAINT IF EXISTS chk_hub_skill_profiles_status") ||
+		!strings.Contains(sql, "ADD CONSTRAINT chk_hub_skill_profiles_status") {
+		t.Fatal("lifecycle migration must replace the existing status constraint")
+	}
+}
