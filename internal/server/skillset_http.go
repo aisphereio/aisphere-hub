@@ -327,6 +327,7 @@ var (
 	errSkillSetMemberInvalid         = errorx.BadRequest("SKILLSET_MEMBER_INVALID", "valid skillName is required")
 	errSkillSetMemberVersionRequired = errorx.BadRequest("SKILLSET_MEMBER_VERSION_REQUIRED", "an exact Skill release version is required")
 	errSkillSetMemberUnresolved      = errorx.Conflict("SKILLSET_MEMBER_UNRESOLVED", "all SkillSet members must be pinned to immutable releases")
+	errSkillSetMemberInactive        = errorx.Conflict("SKILLSET_MEMBER_INACTIVE", "all SkillSet members must be active")
 	errSkillSetMemberForbidden       = errorx.Forbidden("SKILLSET_MEMBER_FORBIDDEN", "the referenced Skill is not visible to the caller")
 	errSkillSetReleaseUnavailable    = errorx.New("SKILLSET_RELEASE_UNAVAILABLE", errorx.WithHTTPStatus(http.StatusServiceUnavailable), errorx.WithMessage("Skill release resolver is unavailable"))
 )
@@ -353,6 +354,8 @@ func skillSetDBErr(err error) error {
 	case errors.Is(err, errSkillSetMemberVersionRequired):
 		return err
 	case errors.Is(err, errSkillSetMemberUnresolved):
+		return err
+	case errors.Is(err, errSkillSetMemberInactive):
 		return err
 	case errors.Is(err, errSkillSetMemberForbidden):
 		return err
@@ -703,6 +706,9 @@ func (h *skillSetHTTPHandler) resolveEndpoint(ctx khttp.Context) error {
 		for _, member := range members {
 			if member.Version == "" || member.CommitSHA == "" || member.TreeSHA == "" || member.ManifestSHA == "" {
 				return nil, errSkillSetMemberUnresolved
+			}
+			if member.Status != biz.SkillStatusActive {
+				return nil, errSkillSetMemberInactive
 			}
 		}
 		return map[string]any{
