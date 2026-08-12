@@ -66,9 +66,38 @@ func TestNormalizeAgentDefinitionSkillBinding(t *testing.T) {
 	}
 }
 
+func TestNormalizeAgentDefinitionSkillSetBinding(t *testing.T) {
+	raw := json.RawMessage(`{
+		"entryPoint":"root.yaml",
+		"files":{"root.yaml":"name: demo"},
+		"skillsets":[{"name":"backend-engineer","revision":8}]
+	}`)
+	canonical, projection, err := normalizeAgentDefinition(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(projection.SkillSets) != 1 || projection.SkillSets[0].Name != "backend-engineer" || projection.SkillSets[0].Revision != 8 {
+		t.Fatalf("unexpected projection: %+v", projection.SkillSets)
+	}
+	if !json.Valid(canonical) {
+		t.Fatal("canonical definition is not valid JSON")
+	}
+}
+
+func TestNormalizeAgentDefinitionSkillSetRejectsMissingRevision(t *testing.T) {
+	raw := json.RawMessage(`{
+		"entryPoint":"root.yaml",
+		"files":{"root.yaml":"name: demo"},
+		"skillsets":[{"name":"backend-engineer"}]
+	}`)
+	if _, _, err := normalizeAgentDefinition(raw); err == nil {
+		t.Fatal("expected error for skillset without revision")
+	}
+}
+
 func TestResolveAgentSkillSnapshotsBuiltinOnly(t *testing.T) {
 	h := &agentHTTPHandler{}
-	items, err := h.resolveAgentSkillSnapshots(context.Background(), authn.Principal{}, []agentSkillBinding{{Name: "sandbox-workspace-tools", Version: "builtin-d9f6a0bea925"}})
+	items, err := h.resolveAgentSkillSnapshots(context.Background(), authn.Principal{}, []agentSkillBinding{{Name: "sandbox-workspace-tools", Version: "builtin-d9f6a0bea925"}}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -123,6 +123,30 @@ func normalizeAgentDefinition(raw json.RawMessage) (json.RawMessage, agentDefini
 			}
 		}
 	}
+	if sets, ok := doc["skillsets"].([]any); ok {
+		seen := map[string]struct{}{}
+		for _, value := range sets {
+			binding, ok := value.(map[string]any)
+			if !ok {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_DEFINITION_INVALID", "definition.skillsets entries must be objects")
+			}
+			name, _ := binding["name"].(string)
+			name = strings.TrimSpace(name)
+			if !agentIDRE.MatchString(name) {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_SKILLSET_INVALID", "definition.skillsets contains an invalid skillset name")
+			}
+			if _, exists := seen[name]; exists {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_SKILLSET_DUPLICATE", "definition.skillsets contains duplicate skillset "+name)
+			}
+			seen[name] = struct{}{}
+			revision, exists := binding["revision"].(float64)
+			if !exists || revision <= 0 {
+				return nil, agentDefinitionProjection{}, errorx.BadRequest("AGENT_SKILLSET_REVISION_REQUIRED", "definition.skillsets.revision is required and must be a positive integer")
+			}
+			binding["name"] = name
+			binding["revision"] = int64(revision)
+		}
+	}
 	canonical, err := json.Marshal(doc)
 	if err != nil {
 		return nil, agentDefinitionProjection{}, errorx.Internal("AGENT_DEFINITION_ENCODE_FAILED", "failed to encode agent definition", errorx.WithCause(err))

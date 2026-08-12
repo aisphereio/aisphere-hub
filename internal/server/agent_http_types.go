@@ -120,6 +120,16 @@ type agentSkillBinding struct {
 	Source  string `json:"source,omitempty"`
 }
 
+// agentSkillSetBinding is a version-pinned SkillSet reference from the Agent
+// definition. Revision is required at save time; at run resolve time Hub
+// expands the SkillSet into its member SkillVersion snapshots the same way
+// direct skills are pinned. A SkillSet is a collection, not a permission
+// bundle — every expanded member still requires skill.view(launcher).
+type agentSkillSetBinding struct {
+	Name     string `json:"name"`
+	Revision int64  `json:"revision"`
+}
+
 // agentModelBinding points to the AISphere-owned ModelProfile UUID. Revision is
 // optional: zero means resolve the latest revision when the Agent run snapshot
 // is created. The resolved revision is then frozen into that run snapshot.
@@ -129,11 +139,12 @@ type agentModelBinding struct {
 }
 
 type agentDefinitionProjection struct {
-	EntryPoint string              `json:"entryPoint"`
-	Files      map[string]string   `json:"files"`
-	Model      *agentModelBinding  `json:"model,omitempty"`
-	Tools      []agentToolBinding  `json:"tools"`
-	Skills     []agentSkillBinding `json:"skills,omitempty"`
+	EntryPoint string               `json:"entryPoint"`
+	Files      map[string]string    `json:"files"`
+	Model      *agentModelBinding   `json:"model,omitempty"`
+	Tools      []agentToolBinding   `json:"tools"`
+	Skills     []agentSkillBinding  `json:"skills,omitempty"`
+	SkillSets  []agentSkillSetBinding `json:"skillsets,omitempty"`
 }
 
 type agentRunRequest struct {

@@ -59,7 +59,7 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 	if _, err := h.resolveAgentModelSnapshot(ctx, principal, projection.Model); err != nil {
 		return err
 	}
-	if _, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills); err != nil {
+	if _, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills, projection.SkillSets); err != nil {
 		return err
 	}
 	for _, binding := range projection.Tools {
@@ -79,70 +79,148 @@ func (h *agentHTTPHandler) validateToolBindings(ctx context.Context, principal a
 // user cannot run an Agent whose definition binds a skill they cannot even
 // see) and are pinned by name+version — the download contract
 // (artifactRef/digest/URL) lands with the Runtime Skill Fetch work.
-func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, principal authn.Principal, bindings []agentSkillBinding) ([]map[string]any, error) {
-	out := make([]map[string]any, 0, len(bindings))
+func (h *agentHTTPHandler) resolveAgentSkillSnapshots(ctx context.Context, principal authn.Principal, bindings []agentSkillBinding, sets []agentSkillSetBinding) ([]map[string]any, error) {
+	out := make([]map[string]any, 0, len(bindings)+len(sets))
 	for _, binding := range bindings {
-		name := strings.TrimSpace(binding.Name)
-		version := strings.TrimSpace(binding.Version)
-		source := strings.ToLower(strings.TrimSpace(binding.Source))
-		if source == "" && (version == "builtin" || strings.HasPrefix(version, "builtin-")) {
-			source = "builtin"
-		}
-		if source == "builtin" {
-			out = append(out, map[string]any{
-				"name": name, "version": version, "revision": version,
-				"source": "builtin", "object": "aisphere://builtin-skills/" + name,
-			})
-			continue
-		}
-		// Catalog skill: the launcher must be able to see it first.
-		if err := h.requirePermission(ctx, principal, "skill", name, "view"); err != nil {
+		entry, err := h.resolveSkillSnapshotEntry(ctx, principal, binding.Name, binding.Version, binding.Source, "")
+		if err != nil {
 			return nil, err
 		}
-		// S7/S22: the catalog binding must still hold at definition-save time
-		// and again at resolve time. The skill must exist and be active
-		// (disabled/archived skills reject new runs), and the pinned version
-		// must be a published release — hand-crafted JSON cannot bypass the
-		// UI and pin a version that never shipped.
-		if h.skillRepo != nil {
-			skill, err := h.skillRepo.GetSkill(ctx, name)
-			if err != nil {
-				return nil, err
-			}
-			if strings.TrimSpace(skill.Status) != "active" {
-				return nil, errorx.New(
-					errorx.Code("SKILL_DISABLED"),
-					errorx.WithHTTPStatus(http.StatusConflict),
-					errorx.WithMessage("skill "+name+" is not active"),
-				)
-			}
+		out = append(out, entry)
+	}
+	for _, set := range sets {
+		entries, err := h.resolveAgentSkillSet(ctx, principal, set)
+		if err != nil {
+			return nil, err
 		}
-		if h.releaseResolver != nil {
-			if _, err := h.releaseResolver.GetRelease(ctx, name, version); err != nil {
-				return nil, err
-			}
-		}
-		entry := map[string]any{
+		out = append(out, entries...)
+	}
+	return out, nil
+}
+
+// resolveSkillSnapshotEntry pins one Skill binding into the immutable run
+// snapshot. Built-in skills come from the worker image; catalog skills are
+// validated against the Hub catalog (the launcher must hold `skill:{name}#view`
+// so a user cannot run an Agent whose definition binds a skill they cannot
+// even see), S7/S22 checks (active + published release) apply, and the
+// download contract (artifactRef/digest/URL) is attached to the entry.
+// fromSet records the owning SkillSet name for provenance when the entry was
+// expanded from an Agent SkillSet binding ("" = direct binding).
+func (h *agentHTTPHandler) resolveSkillSnapshotEntry(ctx context.Context, principal authn.Principal, name, version, source, fromSet string) (map[string]any, error) {
+	name = strings.TrimSpace(name)
+	version = strings.TrimSpace(version)
+	source = strings.ToLower(strings.TrimSpace(source))
+	if source == "" && (version == "builtin" || strings.HasPrefix(version, "builtin-")) {
+		source = "builtin"
+	}
+	if source == "builtin" {
+		return map[string]any{
 			"name": name, "version": version, "revision": version,
-			"source": "catalog", "object": "aihub:skill:" + name,
+			"source": "builtin", "object": "aisphere://builtin-skills/" + name,
+		}, nil
+	}
+	// Catalog skill: the launcher must be able to see it first.
+	if err := h.requirePermission(ctx, principal, "skill", name, "view"); err != nil {
+		return nil, err
+	}
+	// S7/S22: the catalog binding must still hold at definition-save time
+	// and again at resolve time. The skill must exist and be active
+	// (disabled/archived skills reject new runs), and the pinned version
+	// must be a published release — hand-crafted JSON cannot bypass the
+	// UI and pin a version that never shipped.
+	if h.skillRepo != nil {
+		skill, err := h.skillRepo.GetSkill(ctx, name)
+		if err != nil {
+			return nil, err
 		}
-		// Load-phase download contract: when package signing is configured,
-		// attach content digests + a short-lived signed URL so the Runtime
-		// can fetch (and verify) the immutable package.
-		if h.skillPackages != nil {
-			pkg, err := h.skillPackages.BuildSkillPackage(ctx, name, version)
-			if err != nil {
-				return nil, err
-			}
-			downloadURL, err := h.skillPackages.BuildDownloadURL(name, version, string(principal.SubjectID))
-			if err != nil {
-				return nil, err
-			}
-			entry["sha256"] = pkg.SHA256
-			entry["md5"] = pkg.MD5
-			entry["size"] = pkg.Size
-			entry["downloadUrl"] = downloadURL
+		if strings.TrimSpace(skill.Status) != "active" {
+			return nil, errorx.New(
+				errorx.Code("SKILL_DISABLED"),
+				errorx.WithHTTPStatus(http.StatusConflict),
+				errorx.WithMessage("skill "+name+" is not active"),
+			)
 		}
+	}
+	if h.releaseResolver != nil {
+		if _, err := h.releaseResolver.GetRelease(ctx, name, version); err != nil {
+			return nil, err
+		}
+	}
+	entry := map[string]any{
+		"name": name, "version": version, "revision": version,
+		"source": "catalog", "object": "aihub:skill:" + name,
+	}
+	if fromSet != "" {
+		entry["viaSkillSet"] = fromSet
+	}
+	// Load-phase download contract: when package signing is configured,
+	// attach content digests + a short-lived signed URL so the Runtime
+	// can fetch (and verify) the immutable package.
+	if h.skillPackages != nil {
+		pkg, err := h.skillPackages.BuildSkillPackage(ctx, name, version)
+		if err != nil {
+			return nil, err
+		}
+		downloadURL, err := h.skillPackages.BuildDownloadURL(name, version, string(principal.SubjectID))
+		if err != nil {
+			return nil, err
+		}
+		entry["sha256"] = pkg.SHA256
+		entry["md5"] = pkg.MD5
+		entry["size"] = pkg.Size
+		entry["downloadUrl"] = downloadURL
+	}
+	return entry, nil
+}
+
+// resolveAgentSet expands one version-pinned SkillSet binding into the pinned
+// SkillLinks the Agent actually runs. A SkillSet is a collection, not a
+// permission bundle — every member still passes resolveSkillSnapshotEntry
+// (skill.view(launcher), active, published release, download contract). The
+// binding is immutable: once the SkillSet moves to a newer revision the Agent
+// definition is out of sync and the run refuses to resolve (no silent drift).
+func (h *agentHTTPHandler) resolveAgentSkillSet(ctx context.Context, principal authn.Principal, binding agentSkillSetBinding) ([]map[string]any, error) {
+	name := strings.TrimSpace(binding.Name)
+	var set skillSetRow
+	if err := h.db(ctx).Where("name = ? AND deleted_at IS NULL", name).
+		Where("visibility = 'public' OR owner_id = ? OR (visibility = 'internal' AND org_id <> '' AND org_id = ?)", principal.SubjectID, principal.OrgID).
+		First(&set).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errorx.NotFound("AGENT_SKILLSET_NOT_FOUND", "skillset "+name+" not found is not visible to the launcher")
+		}
+		return nil, skillSetDBErr(err)
+	}
+	if binding.Revision > 0 && set.Revision != binding.Revision {
+		return nil, errorx.Conflict("AGENT_SKILLSET_REVISION_MISMATCH",
+			fmt.Sprintf("skillset %s is now revision %d but the Agent pins revision %d; save a new Agent version to re-pin", name, set.Revision, binding.Revision))
+	}
+	var members []skillSetMember
+	if err := h.db(ctx).Raw(`
+		SELECT i.skill_name, i.sort_order, i.version, i.commit_sha, i.tree_sha,
+		       i.manifest_sha256, i.resolved_at,
+		       COALESCE(p.display_name, '') AS display_name
+		FROM aihub_skillset_items i
+		JOIN repo r ON r.name = i.skill_name
+		JOIN hub_skill_profiles p ON p.repository_id = r.id
+		WHERE i.skillset_name = ? AND p.lifecycle_status = 'active'
+		ORDER BY i.sort_order ASC, i.skill_name ASC`, name).Scan(&members).Error; err != nil {
+		return nil, skillSetDBErr(err)
+	}
+	if len(members) == 0 {
+		return nil, errorx.Conflict("AGENT_SKILLSET_EMPTY", "skillset "+name+" has no active members")
+	}
+	out := make([]map[string]any, 0, len(members))
+	for _, member := range members {
+		if member.CommitSHA == "" || member.TreeSHA == "" || member.ManifestSHA == "" {
+			return nil, errorx.Conflict("AGENT_SKILLSET_MEMBER_UNRESOLVED", "skillset "+name+" member "+member.SkillName+" is not pinned to a release")
+		}
+		entry, err := h.resolveSkillSnapshotEntry(ctx, principal, member.SkillName, member.Version, "catalog", name)
+		if err != nil {
+			return nil, err
+		}
+		entry["commitSHA"] = member.CommitSHA
+		entry["treeSHA"] = member.TreeSHA
+		entry["manifestSHA256"] = member.ManifestSHA
 		out = append(out, entry)
 	}
 	return out, nil
@@ -349,7 +427,7 @@ func (h *agentHTTPHandler) buildRunPlan(ctx context.Context, principal authn.Pri
 	if err != nil {
 		return nil, nil, err
 	}
-	skills, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills)
+	skills, err := h.resolveAgentSkillSnapshots(ctx, principal, projection.Skills, projection.SkillSets)
 	if err != nil {
 		return nil, nil, err
 	}
